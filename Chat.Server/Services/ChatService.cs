@@ -163,14 +163,44 @@ namespace Chat.Server.Services
 
         private void LogRequest(string message)
         {
-            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [REQUEST] {message}";
+            string clientType = DetectClientType();
+            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [REQUEST] [{clientType}] {message}";
             string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
             try
             {
                 System.IO.File.AppendAllText(logPath, logMessage + Environment.NewLine);
             }
             catch { }
+
+            // Color-coded console output
+            ConsoleColor originalColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(logMessage);
+            Console.ForegroundColor = originalColor;
+        }
+
+        private string DetectClientType()
+        {
+            try
+            {
+                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
+                {
+                    var transport = OperationContext.Current.IncomingMessageProperties["Via"] as string;
+                    if (transport != null)
+                    {
+                        if (transport.StartsWith("net.tcp://"))
+                        {
+                            return "DUPLEX";
+                        }
+                        else if (transport.StartsWith("http://"))
+                        {
+                            return "POLLING";
+                        }
+                    }
+                }
+            }
+            catch { }
+            return "UNKNOWN";
         }
     }
 }
