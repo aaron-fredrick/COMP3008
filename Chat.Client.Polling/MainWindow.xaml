@@ -1,8 +1,78 @@
 <Window x:Class="Chat.Client.Polling.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Chat Client (Polling)" Height="450" Width="800">
+        Title="Chat Client (Polling)" Height="600" Width="1000"
+        Background="#1e1e1e"
+        WindowStartupLocation="CenterScreen">
     <Grid>
-        <TextBlock Text="Chat Client (Polling)" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+        <!-- Login Panel -->
+        <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
+            <TextBlock Text="COMP3008 Chat" FontSize="28" FontWeight="Bold" 
+                       Foreground="#00bcd4" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+            <TextBlock Text="Username:" FontSize="14" Foreground="#ffffff" Margin="0,0,0,5"/>
+            <TextBox x:Name="UsernameTextBox" FontSize="14" Padding="8" Margin="0,0,0,20"
+                     Background="#2d2d2d" Foreground="#ffffff" BorderBrush="#404040"/>
+            <Button x:Name="SignInButton" Content="Sign In" FontSize="14" Padding="10" Margin="0,0,0,10"
+                    Background="#00bcd4" Foreground="#ffffff" BorderThickness="0"
+                    Cursor="Hand" Click="SignInButton_Click"/>
+            <TextBlock x:Name="LoginStatusText" FontSize="12" Foreground="#ff5252" 
+                       HorizontalAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Main Chat Panel (Initially Hidden) -->
+        <Grid x:Name="MainChatPanel" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <Border Grid.Column="0" Background="#252526" BorderBrush="#404040" BorderThickness="0,0,1,0">
+                <StackPanel Margin="10">
+                    <TextBlock Text="Channels" FontSize="16" FontWeight="Bold" 
+                               Foreground="#ffffff" Margin="0,0,0,10"/>
+                    <ListBox x:Name="ChannelsListBox" Background="#2d2d2d" 
+                             Foreground="#ffffff" BorderBrush="#404040" Height="200"
+                             SelectionChanged="ChannelsListBox_SelectionChanged"/>
+                    
+                    <TextBlock Text="Members" FontSize="16" FontWeight="Bold" 
+                               Foreground="#ffffff" Margin="0,20,0,10"/>
+                    <ListBox x:Name="MembersListBox" Background="#2d2d2d" 
+                             Foreground="#ffffff" BorderBrush="#404040" Height="200"/>
+                    
+                    <Button x:Name="SignOutButton" Content="Sign Out" FontSize="12" Padding="8" Margin="0,20,0,0"
+                            Background="#ff5252" Foreground="#ffffff" BorderThickness="0"
+                            Cursor="Hand" Click="SignOutButton_Click"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Main Chat Area -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Messages -->
+                <ListBox x:Name="MessagesListBox" Grid.Row="0" Background="#1e1e1e" 
+                         Foreground="#ffffff" BorderBrush="#404040" Padding="10"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+
+                <!-- Input Area -->
+                <Border Grid.Row="1" Background="#252526" Padding="10" BorderBrush="#404040" BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="MessageTextBox" Grid.Column="0" FontSize="14" Padding="8"
+                                 Background="#2d2d2d" Foreground="#ffffff" BorderBrush="#404040"/>
+                        <Button x:Name="SendButton" Grid.Column="1" Content="Send" FontSize="14" Padding="15,8"
+                                Background="#00bcd4" Foreground="#ffffff" BorderThickness="0"
+                                Cursor="Hand" Margin="10,0,0,0" Click="SendButton_Click"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>
