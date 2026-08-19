@@ -17,6 +17,7 @@ namespace Chat.Client.Polling
         private int _pollingInterval;
         private ChannelListView _channelListView;
         private ConversationView _conversationView;
+        private bool _isSigningOut = false;
 
         public MainWindow()
         {
@@ -86,12 +87,22 @@ namespace Chat.Client.Polling
 
         private void ChannelListView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Prevent re-entrancy during sign out
+            if (_isSigningOut)
+            {
+                return;
+            }
             // User clicked X on channel list - sign out
             SignOut();
         }
 
         private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Prevent re-entrancy during sign out
+            if (_isSigningOut)
+            {
+                return;
+            }
             // User clicked X on conversation - sign out
             SignOut();
         }
@@ -158,8 +169,11 @@ namespace Chat.Client.Polling
 
         private void LoadChannels()
         {
-            var channels = _serviceClient.GetChannels();
-            _channelListView?.UpdateChannels(channels);
+            if (!_isSigningOut)
+            {
+                var channels = _serviceClient.GetChannels();
+                _channelListView?.UpdateChannels(channels);
+            }
         }
 
         private void LoadChannelMembers()
@@ -194,7 +208,21 @@ namespace Chat.Client.Polling
 
         private void SignOut()
         {
+            if (_isSigningOut)
+            {
+                return;
+            }
+
+            _isSigningOut = true;
             _pollingTimer.Stop();
+            
+            // Leave channel if in one
+            if (!string.IsNullOrEmpty(_currentChannel))
+            {
+                _serviceClient?.LeaveChannel(_currentUserId);
+            }
+            
+            // Sign out from server
             _serviceClient?.SignOut(_currentUserId);
             _serviceClient?.Dispose();
             
@@ -207,6 +235,8 @@ namespace Chat.Client.Polling
             this.Show();
             LoginStatusText.Text = "";
             UsernameTextBox.Text = "";
+            
+            _isSigningOut = false;
         }
 
         protected override void OnClosed(EventArgs e)
