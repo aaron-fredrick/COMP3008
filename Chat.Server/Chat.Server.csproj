@@ -35,6 +35,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
@@ -46,6 +47,14 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Hosting\ChatServiceHost.cs" />
+    <Compile Include="Services\ChatService.cs" />
+    <Compile Include="StateManagement\UserSession.cs" />
+    <Compile Include="StateManagement\UserManager.cs" />
+    <Compile Include="StateManagement\ChannelManager.cs" />
+    <Compile Include="StateManagement\MessageRouter.cs" />
+    <Compile Include="StateManagement\CallbackManager.cs" />
+    <Compile Include="FileStorage\FileHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj" />
