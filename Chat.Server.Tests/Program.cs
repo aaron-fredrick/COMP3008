@@ -1,5 +1,8 @@
 using System;
-using System.IO;
+using System.ServiceModel;
+using Chat.Contracts.ServiceContracts;
+using Chat.Contracts.DataContracts;
+using Chat.Contracts.SharedTypes;
 
 namespace Chat.Server.Tests
 {
@@ -7,56 +10,94 @@ namespace Chat.Server.Tests
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Chat Server Logging Test");
-            Console.WriteLine("=========================\n");
+            Console.WriteLine("Chat Server Integration Test");
+            Console.WriteLine("============================\n");
 
-            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestLog.log");
+            string serverUrl = "http://localhost:9000/ChatService/Polling";
 
-            // Clean up old log
-            if (File.Exists(logPath))
+            Console.WriteLine($"Connecting to server: {serverUrl}");
+
+            try
             {
-                File.Delete(logPath);
+                var binding = new BasicHttpBinding();
+                var endpoint = new EndpointAddress(serverUrl);
+                var channelFactory = new ChannelFactory<IChatService>(binding, endpoint);
+                IChatService proxy = channelFactory.CreateChannel();
+
+                Console.WriteLine("Connected to server successfully.\n");
+
+                // Test 1: SignIn
+                Console.WriteLine("Test 1: SignIn");
+                bool signInResult = proxy.SignIn("testuser1");
+                Console.WriteLine($"  - SignIn result: {signInResult}");
+
+                // Test 2: GetChannels (should be empty initially)
+                Console.WriteLine("\nTest 2: GetChannels");
+                var channels = proxy.GetChannels();
+                Console.WriteLine($"  - Channel count: {channels.Count}");
+
+                // Test 3: CreateChannel
+                Console.WriteLine("\nTest 3: CreateChannel");
+                bool createResult = proxy.CreateChannel("general");
+                Console.WriteLine($"  - CreateChannel result: {createResult}");
+
+                // Test 4: GetChannels (should have 1 channel)
+                Console.WriteLine("\nTest 4: GetChannels after creation");
+                channels = proxy.GetChannels();
+                Console.WriteLine($"  - Channel count: {channels.Count}");
+                if (channels.Count > 0)
+                {
+                    Console.WriteLine($"  - Channel name: {channels[0].Name}");
+                }
+
+                // Test 5: JoinChannel
+                Console.WriteLine("\nTest 5: JoinChannel");
+                bool joinResult = proxy.JoinChannel("testuser1", "general");
+                Console.WriteLine($"  - JoinChannel result: {joinResult}");
+
+                // Test 6: GetChannelMembers
+                Console.WriteLine("\nTest 6: GetChannelMembers");
+                var members = proxy.GetChannelMembers("general");
+                Console.WriteLine($"  - Member count: {members.Count}");
+                if (members.Count > 0)
+                {
+                    Console.WriteLine($"  - Member: {members[0]}");
+                }
+
+                // Test 7: SendMessage
+                Console.WriteLine("\nTest 7: SendMessage");
+                proxy.SendMessage("testuser1", "general", "Hello, world!");
+                Console.WriteLine("  - Message sent successfully");
+
+                // Test 8: GetPendingMessages
+                Console.WriteLine("\nTest 8: GetPendingMessages");
+                var messages = proxy.GetPendingMessages("testuser1");
+                Console.WriteLine($"  - Pending message count: {messages.Count}");
+                if (messages.Count > 0)
+                {
+                    Console.WriteLine($"  - Message content: {messages[0].Content}");
+                }
+
+                // Test 9: SignOut
+                Console.WriteLine("\nTest 9: SignOut");
+                proxy.SignOut("testuser1");
+                Console.WriteLine("  - SignOut completed");
+
+                // Cleanup
+                Console.WriteLine("\nClosing connection...");
+                ((IClientChannel)proxy).Close();
+                channelFactory.Close();
+
+                Console.WriteLine("\n=== All tests completed successfully ===");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nTest failed with error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
 
-            // Test logging functions
-            TestLogInfo(logPath);
-            TestLogError(logPath);
-            TestConcurrentLogging(logPath);
-
-            Console.WriteLine("\nTest complete. Check TestLog.log for results.");
-            Console.WriteLine("Press any key to exit...");
+            Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
-        }
-
-        static void TestLogInfo(string logPath)
-        {
-            Console.WriteLine("Test 1: LogInfo");
-            string message = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [INFO] Test info message";
-            File.AppendAllText(logPath, message + Environment.NewLine);
-            Console.WriteLine("  - LogInfo written successfully");
-        }
-
-        static void TestLogError(string logPath)
-        {
-            Console.WriteLine("Test 2: LogError");
-            string message = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [ERROR] Test error message";
-            File.AppendAllText(logPath, message + Environment.NewLine);
-            Console.WriteLine("  - LogError written successfully");
-        }
-
-        static void TestConcurrentLogging(string logPath)
-        {
-            Console.WriteLine("Test 3: Concurrent logging");
-            var lockObj = new object();
-            System.Threading.Tasks.Parallel.For(0, 10, i =>
-            {
-                lock (lockObj)
-                {
-                    string message = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [INFO] Concurrent message {i}";
-                    File.AppendAllText(logPath, message + Environment.NewLine);
-                }
-            });
-            Console.WriteLine("  - 10 concurrent messages written successfully");
         }
     }
 }
