@@ -10,6 +10,7 @@ namespace Chat.Client.Polling.Views
     {
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
+        public event EventHandler SignOutRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
 
         private bool _isLeavingChannel = false;
@@ -28,10 +29,10 @@ namespace Chat.Client.Polling.Views
                 return;
             }
 
-            // User clicked X - trigger leave channel and prevent close
+            // User clicked X - trigger sign out and prevent close
             e.Cancel = true;
             _isLeavingChannel = true;
-            LeaveChannelRequested?.Invoke(this, EventArgs.Empty);
+            SignOutRequested?.Invoke(this, EventArgs.Empty);
         }
 
         public void CloseWindow()

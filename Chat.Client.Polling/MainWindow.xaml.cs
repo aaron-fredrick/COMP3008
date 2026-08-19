@@ -75,6 +75,7 @@ namespace Chat.Client.Polling
             _conversationView.SetChannelName(channelName);
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
+            _conversationView.SignOutRequested += ConversationView_SignOutRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
             
             LoadChannelMembers();
@@ -130,6 +131,11 @@ namespace Chat.Client.Polling
             _conversationView.CloseWindow();
             _channelListView.Show();
             LoadChannels();
+        }
+
+        private void ConversationView_SignOutRequested(object sender, EventArgs e)
+        {
+            SignOut();
         }
 
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file)
