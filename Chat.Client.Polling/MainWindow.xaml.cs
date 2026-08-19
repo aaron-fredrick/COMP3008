@@ -63,6 +63,7 @@ namespace Chat.Client.Polling
             _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
             _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
             _channelListView.SignOutRequested += ChannelListView_SignOutRequested;
+            _channelListView.Closing += ChannelListView_Closing;
             
             LoadChannels();
             _channelListView.Show();
@@ -75,12 +76,24 @@ namespace Chat.Client.Polling
             _conversationView.SetChannelName(channelName);
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
-            _conversationView.SignOutRequested += ConversationView_SignOutRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
+            _conversationView.Closing += ConversationView_Closing;
             
             LoadChannelMembers();
             _conversationView.Show();
             _channelListView.Hide();
+        }
+
+        private void ChannelListView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // User clicked X on channel list - sign out
+            SignOut();
+        }
+
+        private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // User clicked X on conversation - sign out
+            SignOut();
         }
 
         private void ChannelListView_JoinChannelRequested(object sender, string channelName)
@@ -128,14 +141,9 @@ namespace Chat.Client.Polling
         {
             _serviceClient.LeaveChannel(_currentUserId);
             _currentChannel = null;
-            _conversationView.CloseWindow();
+            _conversationView.Close();
             _channelListView.Show();
             LoadChannels();
-        }
-
-        private void ConversationView_SignOutRequested(object sender, EventArgs e)
-        {
-            SignOut();
         }
 
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file)

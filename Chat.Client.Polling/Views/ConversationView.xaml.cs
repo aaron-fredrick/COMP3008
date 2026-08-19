@@ -10,35 +10,11 @@ namespace Chat.Client.Polling.Views
     {
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
-        public event EventHandler SignOutRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
-
-        private bool _isLeavingChannel = false;
 
         public ConversationView()
         {
             InitializeComponent();
-            this.Closing += ConversationView_Closing;
-        }
-
-        private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // Allow close if we're already leaving (programmatic close)
-            if (_isLeavingChannel)
-            {
-                return;
-            }
-
-            // User clicked X - trigger sign out and prevent close
-            e.Cancel = true;
-            _isLeavingChannel = true;
-            SignOutRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void CloseWindow()
-        {
-            _isLeavingChannel = true;
-            this.Close();
         }
 
         public void SetChannelName(string channelName)
