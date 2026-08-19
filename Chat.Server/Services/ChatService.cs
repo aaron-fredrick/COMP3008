@@ -199,18 +199,45 @@ namespace Chat.Server.Services
         {
             try
             {
-                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
+                if (OperationContext.Current != null)
                 {
-                    var transport = OperationContext.Current.IncomingMessageProperties["Via"] as string;
-                    if (transport != null)
+                    // Check the channel's binding type
+                    var channel = OperationContext.Current.Channel;
+                    if (channel != null)
                     {
-                        if (transport.StartsWith("net.tcp://"))
+                        var binding = channel.GetProperty<System.ServiceModel.Channels.Binding>();
+                        if (binding != null)
                         {
-                            return "DUPLEX";
+                            if (binding is System.ServiceModel.NetTcpBinding)
+                            {
+                                return "DUPLEX";
+                            }
+                            else if (binding is System.ServiceModel.BasicHttpBinding || binding is System.ServiceModel.WSHttpBinding)
+                            {
+                                return "POLLING";
+                            }
                         }
-                        else if (transport.StartsWith("http://"))
+                    }
+
+                    // Fallback: check incoming message properties
+                    if (OperationContext.Current.IncomingMessageProperties != null)
+                    {
+                        var properties = OperationContext.Current.IncomingMessageProperties;
+                        foreach (var prop in properties.Keys)
                         {
-                            return "POLLING";
+                            var value = properties[prop];
+                            if (value != null)
+                            {
+                                string valueStr = value.ToString();
+                                if (valueStr.Contains("net.tcp"))
+                                {
+                                    return "DUPLEX";
+                                }
+                                else if (valueStr.Contains("http"))
+                                {
+                                    return "POLLING";
+                                }
+                            }
                         }
                     }
                 }
