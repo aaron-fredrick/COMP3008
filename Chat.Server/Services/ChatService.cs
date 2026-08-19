@@ -173,13 +173,23 @@ namespace Chat.Server.Services
 
         public List<Message> GetPendingMessages(string userId)
         {
-            var pendingQueue = _userManager.GetPendingChannelMessages(userId);
             string clientType = DetectClientType();
-            if (pendingQueue.Count > 0)
+            var session = _userManager.GetUserSession(userId);
+            if (session == null)
             {
-                ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} message(s)");
+                return new List<Message>();
             }
-            return new List<Message>(pendingQueue);
+
+            var lastPollTime = _userManager.GetLastPollTime(userId);
+            var messages = _channelManager.GetMessagesSince(session.CurrentChannel, lastPollTime, userId);
+            
+            _userManager.UpdateLastPollTime(userId);
+            
+            if (messages.Count > 0)
+            {
+                ServerLogger.Request(clientType, "POLL", $"{userId} <- {messages.Count} message(s)");
+            }
+            return messages;
         }
 
         public List<Message> GetPendingPrivateMessages(string userId)

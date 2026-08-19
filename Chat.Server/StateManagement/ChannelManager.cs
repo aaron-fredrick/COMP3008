@@ -9,11 +9,13 @@ namespace Chat.Server.StateManagement
     public class ChannelManager
     {
         private readonly Dictionary<string, Channel> _channels;
+        private readonly Dictionary<string, List<Message>> _channelMessages;
         private readonly ReaderWriterLockSlim _lock;
 
         public ChannelManager()
         {
             _channels = new Dictionary<string, Channel>();
+            _channelMessages = new Dictionary<string, List<Message>>();
             _lock = new ReaderWriterLockSlim();
         }
 
@@ -39,6 +41,7 @@ namespace Chat.Server.StateManagement
                     Name = channelName,
                     Members = new List<string>()
                 };
+                _channelMessages[channelName] = new List<Message>();
 
                 reason = null;
                 return true;
@@ -153,6 +156,48 @@ namespace Chat.Server.StateManagement
             finally
             {
                 _lock.ExitWriteLock();
+            }
+        }
+
+        public void AddChannelMessage(string channelName, Message message)
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                if (_channelMessages.ContainsKey(channelName))
+                {
+                    _channelMessages[channelName].Add(message);
+                }
+            }
+            finally
+            {
+                _lock.ExitWriteLock();
+            }
+        }
+
+        public List<Message> GetMessagesSince(string channelName, DateTime since, string requestingUserId)
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                if (!_channelMessages.ContainsKey(channelName))
+                {
+                    return new List<Message>();
+                }
+
+                var channel = _channels[channelName];
+                if (!channel.Members.Contains(requestingUserId))
+                {
+                    return new List<Message>();
+                }
+
+                return _channelMessages[channelName]
+                    .Where(m => m.Timestamp > since && m.SenderId != requestingUserId)
+                    .ToList();
+            }
+            finally
+            {
+                _lock.ExitReadLock();
             }
         }
     }

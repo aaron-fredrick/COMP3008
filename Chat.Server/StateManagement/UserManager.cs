@@ -147,22 +147,6 @@ namespace Chat.Server.StateManagement
             }
         }
 
-        public void AddPendingChannelMessage(string userId, Message message)
-        {
-            _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].PendingChannelMessages.Enqueue(message);
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
-        }
-
         public void AddPendingPrivateMessage(string userId, Message message)
         {
             _lock.EnterWriteLock();
@@ -179,22 +163,38 @@ namespace Chat.Server.StateManagement
             }
         }
 
-        public Queue<Message> GetPendingChannelMessages(string userId)
+        public DateTime UpdateLastPollTime(string userId)
         {
             _lock.EnterWriteLock();
             try
             {
                 if (_users.ContainsKey(userId))
                 {
-                    var messages = _users[userId].PendingChannelMessages;
-                    _users[userId].PendingChannelMessages = new Queue<Message>();
-                    return messages;
+                    _users[userId].LastPollTime = DateTime.UtcNow;
+                    return _users[userId].LastPollTime;
                 }
-                return new Queue<Message>();
+                return DateTime.UtcNow;
             }
             finally
             {
                 _lock.ExitWriteLock();
+            }
+        }
+
+        public DateTime GetLastPollTime(string userId)
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                if (_users.ContainsKey(userId))
+                {
+                    return _users[userId].LastPollTime;
+                }
+                return DateTime.UtcNow;
+            }
+            finally
+            {
+                _lock.ExitReadLock();
             }
         }
 

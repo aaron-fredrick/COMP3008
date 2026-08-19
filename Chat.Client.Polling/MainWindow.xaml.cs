@@ -204,11 +204,7 @@ namespace Chat.Client.Polling
                 var messages = _serviceClient.GetPendingMessages(_currentUserId);
                 foreach (var message in messages)
                 {
-                    // Skip own messages since we display them immediately on send
-                    if (message.SenderId != _currentUserId)
-                    {
-                        _conversationView?.AddMessage(message);
-                    }
+                    _conversationView?.AddMessage(message);
                 }
 
                 var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.CallbackContracts;
@@ -8,7 +9,7 @@ namespace Chat.Server.StateManagement
     {
         public string UserId { get; set; }
         public string CurrentChannel { get; set; }
-        public Queue<Message> PendingChannelMessages { get; set; }
+        public DateTime LastPollTime { get; set; }
         public Queue<Message> PendingPrivateMessages { get; set; }
         public IChatCallback Callback { get; set; }
 
@@ -16,7 +17,7 @@ namespace Chat.Server.StateManagement
         {
             UserId = userId;
             CurrentChannel = null;
-            PendingChannelMessages = new Queue<Message>();
+            LastPollTime = DateTime.UtcNow;
             PendingPrivateMessages = new Queue<Message>();
             Callback = null;
         }

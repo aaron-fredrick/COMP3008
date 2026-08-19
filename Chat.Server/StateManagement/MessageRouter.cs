@@ -57,11 +57,10 @@ namespace Chat.Server.StateManagement
                     RecipientId = null
                 };
 
-                foreach (var memberId in members)
-                {
-                    _userManager.AddPendingChannelMessage(memberId, message);
-                }
+                // Add to channel message history
+                _channelManager.AddChannelMessage(channelName, message);
 
+                // Notify via callbacks for duplex clients
                 _callbackManager.NotifyMessageReceived(channelName, message);
 
                 return true;
