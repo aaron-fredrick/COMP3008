@@ -116,7 +116,8 @@ namespace Chat.Server
 
         static void LogInfo(string message)
         {
-            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [INFO] {message}";
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
+            string logMessage = $"[{timestamp}] [INFO] {message}";
             lock (_logLock)
             {
                 try
@@ -125,12 +126,29 @@ namespace Chat.Server
                 }
                 catch { }
             }
-            Console.WriteLine(logMessage);
+
+            // Color-coded console output
+            ConsoleColor originalColor = Console.ForegroundColor;
+
+            // Timestamp in purple
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.Write($"[{timestamp}] ");
+
+            // Log level in blue
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write("[INFO] ");
+
+            // Message in green
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(message);
+
+            Console.ForegroundColor = originalColor;
         }
 
         static void LogError(string message)
         {
-            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [ERROR] {message}";
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
+            string logMessage = $"[{timestamp}] [ERROR] {message}";
             lock (_logLock)
             {
                 try
@@ -139,7 +157,23 @@ namespace Chat.Server
                 }
                 catch { }
             }
-            Console.WriteLine(logMessage);
+
+            // Color-coded console output
+            ConsoleColor originalColor = Console.ForegroundColor;
+
+            // Timestamp in purple
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.Write($"[{timestamp}] ");
+
+            // Log level in red
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("[ERROR] ");
+
+            // Message in yellow
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(message);
+
+            Console.ForegroundColor = originalColor;
         }
 
         static void PrintHelp()

@@ -164,7 +164,8 @@ namespace Chat.Server.Services
         private void LogRequest(string message)
         {
             string clientType = DetectClientType();
-            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [REQUEST] [{clientType}] {message}";
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
+            string logMessage = $"[{timestamp}] [REQUEST] [{clientType}] {message}";
             string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
             try
             {
@@ -174,8 +175,23 @@ namespace Chat.Server.Services
 
             // Color-coded console output
             ConsoleColor originalColor = Console.ForegroundColor;
+
+            // Timestamp in purple
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.Write($"[{timestamp}] ");
+
+            // Log level in blue
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write("[REQUEST] ");
+
+            // Client type in yellow
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"[{clientType}] ");
+
+            // Message in cyan
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(logMessage);
+            Console.WriteLine(message);
+
             Console.ForegroundColor = originalColor;
         }
 
