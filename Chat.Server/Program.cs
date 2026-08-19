@@ -1,14 +1,20 @@
 using System;
+using System.IO;
 using Chat.Server.Hosting;
 
 namespace Chat.Server
 {
     class Program
     {
+        private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
+        private static ChatServiceHost _serviceHost;
+        private static readonly object _logLock = new object();
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Chat Server - COMP3008");
-            Console.WriteLine("========================");
+            SetupLogging();
+            LogInfo("Chat Server - COMP3008");
+            LogInfo("========================");
 
             string host = null;
             int? pollingPort = null;
@@ -43,21 +49,94 @@ namespace Chat.Server
                 }
             }
 
-            var serviceHost = new ChatServiceHost(host, pollingPort, duplexPort);
+            _serviceHost = new ChatServiceHost(host, pollingPort, duplexPort);
+
+            Console.CancelKeyPress += OnCancelKeyPress;
 
             try
             {
-                serviceHost.Start();
-                Console.WriteLine("\nPress any key to stop the server...");
-                Console.ReadKey();
-                serviceHost.Stop();
+                _serviceHost.Start();
+                LogInfo("Server started successfully");
+                LogInfo($"Polling endpoint: {_serviceHost.PollingEndpoint}");
+                LogInfo($"Duplex endpoint: {_serviceHost.DuplexEndpoint}");
+                LogInfo("Press Ctrl+C to stop the server...");
+                Console.ReadLine();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\nError: {ex.Message}");
+                LogError($"Error: {ex.Message}");
+                LogError($"Stack Trace: {ex.StackTrace}");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }
+            finally
+            {
+                if (_serviceHost != null)
+                {
+                    _serviceHost.Stop();
+                }
+            }
+        }
+
+        static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            e.Cancel = true;
+            LogInfo("Shutdown signal received (Ctrl+C)");
+            Console.WriteLine("\nShutting down server...");
+
+            if (_serviceHost != null)
+            {
+                _serviceHost.Stop();
+            }
+
+            LogInfo("Server stopped");
+            Environment.Exit(0);
+        }
+
+        static void SetupLogging()
+        {
+            try
+            {
+                var logDir = Path.GetDirectoryName(LogFilePath);
+                if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
+                {
+                    Directory.CreateDirectory(logDir);
+                }
+
+                File.WriteAllText(LogFilePath, $"=== Chat Server Log - {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC ===\n");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not initialize logging: {ex.Message}");
+            }
+        }
+
+        static void LogInfo(string message)
+        {
+            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [INFO] {message}";
+            lock (_logLock)
+            {
+                try
+                {
+                    File.AppendAllText(LogFilePath, logMessage + Environment.NewLine);
+                }
+                catch { }
+            }
+            Console.WriteLine(message);
+        }
+
+        static void LogError(string message)
+        {
+            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [ERROR] {message}";
+            lock (_logLock)
+            {
+                try
+                {
+                    File.AppendAllText(LogFilePath, logMessage + Environment.NewLine);
+                }
+                catch { }
+            }
+            Console.WriteLine(message);
         }
 
         static void PrintHelp()

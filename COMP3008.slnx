@@ -4,4 +4,5 @@
   <Project Path="Chat.Client.Shared/Chat.Client.Shared.csproj" Id="b2c3d4e5-f6a7-4890-b123-45678901bcde" />
   <Project Path="Chat.Contracts/Chat.Contracts.csproj" Id="a1b2c3d4-e5f6-4789-a012-34567890abcd" />
   <Project Path="Chat.Server/Chat.Server.csproj" Id="c3d4e5f6-a7b8-4901-c234-56789012cdef" />
+  <Project Path="test1/test1.csproj" Id="675d7c94-dd35-4aa2-8873-e94224f7c784" />
 </Solution>

@@ -66,15 +66,38 @@ Maximum file size: **2 MB**
 
 ### Prerequisites
 
-- Visual Studio 2022
+- Visual Studio 2019 or later
 - .NET Framework 4.8 SDK
 - Windows OS
 
 ### Building the Solution
 
-1. Open `COMP3008.slnx` in Visual Studio 2022
+**Using build scripts (recommended):**
+```powershell
+# Build Chat.Server (default)
+.\build.ps1
+
+# Build specific project
+.\build.ps1 Chat.Contracts
+
+# Build with Release configuration
+.\build.ps1 Chat.Server Release
+
+# Or use batch file
+build.bat
+build.bat Chat.Contracts
+build.bat Chat.Server Release
+```
+
+**Using Visual Studio:**
+1. Open `COMP3008.slnx` in Visual Studio
 2. Build the solution (Ctrl+Shift+B)
 3. Ensure all projects compile successfully
+
+**Using MSBuild directly:**
+```powershell
+& "d:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" Chat.Server\Chat.Server.csproj /p:Configuration=Debug
+```
 
 ### Running the Server
 

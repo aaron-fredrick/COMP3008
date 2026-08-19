@@ -13,6 +13,9 @@ namespace Chat.Server.Hosting
         private readonly int _pollingPort;
         private readonly int _duplexPort;
 
+        public string PollingEndpoint { get; private set; }
+        public string DuplexEndpoint { get; private set; }
+
         public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null)
         {
             _host = host ?? ConfigurationManager.AppSettings["Host"] ?? "localhost";
@@ -39,14 +42,12 @@ namespace Chat.Server.Hosting
                     $"net.tcp://{_host}:{_duplexPort}/ChatService/Duplex");
 
                 _serviceHost.Open();
-                Console.WriteLine("Chat Service started successfully.");
-                Console.WriteLine($"Polling endpoint: {pollingEndpoint.Address}");
-                Console.WriteLine($"Duplex endpoint: {duplexEndpoint.Address}");
+                PollingEndpoint = pollingEndpoint.Address.ToString();
+                DuplexEndpoint = duplexEndpoint.Address.ToString();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to start service: {ex.Message}");
-                throw;
+                throw new Exception($"Failed to start service: {ex.Message}", ex);
             }
         }
 
@@ -54,9 +55,16 @@ namespace Chat.Server.Hosting
         {
             if (_serviceHost != null)
             {
-                _serviceHost.Close();
-                _serviceHost = null;
-                Console.WriteLine("Chat Service stopped.");
+                try
+                {
+                    _serviceHost.Close();
+                    _serviceHost = null;
+                }
+                catch (Exception ex)
+                {
+                    _serviceHost = null;
+                    throw new Exception($"Error stopping service: {ex.Message}", ex);
+                }
             }
         }
     }
