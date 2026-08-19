@@ -7,7 +7,6 @@ A real-time chat application built with .NET Framework, WCF, and WPF supporting 
 - **Framework**: .NET Framework 4.8
 - **UI Framework**: WPF (Windows Presentation Foundation)
 - **Communication**: WCF (Windows Communication Foundation)
-- **Database**: SQLite (for session recovery)
 - **Language**: C#
 
 ## Solution Architecture
@@ -31,7 +30,7 @@ COMP3008.sln
 │
 ├── Chat.Server/                # Console application
 │   ├── Services/               # WCF service implementations (implements Chat.Contracts)
-│   ├── StateManagement/        # In-memory state + SQLite persistence
+│   ├── StateManagement/        # In-memory state management
 │   ├── FileStorage/            # File handling and validation
 │   └── Hosting/                # Service host configuration
 │
@@ -266,10 +265,16 @@ CREATE INDEX idx_private_messages_time ON PrivateMessages(sent_at);
 
 ### Server Configuration
 **Address and Port**:
-- Fixed address: `net.tcp://localhost:8080/ChatService`
-- Port: 8080 (configurable in app.config)
+- Configurable via App.config or command-line arguments
+- Default polling endpoint: `http://localhost:8080/ChatService/Polling`
+- Default duplex endpoint: `net.tcp://localhost:8081/ChatService/Duplex`
 - Binding: `netTcpBinding` for duplex client
-- Binding: `basicHttpBinding` or `wsHttpBinding` for polling client
+- Binding: `basicHttpBinding` for polling client
+
+**Configuration Options**:
+- App.config: Set `PollingHost`, `PollingPort`, `DuplexHost`, `DuplexPort` in appSettings
+- Command-line: `--polling-host`, `--polling-port`, `--duplex-host`, `--duplex-port`
+- Command-line arguments override App.config values
 
 **State Management**:
 - All state held in server memory (per assignment requirement)
@@ -304,48 +309,10 @@ CREATE INDEX idx_private_messages_time ON PrivateMessages(sent_at);
 - Collapsible panel to save screen space
 
 ### Server-Side SQLite Schema
-**Purpose**: Recover server state after crash to minimize data loss.
+**NOTE**: Server-side SQLite is NOT required per assignment. The assignment explicitly states:
+> All state is held in server memory. No database is required, and nothing needs to survive a server restart.
 
-```sql
-CREATE TABLE Users (
-    user_id TEXT PRIMARY KEY,
-    current_channel TEXT,
-    last_seen TIMESTAMP
-);
-
-CREATE TABLE Channels (
-    channel_name TEXT PRIMARY KEY,
-    created_at TIMESTAMP
-);
-
-CREATE TABLE ChannelMembers (
-    channel_name TEXT,
-    user_id TEXT,
-    joined_at TIMESTAMP,
-    PRIMARY KEY (channel_name, user_id)
-);
-
-CREATE TABLE SharedFiles (
-    file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    channel_name TEXT,
-    file_name TEXT,
-    file_type TEXT,
-    file_size INTEGER,
-    uploader_id TEXT,
-    uploaded_at TIMESTAMP,
-    file_path TEXT
-);
-```
-
-**Recovery Strategy**:
-- Periodic checkpoint every 30 seconds
-- On server startup: load from SQLite if available
-- In-memory state remains primary source
-- SQLite serves as backup, not primary storage
-
-**Limitations**:
-- Message history NOT recovered (per assignment requirements)
-- Only structural state (users, channels, files) recovered
+Server implementation uses in-memory state only. Any SQLite implementation would be client-side only for optional local message history caching.
 
 ## Shared Contract Implementation
 
@@ -379,17 +346,21 @@ public class MessageRouter : IMessageRouter { }
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1)
-- [ ] Create solution structure with 4 projects
-- [ ] Define all service contracts in Chat.Contracts
-- [ ] Define data contracts and shared types
-- [ ] Set up basic WCF hosting in Chat.Server
-- [ ] Create basic WPF shell for both clients
+- [x] Create solution structure with 5 projects
+- [x] Define all service contracts in Chat.Contracts
+- [x] Define data contracts and shared types
+- [x] Set up basic WCF hosting in Chat.Server
+- [x] Create basic WPF shell for both clients
+- [x] Add configurable endpoints via App.config and command-line
 
 ### Phase 2: Server Core (Week 2)
-- [ ] Implement UserManager with ID uniqueness
-- [ ] Implement ChannelManager with CRUD operations
-- [ ] Implement MessageRouter for public messages
-- [ ] Implement FileHandler with validation
+- [x] Implement UserManager with ID uniqueness
+- [x] Implement ChannelManager with CRUD operations
+- [x] Implement MessageRouter for public messages
+- [x] Implement FileHandler with validation
+- [x] Implement CallbackManager for duplex callbacks
+- [x] Implement ChatService WCF service
+- [x] Add thread-safety with ReaderWriterLockSlim
 - [ ] Add basic unit tests for server components
 
 ### Phase 3: Polling Client (Week 3)
@@ -409,11 +380,11 @@ public class MessageRouter : IMessageRouter { }
 - [ ] Implement settings feature
 
 ### Phase 5: Session Recovery (Week 5)
-- [ ] Design SQLite schema
-- [ ] Implement SQLite persistence layer
-- [ ] Add periodic checkpointing
-- [ ] Implement recovery on server startup
-- [ ] Test crash recovery scenarios
+- [ ] Design SQLite schema (optional - client-side only)
+- [ ] Implement SQLite persistence layer (optional - client-side only)
+- [ ] Add periodic checkpointing (optional - client-side only)
+- [ ] Implement recovery on server startup (NOT REQUIRED - assignment states no server persistence)
+- [ ] Test crash recovery scenarios (optional - client-side only)
 
 ### Phase 6: Duplex Client (Week 6)
 - [ ] Implement IDuplexChatService on server
