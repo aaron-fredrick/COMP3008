@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.ServiceModel;
 using Chat.Contracts.ServiceContracts;
 using Chat.Contracts.CallbackContracts;
@@ -12,9 +13,12 @@ namespace Chat.Server.Tests
         private static int _totalTests = 0;
         private static int _passedTests = 0;
         private static int _failedTests = 0;
+        private static string _pollingUrl;
+        private static string _duplexUrl;
 
         static void Main(string[] args)
         {
+            LoadConfiguration(args);
             PrintHeader();
 
             try
@@ -33,6 +37,50 @@ namespace Chat.Server.Tests
 
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
+        }
+
+        static void LoadConfiguration(string[] args)
+        {
+            // Load from App.config
+            _pollingUrl = ConfigurationManager.AppSettings["PollingUrl"] ?? "http://localhost:9000/ChatService/Polling";
+            _duplexUrl = ConfigurationManager.AppSettings["DuplexUrl"] ?? "net.tcp://localhost:8081/ChatService/Duplex";
+
+            // Override with command-line arguments
+            for (int i = 0; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "--polling-url":
+                        if (i + 1 < args.Length)
+                        {
+                            _pollingUrl = args[++i];
+                        }
+                        break;
+                    case "--duplex-url":
+                        if (i + 1 < args.Length)
+                        {
+                            _duplexUrl = args[++i];
+                        }
+                        break;
+                    case "--help":
+                    case "-h":
+                        PrintHelp();
+                        Environment.Exit(0);
+                        break;
+                }
+            }
+        }
+
+        static void PrintHelp()
+        {
+            Console.WriteLine("Usage: Chat.Server.Tests.exe [options]");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --polling-url <url>   Polling endpoint URL (default: from App.config)");
+            Console.WriteLine("  --duplex-url <url>    Duplex endpoint URL (default: from App.config)");
+            Console.WriteLine("  -h, --help              Show this help message");
+            Console.WriteLine();
+            Console.WriteLine("Configuration can also be set in App.config under appSettings.");
         }
 
         static void PrintHeader()
@@ -161,11 +209,10 @@ namespace Chat.Server.Tests
         {
             PrintSectionHeader("POLLING TESTS");
 
-            string serverUrl = "http://localhost:9000/ChatService/Polling";
-            PrintConnectionInfo("Connecting to polling server...", serverUrl);
+            PrintConnectionInfo("Connecting to polling server...", _pollingUrl);
 
             var binding = new BasicHttpBinding();
-            var endpoint = new EndpointAddress(serverUrl);
+            var endpoint = new EndpointAddress(_pollingUrl);
             var channelFactory = new ChannelFactory<IChatService>(binding, endpoint);
             IChatService proxy = channelFactory.CreateChannel();
 
@@ -268,11 +315,10 @@ namespace Chat.Server.Tests
         {
             PrintSectionHeader("DUPLEX TESTS");
 
-            string serverUrl = "net.tcp://localhost:8081/ChatService/Duplex";
-            PrintConnectionInfo("Connecting to duplex server...", serverUrl);
+            PrintConnectionInfo("Connecting to duplex server...", _duplexUrl);
 
             var binding = new NetTcpBinding();
-            var endpoint = new EndpointAddress(serverUrl);
+            var endpoint = new EndpointAddress(_duplexUrl);
             var callback = new TestCallback();
             var context = new InstanceContext(callback);
             var channelFactory = new DuplexChannelFactory<IDuplexChatService>(context, binding, endpoint);
@@ -283,7 +329,7 @@ namespace Chat.Server.Tests
 
             // Connect to polling endpoint for operations not in duplex
             var pollingBinding = new BasicHttpBinding();
-            var pollingEndpoint = new EndpointAddress("http://localhost:9000/ChatService/Polling");
+            var pollingEndpoint = new EndpointAddress(_pollingUrl);
             var pollingFactory = new ChannelFactory<IChatService>(pollingBinding, pollingEndpoint);
             IChatService pollingProxy = pollingFactory.CreateChannel();
 
