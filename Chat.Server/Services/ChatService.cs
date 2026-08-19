@@ -30,11 +30,14 @@ namespace Chat.Server.Services
 
         public bool SignIn(string userId)
         {
-            return _userManager.TrySignIn(userId, out string reason);
+            bool result = _userManager.TrySignIn(userId, out string reason);
+            LogRequest($"SignIn - User: {userId}, Success: {result}, Reason: {reason}");
+            return result;
         }
 
         public void SignOut(string userId)
         {
+            LogRequest($"SignOut - User: {userId}");
             var session = _userManager.GetUserSession(userId);
             if (session != null)
             {
@@ -49,16 +52,21 @@ namespace Chat.Server.Services
 
         public List<Channel> GetChannels()
         {
-            return _channelManager.GetChannels();
+            var channels = _channelManager.GetChannels();
+            LogRequest($"GetChannels - Count: {channels.Count}");
+            return channels;
         }
 
         public bool CreateChannel(string channelName)
         {
-            return _channelManager.TryCreateChannel(channelName, out string reason);
+            bool result = _channelManager.TryCreateChannel(channelName, out string reason);
+            LogRequest($"CreateChannel - Name: {channelName}, Success: {result}, Reason: {reason}");
+            return result;
         }
 
         public bool JoinChannel(string userId, string channelName)
         {
+            LogRequest($"JoinChannel - User: {userId}, Channel: {channelName}");
             var session = _userManager.GetUserSession(userId);
             if (session == null)
             {
@@ -82,6 +90,7 @@ namespace Chat.Server.Services
 
         public void LeaveChannel(string userId)
         {
+            LogRequest($"LeaveChannel - User: {userId}");
             var session = _userManager.GetUserSession(userId);
             if (session != null && session.CurrentChannel != null)
             {
@@ -92,50 +101,73 @@ namespace Chat.Server.Services
 
         public List<string> GetChannelMembers(string channelName)
         {
-            return _channelManager.GetChannelMembers(channelName);
+            var members = _channelManager.GetChannelMembers(channelName);
+            LogRequest($"GetChannelMembers - Channel: {channelName}, Count: {members.Count}");
+            return members;
         }
 
         public void SendMessage(string senderId, string channelName, string content)
         {
+            LogRequest($"SendMessage - Sender: {senderId}, Channel: {channelName}, Content: {content}");
             _messageRouter.RoutePublicMessage(senderId, channelName, content, out string reason);
         }
 
         public void SendPrivateMessage(string senderId, string recipientId, string content)
         {
+            LogRequest($"SendPrivateMessage - Sender: {senderId}, Recipient: {recipientId}, Content: {content}");
             _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
         }
 
         public bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData)
         {
-            return _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason);
+            bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason);
+            LogRequest($"ShareFile - Uploader: {uploaderId}, Channel: {channelName}, File: {fileName}, Type: {fileType}, Success: {result}, Reason: {reason}");
+            return result;
         }
 
         public SharedFile GetFile(string channelName, string fileName)
         {
+            LogRequest($"GetFile - Channel: {channelName}, File: {fileName}");
             return _fileHandler.GetFile(channelName, fileName);
         }
 
         public List<Message> GetPendingMessages(string userId)
         {
             var pendingQueue = _userManager.GetPendingChannelMessages(userId);
+            LogRequest($"GetPendingMessages - User: {userId}, Count: {pendingQueue.Count}");
             return new List<Message>(pendingQueue);
         }
 
         public List<Message> GetPendingPrivateMessages(string userId)
         {
             var pendingQueue = _userManager.GetPendingPrivateMessages(userId);
+            LogRequest($"GetPendingPrivateMessages - User: {userId}, Count: {pendingQueue.Count}");
             return new List<Message>(pendingQueue);
         }
 
         public void RegisterCallback(string userId)
         {
+            LogRequest($"RegisterCallback - User: {userId}");
             var callback = OperationContext.Current.GetCallbackChannel<IChatCallback>();
             _callbackManager.RegisterCallback(userId, callback);
         }
 
         public void UnregisterCallback(string userId)
         {
+            LogRequest($"UnregisterCallback - User: {userId}");
             _callbackManager.UnregisterCallback(userId);
+        }
+
+        private void LogRequest(string message)
+        {
+            string logMessage = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC] [REQUEST] {message}";
+            string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
+            try
+            {
+                System.IO.File.AppendAllText(logPath, logMessage + Environment.NewLine);
+            }
+            catch { }
+            Console.WriteLine(logMessage);
         }
     }
 }
