@@ -26,7 +26,8 @@
                            Foreground="#ffffff" Margin="0,0,0,10"/>
                 <ListBox x:Name="ChannelsListBox" Background="#2d2d2d" 
                          Foreground="#ffffff" BorderBrush="#404040" Height="250"
-                         SelectionMode="Single" SelectionChanged="ChannelsListBox_SelectionChanged"/>
+                         SelectionMode="Single" SelectionChanged="ChannelsListBox_SelectionChanged"
+                         DisplayMemberPath="Name"/>
             </StackPanel>
         </Border>
 
