@@ -200,6 +200,11 @@ namespace Chat.Client.Polling
             _pollingTimer?.Stop();
             _serviceClient?.SignOut(_currentUserId);
             _serviceClient?.Dispose();
+            
+            _channelListView?.Close();
+            _conversationView?.Close();
+            
+            Application.Current.Shutdown();
             base.OnClosed(e);
         }
     }

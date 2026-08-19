@@ -15,6 +15,12 @@ namespace Chat.Client.Polling.Views
         public ConversationView()
         {
             InitializeComponent();
+            this.Closing += ConversationView_Closing;
+        }
+
+        private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Don't prevent closing, just ensure cleanup happens
         }
 
         public void SetChannelName(string channelName)
