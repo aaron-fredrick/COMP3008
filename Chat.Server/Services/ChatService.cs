@@ -26,7 +26,7 @@ namespace Chat.Server.Services
         {
             _userManager = new UserManager();
             _channelManager = new ChannelManager();
-            _callbackManager = new CallbackManager(_userManager);
+            _callbackManager = new CallbackManager(_userManager, _channelManager);
             _messageRouter = new MessageRouter(_userManager, _channelManager, _callbackManager);
             _fileHandler = new FileHandler();
         }

@@ -216,5 +216,26 @@ namespace Chat.Server.StateManagement
                 _lock.ExitWriteLock();
             }
         }
+
+        public List<string> GetChannelMembers(string channelName, ChannelManager channelManager)
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                var members = new List<string>();
+                foreach (var kvp in _users)
+                {
+                    if (kvp.Value.CurrentChannel == channelName)
+                    {
+                        members.Add(kvp.Key);
+                    }
+                }
+                return members;
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
     }
 }

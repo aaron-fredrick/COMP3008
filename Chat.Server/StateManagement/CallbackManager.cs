@@ -8,11 +8,13 @@ namespace Chat.Server.StateManagement
     public class CallbackManager
     {
         private readonly UserManager _userManager;
+        private readonly ChannelManager _channelManager;
         private readonly ReaderWriterLockSlim _lock;
 
-        public CallbackManager(UserManager userManager)
+        public CallbackManager(UserManager userManager, ChannelManager channelManager)
         {
             _userManager = userManager;
+            _channelManager = channelManager;
             _lock = new ReaderWriterLockSlim();
         }
 
@@ -31,15 +33,19 @@ namespace Chat.Server.StateManagement
             _lock.EnterReadLock();
             try
             {
-                var callback = _userManager.GetCallback(message.SenderId);
-                if (callback != null)
+                var members = _userManager.GetChannelMembers(channelName, _channelManager);
+                foreach (var memberId in members)
                 {
-                    try
+                    var callback = _userManager.GetCallback(memberId);
+                    if (callback != null)
                     {
-                        callback.OnMessageReceived(message);
-                    }
-                    catch
-                    {
+                        try
+                        {
+                            callback.OnMessageReceived(message);
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
             }
