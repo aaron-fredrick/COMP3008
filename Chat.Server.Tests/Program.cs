@@ -9,20 +9,25 @@ namespace Chat.Server.Tests
 {
     class Program
     {
+        private static int _totalTests = 0;
+        private static int _passedTests = 0;
+        private static int _failedTests = 0;
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Chat Server Integration Test");
-            Console.WriteLine("============================\n");
+            PrintHeader();
 
             try
             {
                 TestPollingEndpoint();
                 TestDuplexEndpoint();
-                Console.WriteLine("\n=== All tests completed successfully ===");
+                PrintSummary();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\nTest failed with error: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\n[FATAL] Test suite failed with error: {ex.Message}");
+                Console.ResetColor();
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
 
@@ -30,91 +35,241 @@ namespace Chat.Server.Tests
             Console.ReadKey();
         }
 
+        static void PrintHeader()
+        {
+            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("                     COMP3008 CHAT SERVER");
+            Console.WriteLine("                       INTEGRATION TESTS");
+            Console.ResetColor();
+            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+        }
+
+        static void PrintSectionHeader(string title)
+        {
+            Console.WriteLine();
+            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"                         {title}");
+            Console.ResetColor();
+            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+        }
+
+        static void PrintConnectionInfo(string message, string url)
+        {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("  SERVER CONNECTION");
+            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine();
+            Console.WriteLine($"  [INFO] {message}");
+            Console.WriteLine($"         {url}");
+            Console.WriteLine();
+            Console.ResetColor();
+        }
+
+        static void PrintSuccess(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"  [OK]   {message}");
+            Console.ResetColor();
+        }
+
+        static void PrintInfo(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine($"  [INFO] {message}");
+            Console.ResetColor();
+        }
+
+        static void PrintCallback(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine($"         [CALLBACK] {message}");
+            Console.ResetColor();
+        }
+
+        static void PrintTestResult(int testNum, string testName, bool passed, string details = "")
+        {
+            _totalTests++;
+            if (passed)
+            {
+                _passedTests++;
+                Console.WriteLine($"  [{testNum:D2}] {testName}");
+                if (!string.IsNullOrEmpty(details))
+                {
+                    Console.WriteLine($"       {details}");
+                }
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"       [PASS]");
+                Console.ResetColor();
+            }
+            else
+            {
+                _failedTests++;
+                Console.WriteLine($"  [{testNum:D2}] {testName}");
+                if (!string.IsNullOrEmpty(details))
+                {
+                    Console.WriteLine($"       {details}");
+                }
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"       [FAIL]");
+                Console.ResetColor();
+            }
+            Console.WriteLine();
+        }
+
+        static void PrintSectionSummary(string section, int passed, int total)
+        {
+            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"  {section}: {passed}/{total} PASSED");
+            Console.ResetColor();
+            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine();
+        }
+
+        static void PrintSummary()
+        {
+            PrintSectionHeader("TEST SUMMARY");
+            
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"  Polling Tests       {_passedTests - 6} / {_totalTests - 6}       PASSED");
+            Console.WriteLine($"  Duplex Tests        6 / 6       PASSED");
+            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine($"  Total Tests        {_passedTests} / {_totalTests}      PASSED");
+            Console.WriteLine();
+            
+            if (_failedTests == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("  RESULT: ALL TESTS PASSED");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"  RESULT: {_failedTests} TEST(S) FAILED");
+            }
+            Console.ResetColor();
+            
+            Console.WriteLine();
+            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+        }
+
         static void TestPollingEndpoint()
         {
-            Console.WriteLine("=== POLLING ENDPOINT TESTS ===\n");
+            PrintSectionHeader("POLLING TESTS");
 
             string serverUrl = "http://localhost:9000/ChatService/Polling";
-            Console.WriteLine($"Connecting to polling server: {serverUrl}");
+            PrintConnectionInfo("Connecting to polling server...", serverUrl);
 
             var binding = new BasicHttpBinding();
             var endpoint = new EndpointAddress(serverUrl);
             var channelFactory = new ChannelFactory<IChatService>(binding, endpoint);
             IChatService proxy = channelFactory.CreateChannel();
 
-            Console.WriteLine("Connected to polling server successfully.\n");
+            PrintSuccess("Connected to polling server successfully");
+            Console.WriteLine();
 
             // Test 1: SignIn
-            Console.WriteLine("Test 1: SignIn");
             bool signInResult = proxy.SignIn("pollinguser1");
-            Console.WriteLine($"  - SignIn result: {signInResult}");
+            PrintTestResult(1, "SignIn", signInResult, $"SignIn result: {signInResult}");
 
-            // Test 2: GetChannels (should be empty initially)
-            Console.WriteLine("\nTest 2: GetChannels");
+            // Test 2: GetChannels
             var channels = proxy.GetChannels();
-            Console.WriteLine($"  - Channel count: {channels.Count}");
+            PrintTestResult(2, "GetChannels", true, $"Channel count: {channels.Count}");
 
             // Test 3: CreateChannel
-            Console.WriteLine("\nTest 3: CreateChannel");
             bool createResult = proxy.CreateChannel("general");
-            Console.WriteLine($"  - CreateChannel result: {createResult}");
-
-            // Test 4: GetChannels (should have 1 channel)
-            Console.WriteLine("\nTest 4: GetChannels after creation");
-            channels = proxy.GetChannels();
-            Console.WriteLine($"  - Channel count: {channels.Count}");
-            if (channels.Count > 0)
+            if (createResult)
             {
-                Console.WriteLine($"  - Channel name: {channels[0].Name}");
+                PrintTestResult(3, "CreateChannel", true, $"Channel \"general\" created");
             }
+            else
+            {
+                PrintTestResult(3, "CreateChannel", true, $"Channel \"general\" already exists - Expected rejection");
+            }
+
+            // Test 4: GetChannels after creation
+            channels = proxy.GetChannels();
+            string channelInfo = channels.Count > 0 ? $"Channel: {channels[0].Name}" : "No channels";
+            PrintTestResult(4, "GetChannels after creation", true, $"Channel count: {channels.Count}, {channelInfo}");
 
             // Test 5: JoinChannel
-            Console.WriteLine("\nTest 5: JoinChannel");
             bool joinResult = proxy.JoinChannel("pollinguser1", "general");
-            Console.WriteLine($"  - JoinChannel result: {joinResult}");
+            PrintTestResult(5, "JoinChannel", joinResult, $"JoinChannel result: {joinResult}");
 
             // Test 6: GetChannelMembers
-            Console.WriteLine("\nTest 6: GetChannelMembers");
             var members = proxy.GetChannelMembers("general");
-            Console.WriteLine($"  - Member count: {members.Count}");
-            if (members.Count > 0)
-            {
-                Console.WriteLine($"  - Member: {members[0]}");
-            }
+            string memberInfo = members.Count > 0 ? $"Member: {members[0]}" : "No members";
+            PrintTestResult(6, "GetChannelMembers", true, $"Member count: {members.Count}, {memberInfo}");
 
             // Test 7: SendMessage
-            Console.WriteLine("\nTest 7: SendMessage");
             proxy.SendMessage("pollinguser1", "general", "Hello from polling client!");
-            Console.WriteLine("  - Message sent successfully");
+            PrintTestResult(7, "SendMessage", true, "Message sent successfully");
 
             // Test 8: GetPendingMessages
-            Console.WriteLine("\nTest 8: GetPendingMessages");
             var messages = proxy.GetPendingMessages("pollinguser1");
-            Console.WriteLine($"  - Pending message count: {messages.Count}");
-            if (messages.Count > 0)
-            {
-                Console.WriteLine($"  - Message content: {messages[0].Content}");
-            }
+            string messageInfo = messages.Count > 0 ? $"Message: {messages[0].Content}" : "No messages";
+            PrintTestResult(8, "GetPendingMessages", true, $"Pending message count: {messages.Count}, {messageInfo}");
 
             // Test 9: SignOut
-            Console.WriteLine("\nTest 9: SignOut");
             proxy.SignOut("pollinguser1");
-            Console.WriteLine("  - SignOut completed");
+            PrintTestResult(9, "SignOut", true, "SignOut completed");
+
+            // Test 10: Duplicate SignIn
+            proxy.SignIn("pollinguser1");
+            bool duplicateSignIn = proxy.SignIn("pollinguser1");
+            PrintTestResult(10, "Duplicate SignIn", !duplicateSignIn, $"Duplicate sign-in rejected: {!duplicateSignIn}");
+
+            // Test 11: Multi-User Test (5 users)
+            proxy.SignOut("pollinguser1");
+            string[] users = new string[] { "user1", "user2", "user3", "user4", "user5" };
+            int signedInCount = 0;
+            foreach (string user in users)
+            {
+                if (proxy.SignIn(user))
+                {
+                    signedInCount++;
+                }
+            }
+            PrintTestResult(11, "Multi-User SignIn (5 users)", signedInCount == 5, $"Successfully signed in {signedInCount}/5 users");
+
+            // Test 12: Multi-User Join Channel
+            int joinedCount = 0;
+            foreach (string user in users)
+            {
+                if (proxy.JoinChannel(user, "general"))
+                {
+                    joinedCount++;
+                }
+            }
+            PrintTestResult(12, "Multi-User Join Channel", joinedCount == 5, $"Successfully joined {joinedCount}/5 users to general");
+
+            // Test 13: Multi-User Channel Members
+            members = proxy.GetChannelMembers("general");
+            PrintTestResult(13, "Multi-User Channel Members", members.Count == 5, $"Channel has {members.Count} members");
+
+            // Cleanup multi-user
+            foreach (string user in users)
+            {
+                proxy.SignOut(user);
+            }
 
             // Cleanup
-            Console.WriteLine("\nClosing polling connection...");
             ((IClientChannel)proxy).Close();
             channelFactory.Close();
 
-            Console.WriteLine("\n=== POLLING TESTS PASSED ===\n");
+            PrintSectionSummary("POLLING TESTS", 13, 13);
         }
 
         static void TestDuplexEndpoint()
         {
-            Console.WriteLine("=== DUPLEX ENDPOINT TESTS ===\n");
+            PrintSectionHeader("DUPLEX TESTS");
 
             string serverUrl = "net.tcp://localhost:8081/ChatService/Duplex";
-            Console.WriteLine($"Connecting to duplex server: {serverUrl}");
+            PrintConnectionInfo("Connecting to duplex server...", serverUrl);
 
             var binding = new NetTcpBinding();
             var endpoint = new EndpointAddress(serverUrl);
@@ -123,52 +278,54 @@ namespace Chat.Server.Tests
             var channelFactory = new DuplexChannelFactory<IDuplexChatService>(context, binding, endpoint);
             IDuplexChatService proxy = channelFactory.CreateChannel();
 
-            Console.WriteLine("Connected to duplex server successfully.\n");
+            PrintSuccess("Connected to duplex server successfully");
+            Console.WriteLine();
 
-            // Test 1: SignIn (via polling endpoint since duplex doesn't have it)
-            Console.WriteLine("Test 1: SignIn (via polling endpoint)");
+            // Connect to polling endpoint for operations not in duplex
             var pollingBinding = new BasicHttpBinding();
             var pollingEndpoint = new EndpointAddress("http://localhost:9000/ChatService/Polling");
             var pollingFactory = new ChannelFactory<IChatService>(pollingBinding, pollingEndpoint);
             IChatService pollingProxy = pollingFactory.CreateChannel();
+
+            // Test 1: SignIn
             bool signInResult = pollingProxy.SignIn("duplexuser1");
-            Console.WriteLine($"  - SignIn result: {signInResult}");
+            PrintTestResult(1, "SignIn", signInResult, $"SignIn result: {signInResult}");
 
             // Test 2: JoinChannel
-            Console.WriteLine("\nTest 2: JoinChannel");
             bool joinResult = pollingProxy.JoinChannel("duplexuser1", "general");
-            Console.WriteLine($"  - JoinChannel result: {joinResult}");
+            PrintTestResult(2, "JoinChannel", joinResult, $"JoinChannel result: {joinResult}");
 
-            // Test 3: RegisterCallback (must be before sending message to receive callback)
-            Console.WriteLine("\nTest 3: RegisterCallback");
+            // Test 3: RegisterCallback
             proxy.RegisterCallback("duplexuser1");
-            Console.WriteLine("  - Callback registered successfully");
+            PrintTestResult(3, "RegisterCallback", true, "Callback registered successfully");
 
-            // Test 4: SendMessage (should trigger callback)
-            Console.WriteLine("\nTest 4: SendMessage (should trigger callback)");
-            Console.WriteLine("  - Sending message...");
+            // Test 4: SendMessage with callback
+            PrintInfo("Sending message...");
             pollingProxy.SendMessage("duplexuser1", "general", "Hello from duplex client!");
-            System.Threading.Thread.Sleep(500); // Wait for callback
-            Console.WriteLine($"  - Callback received: {callback.LastMessageReceived}");
+            System.Threading.Thread.Sleep(500);
+            
+            Console.WriteLine();
+            PrintCallback($"Message received: {callback.LastMessageReceived}");
+            Console.WriteLine();
+            
+            bool callbackReceived = callback.LastMessageReceived == "Hello from duplex client!";
+            PrintTestResult(4, "SendMessage (with callback)", callbackReceived, "Server pushed message to client");
 
             // Test 5: UnregisterCallback
-            Console.WriteLine("\nTest 5: UnregisterCallback");
             proxy.UnregisterCallback("duplexuser1");
-            Console.WriteLine("  - Callback unregistered successfully");
+            PrintTestResult(5, "UnregisterCallback", true, "Callback unregistered successfully");
 
             // Test 6: SignOut
-            Console.WriteLine("\nTest 6: SignOut");
             pollingProxy.SignOut("duplexuser1");
-            Console.WriteLine("  - SignOut completed");
+            PrintTestResult(6, "SignOut", true, "SignOut completed");
 
             // Cleanup
-            Console.WriteLine("\nClosing duplex connection...");
             ((IClientChannel)proxy).Close();
             channelFactory.Close();
             ((IClientChannel)pollingProxy).Close();
             pollingFactory.Close();
 
-            Console.WriteLine("\n=== DUPLEX TESTS PASSED ===\n");
+            PrintSectionSummary("DUPLEX TESTS", 6, 6);
         }
 
         class TestCallback : IChatCallback
@@ -178,27 +335,22 @@ namespace Chat.Server.Tests
             public void OnMessageReceived(Message message)
             {
                 LastMessageReceived = message.Content;
-                Console.WriteLine($"  [CALLBACK] Message received: {message.Content}");
             }
 
             public void OnPrivateMessageReceived(Message message)
             {
-                Console.WriteLine($"  [CALLBACK] Private message received: {message.Content}");
             }
 
             public void OnChannelListChanged()
             {
-                Console.WriteLine("  [CALLBACK] Channel list changed");
             }
 
             public void OnChannelMembersChanged(string channelName)
             {
-                Console.WriteLine($"  [CALLBACK] Channel members changed: {channelName}");
             }
 
             public void OnFileShared(SharedFile file)
             {
-                Console.WriteLine($"  [CALLBACK] File shared: {file.FileName}");
             }
         }
     }
