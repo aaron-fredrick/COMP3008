@@ -105,11 +105,11 @@ namespace Chat.Server.Services
             if (success)
             {
                 _userManager.SetUserChannel(userId, channelName);
-                ServerLogger.Success(clientType, "JOIN", $"{userId} → {channelName}");
+                ServerLogger.Success(clientType, "JOIN", $"{userId} -> {channelName}");
             }
             else
             {
-                ServerLogger.Warning(clientType, "JOIN", $"{userId} → {channelName} failed");
+                ServerLogger.Warning(clientType, "JOIN", $"{userId} -> {channelName} failed");
             }
 
             return success;
@@ -138,14 +138,14 @@ namespace Chat.Server.Services
         public void SendMessage(string senderId, string channelName, string content)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "MESSAGE", $"{senderId} → {channelName}: {content}");
+            ServerLogger.Request(clientType, "MESSAGE", $"{senderId} -> {channelName}: {content}");
             _messageRouter.RoutePublicMessage(senderId, channelName, content, out string reason);
         }
 
         public void SendPrivateMessage(string senderId, string recipientId, string content)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "PRIVATE", $"{senderId} → {recipientId}: {content}");
+            ServerLogger.Request(clientType, "PRIVATE", $"{senderId} -> {recipientId}: {content}");
             _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
         }
 
@@ -177,7 +177,7 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             if (pendingQueue.Count > 0)
             {
-                ServerLogger.Request(clientType, "POLL", $"{userId} ← {pendingQueue.Count} message(s)");
+                ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} message(s)");
             }
             return new List<Message>(pendingQueue);
         }
@@ -188,7 +188,7 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             if (pendingQueue.Count > 0)
             {
-                ServerLogger.Request(clientType, "POLL", $"{userId} ← {pendingQueue.Count} private message(s)");
+                ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} private message(s)");
             }
             return new List<Message>(pendingQueue);
         }
@@ -196,7 +196,7 @@ namespace Chat.Server.Services
         public void RegisterCallback(string userId)
         {
             string clientType = DetectClientType();
-            ServerLogger.Success(clientType, "CALLBACK", $"{userId} registered");
+            ServerLogger.Success(clientType, "CALLBACK", $"{userId} -> registered");
             var callback = OperationContext.Current.GetCallbackChannel<IChatCallback>();
             _callbackManager.RegisterCallback(userId, callback);
         }
@@ -204,7 +204,7 @@ namespace Chat.Server.Services
         public void UnregisterCallback(string userId)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "CALLBACK", $"{userId} unregistered");
+            ServerLogger.Request(clientType, "CALLBACK", $"{userId} -> unregistered");
             _callbackManager.UnregisterCallback(userId);
         }
 
@@ -212,19 +212,57 @@ namespace Chat.Server.Services
         {
             try
             {
-                if (OperationContext.Current != null)
+                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
                 {
-                    var channel = OperationContext.Current.Channel;
-                    if (channel != null)
+                    var properties = OperationContext.Current.IncomingMessageProperties;
+                    
+                    // Check for Via property which contains the transport address
+                    if (properties.ContainsKey("Via"))
                     {
-                        var binding = channel.GetProperty<System.ServiceModel.Channels.Binding>();
-                        if (binding != null)
+                        var via = properties["Via"] as string;
+                        if (via != null)
                         {
-                            if (binding is System.ServiceModel.NetTcpBinding)
+                            if (via.Contains("net.tcp://") || via.Contains("net.tcp:"))
                             {
                                 return "DUPLEX";
                             }
-                            else if (binding is System.ServiceModel.BasicHttpBinding || binding is System.ServiceModel.WSHttpBinding)
+                            else if (via.Contains("http://") || via.Contains("https://"))
+                            {
+                                return "POLLING";
+                            }
+                        }
+                    }
+
+                    // Check RemoteAddressMessageProperty
+                    if (properties.ContainsKey("RemoteAddressMessageProperty"))
+                    {
+                        var remoteAddress = properties["RemoteAddressMessageProperty"];
+                        if (remoteAddress != null)
+                        {
+                            var addressStr = remoteAddress.ToString();
+                            if (addressStr.Contains("net.tcp"))
+                            {
+                                return "DUPLEX";
+                            }
+                            else if (addressStr.Contains("http"))
+                            {
+                                return "POLLING";
+                            }
+                        }
+                    }
+
+                    // Fallback: check all properties for transport info
+                    foreach (var key in properties.Keys)
+                    {
+                        var value = properties[key];
+                        if (value != null)
+                        {
+                            var valueStr = value.ToString();
+                            if (valueStr.Contains("net.tcp"))
+                            {
+                                return "DUPLEX";
+                            }
+                            else if (valueStr.Contains("http"))
                             {
                                 return "POLLING";
                             }

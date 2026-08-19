@@ -79,15 +79,14 @@ namespace Chat.Server
         static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             e.Cancel = true;
-            ServerLogger.Info("Shutdown signal received (Ctrl+C)");
-            Console.WriteLine("\nShutting down server...");
+            ServerLogger.Request("SERVER", "SHUTDOWN", "Ctrl+C received");
 
             if (_serviceHost != null)
             {
                 _serviceHost.Stop();
             }
 
-            ServerLogger.Info("Server stopped");
+            ServerLogger.Request("SERVER", "STOPPED", "Service host closed");
             _shutdownEvent.Set();
             Environment.Exit(0);
         }

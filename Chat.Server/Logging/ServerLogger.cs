@@ -147,7 +147,7 @@ namespace Chat.Server.Logging
             Console.WriteLine("  COMP3008 CHAT SERVER");
             Console.WriteLine("══════════════════════════════════════════════════════════════════════");
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("  ● SERVER ONLINE");
+            Console.WriteLine("  [+] SERVER ONLINE");
             Console.ResetColor();
             Console.WriteLine("  Polling : http://localhost:9000/ChatService/Polling");
             Console.WriteLine("  Duplex  : net.tcp://localhost:8081/ChatService/Duplex");
