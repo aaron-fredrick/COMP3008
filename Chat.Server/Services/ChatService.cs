@@ -10,7 +10,10 @@ using Chat.Server.FileStorage;
 
 namespace Chat.Server.Services
 {
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
+    [ServiceBehavior(
+        InstanceContextMode = InstanceContextMode.Single,
+        ConcurrencyMode = ConcurrencyMode.Multiple,
+        UseSynchronizationContext = false)]
     public class ChatService : IChatService, IDuplexChatService
     {
         private readonly UserManager _userManager;
