@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ServiceModel;
 using Chat.Contracts.DataContracts;
+using Chat.Contracts.SharedTypes;
 
 namespace Chat.Contracts.ServiceContracts
 {

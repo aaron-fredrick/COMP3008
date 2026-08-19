@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using Chat.Contracts.CallbackContracts;
 
 namespace Chat.Contracts.ServiceContracts
 {

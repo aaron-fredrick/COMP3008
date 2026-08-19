@@ -8,7 +8,7 @@ namespace Chat.Server.Hosting
 {
     public class ChatServiceHost
     {
-        private ServiceHost _host;
+        private ServiceHost _serviceHost;
         private readonly string _host;
         private readonly int _pollingPort;
         private readonly int _duplexPort;
@@ -24,21 +24,21 @@ namespace Chat.Server.Hosting
         {
             try
             {
-                _host = new ServiceHost(typeof(ChatService));
+                _serviceHost = new ServiceHost(typeof(ChatService));
 
                 var pollingBinding = new System.ServiceModel.BasicHttpBinding();
-                var pollingEndpoint = _host.AddServiceEndpoint(
+                var pollingEndpoint = _serviceHost.AddServiceEndpoint(
                     typeof(IChatService),
                     pollingBinding,
                     $"http://{_host}:{_pollingPort}/ChatService/Polling");
 
                 var duplexBinding = new System.ServiceModel.NetTcpBinding();
-                var duplexEndpoint = _host.AddServiceEndpoint(
+                var duplexEndpoint = _serviceHost.AddServiceEndpoint(
                     typeof(IDuplexChatService),
                     duplexBinding,
                     $"net.tcp://{_host}:{_duplexPort}/ChatService/Duplex");
 
-                _host.Open();
+                _serviceHost.Open();
                 Console.WriteLine("Chat Service started successfully.");
                 Console.WriteLine($"Polling endpoint: {pollingEndpoint.Address}");
                 Console.WriteLine($"Duplex endpoint: {duplexEndpoint.Address}");
@@ -52,10 +52,10 @@ namespace Chat.Server.Hosting
 
         public void Stop()
         {
-            if (_host != null)
+            if (_serviceHost != null)
             {
-                _host.Close();
-                _host = null;
+                _serviceHost.Close();
+                _serviceHost = null;
                 Console.WriteLine("Chat Service stopped.");
             }
         }

@@ -12,7 +12,6 @@ namespace Chat.Server.StateManagement
         private readonly ChannelManager _channelManager;
         private readonly CallbackManager _callbackManager;
         private readonly ReaderWriterLockSlim _lock;
-        private long _messageIdCounter;
 
         public MessageRouter(UserManager userManager, ChannelManager channelManager, CallbackManager callbackManager)
         {
@@ -20,7 +19,6 @@ namespace Chat.Server.StateManagement
             _channelManager = channelManager;
             _callbackManager = callbackManager;
             _lock = new ReaderWriterLockSlim();
-            _messageIdCounter = 0;
         }
 
         public bool RoutePublicMessage(string senderId, string channelName, string content, out string reason)
