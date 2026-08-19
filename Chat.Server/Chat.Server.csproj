@@ -55,6 +55,8 @@
     <Compile Include="StateManagement\MessageRouter.cs" />
     <Compile Include="StateManagement\CallbackManager.cs" />
     <Compile Include="FileStorage\FileHandler.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
+    <Compile Include="Logging\ServerLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj">

@@ -7,6 +7,7 @@ using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 using Chat.Server.StateManagement;
 using Chat.Server.FileStorage;
+using Chat.Server.Logging;
 
 namespace Chat.Server.Services
 {
@@ -34,13 +35,23 @@ namespace Chat.Server.Services
         public bool SignIn(string userId)
         {
             bool result = _userManager.TrySignIn(userId, out string reason);
-            LogRequest($"SignIn - User: {userId}, Success: {result}, Reason: {reason}");
+            string clientType = DetectClientType();
+            if (result)
+            {
+                ServerLogger.Success(clientType, "SIGN-IN", userId);
+            }
+            else
+            {
+                ServerLogger.Warning(clientType, "SIGN-IN", $"{userId} failed: {reason}");
+            }
             return result;
         }
 
         public void SignOut(string userId)
         {
-            LogRequest($"SignOut - User: {userId}");
+            string clientType = DetectClientType();
+            ServerLogger.Request(clientType, "SIGN-OUT", userId);
+
             var session = _userManager.GetUserSession(userId);
             if (session != null)
             {
@@ -56,20 +67,28 @@ namespace Chat.Server.Services
         public List<Channel> GetChannels()
         {
             var channels = _channelManager.GetChannels();
-            LogRequest($"GetChannels - Count: {channels.Count}");
+            // Don't log polling requests to reduce noise
             return channels;
         }
 
         public bool CreateChannel(string channelName)
         {
             bool result = _channelManager.TryCreateChannel(channelName, out string reason);
-            LogRequest($"CreateChannel - Name: {channelName}, Success: {result}, Reason: {reason}");
+            string clientType = DetectClientType();
+            if (result)
+            {
+                ServerLogger.Success(clientType, "CHANNEL", $"Created \"{channelName}\"");
+            }
+            else
+            {
+                ServerLogger.Warning(clientType, "CHANNEL", $"Create failed: {reason}");
+            }
             return result;
         }
 
         public bool JoinChannel(string userId, string channelName)
         {
-            LogRequest($"JoinChannel - User: {userId}, Channel: {channelName}");
+            string clientType = DetectClientType();
             var session = _userManager.GetUserSession(userId);
             if (session == null)
             {
@@ -86,6 +105,11 @@ namespace Chat.Server.Services
             if (success)
             {
                 _userManager.SetUserChannel(userId, channelName);
+                ServerLogger.Success(clientType, "JOIN", $"{userId} → {channelName}");
+            }
+            else
+            {
+                ServerLogger.Warning(clientType, "JOIN", $"{userId} → {channelName} failed");
             }
 
             return success;
@@ -93,7 +117,9 @@ namespace Chat.Server.Services
 
         public void LeaveChannel(string userId)
         {
-            LogRequest($"LeaveChannel - User: {userId}");
+            string clientType = DetectClientType();
+            ServerLogger.Request(clientType, "LEAVE", userId);
+
             var session = _userManager.GetUserSession(userId);
             if (session != null && session.CurrentChannel != null)
             {
@@ -105,94 +131,81 @@ namespace Chat.Server.Services
         public List<string> GetChannelMembers(string channelName)
         {
             var members = _channelManager.GetChannelMembers(channelName);
-            LogRequest($"GetChannelMembers - Channel: {channelName}, Count: {members.Count}");
+            // Don't log polling requests to reduce noise
             return members;
         }
 
         public void SendMessage(string senderId, string channelName, string content)
         {
-            LogRequest($"SendMessage - Sender: {senderId}, Channel: {channelName}, Content: {content}");
+            string clientType = DetectClientType();
+            ServerLogger.Request(clientType, "MESSAGE", $"{senderId} → {channelName}: {content}");
             _messageRouter.RoutePublicMessage(senderId, channelName, content, out string reason);
         }
 
         public void SendPrivateMessage(string senderId, string recipientId, string content)
         {
-            LogRequest($"SendPrivateMessage - Sender: {senderId}, Recipient: {recipientId}, Content: {content}");
+            string clientType = DetectClientType();
+            ServerLogger.Request(clientType, "PRIVATE", $"{senderId} → {recipientId}: {content}");
             _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
         }
 
         public bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData)
         {
             bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason);
-            LogRequest($"ShareFile - Uploader: {uploaderId}, Channel: {channelName}, File: {fileName}, Type: {fileType}, Success: {result}, Reason: {reason}");
+            string clientType = DetectClientType();
+            if (result)
+            {
+                ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
+            }
+            else
+            {
+                ServerLogger.Warning(clientType, "FILE", $"Share failed: {reason}");
+            }
             return result;
         }
 
         public SharedFile GetFile(string channelName, string fileName)
         {
-            LogRequest($"GetFile - Channel: {channelName}, File: {fileName}");
+            string clientType = DetectClientType();
+            ServerLogger.Request(clientType, "FILE", $"Download {fileName} from {channelName}");
             return _fileHandler.GetFile(channelName, fileName);
         }
 
         public List<Message> GetPendingMessages(string userId)
         {
             var pendingQueue = _userManager.GetPendingChannelMessages(userId);
-            LogRequest($"GetPendingMessages - User: {userId}, Count: {pendingQueue.Count}");
+            string clientType = DetectClientType();
+            if (pendingQueue.Count > 0)
+            {
+                ServerLogger.Request(clientType, "POLL", $"{userId} ← {pendingQueue.Count} message(s)");
+            }
             return new List<Message>(pendingQueue);
         }
 
         public List<Message> GetPendingPrivateMessages(string userId)
         {
             var pendingQueue = _userManager.GetPendingPrivateMessages(userId);
-            LogRequest($"GetPendingPrivateMessages - User: {userId}, Count: {pendingQueue.Count}");
+            string clientType = DetectClientType();
+            if (pendingQueue.Count > 0)
+            {
+                ServerLogger.Request(clientType, "POLL", $"{userId} ← {pendingQueue.Count} private message(s)");
+            }
             return new List<Message>(pendingQueue);
         }
 
         public void RegisterCallback(string userId)
         {
-            LogRequest($"RegisterCallback - User: {userId}");
+            string clientType = DetectClientType();
+            ServerLogger.Success(clientType, "CALLBACK", $"{userId} registered");
             var callback = OperationContext.Current.GetCallbackChannel<IChatCallback>();
             _callbackManager.RegisterCallback(userId, callback);
         }
 
         public void UnregisterCallback(string userId)
         {
-            LogRequest($"UnregisterCallback - User: {userId}");
-            _callbackManager.UnregisterCallback(userId);
-        }
-
-        private void LogRequest(string message)
-        {
             string clientType = DetectClientType();
-            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
-            string logMessage = $"[{timestamp}] [REQUEST] [{clientType}] {message}";
-            string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
-            try
-            {
-                System.IO.File.AppendAllText(logPath, logMessage + Environment.NewLine);
-            }
-            catch { }
-
-            // Color-coded console output
-            ConsoleColor originalColor = Console.ForegroundColor;
-
-            // Timestamp in purple
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write($"[{timestamp}] ");
-
-            // Log level in blue
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.Write("[REQUEST] ");
-
-            // Client type in yellow
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write($"[{clientType}] ");
-
-            // Message in cyan
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(message);
-
-            Console.ForegroundColor = originalColor;
+            ServerLogger.Request(clientType, "CALLBACK", $"{userId} unregistered");
+            _callbackManager.UnregisterCallback(userId);
         }
 
         private string DetectClientType()
@@ -201,7 +214,6 @@ namespace Chat.Server.Services
             {
                 if (OperationContext.Current != null)
                 {
-                    // Check the channel's binding type
                     var channel = OperationContext.Current.Channel;
                     if (channel != null)
                     {
@@ -215,28 +227,6 @@ namespace Chat.Server.Services
                             else if (binding is System.ServiceModel.BasicHttpBinding || binding is System.ServiceModel.WSHttpBinding)
                             {
                                 return "POLLING";
-                            }
-                        }
-                    }
-
-                    // Fallback: check incoming message properties
-                    if (OperationContext.Current.IncomingMessageProperties != null)
-                    {
-                        var properties = OperationContext.Current.IncomingMessageProperties;
-                        foreach (var prop in properties.Keys)
-                        {
-                            var value = properties[prop];
-                            if (value != null)
-                            {
-                                string valueStr = value.ToString();
-                                if (valueStr.Contains("net.tcp"))
-                                {
-                                    return "DUPLEX";
-                                }
-                                else if (valueStr.Contains("http"))
-                                {
-                                    return "POLLING";
-                                }
                             }
                         }
                     }

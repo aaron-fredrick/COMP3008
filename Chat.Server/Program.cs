@@ -1,22 +1,19 @@
 using System;
-using System.IO;
 using System.Threading;
 using Chat.Server.Hosting;
+using Chat.Server.Logging;
 
 namespace Chat.Server
 {
     class Program
     {
-        private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
         private static ChatServiceHost _serviceHost;
-        private static readonly object _logLock = new object();
         private static readonly ManualResetEvent _shutdownEvent = new ManualResetEvent(false);
 
         static void Main(string[] args)
         {
-            SetupLogging();
-            LogInfo("Chat Server - COMP3008");
-            LogInfo("========================");
+            ServerLogger.Initialize();
+            ServerLogger.PrintHeader();
 
             string host = null;
             int? pollingPort = null;
@@ -58,16 +55,15 @@ namespace Chat.Server
             try
             {
                 _serviceHost.Start();
-                LogInfo("Server started successfully");
-                LogInfo($"Polling endpoint: {_serviceHost.PollingEndpoint}");
-                LogInfo($"Duplex endpoint: {_serviceHost.DuplexEndpoint}");
-                LogInfo("Press Ctrl+C to stop the server...");
+                ServerLogger.Success("SERVER", "STARTED", $"Polling: {_serviceHost.PollingEndpoint}");
+                ServerLogger.Success("SERVER", "STARTED", $"Duplex: {_serviceHost.DuplexEndpoint}");
+                Console.WriteLine();
+                Console.WriteLine("Press Ctrl+C to stop the server...");
                 _shutdownEvent.WaitOne();
             }
             catch (Exception ex)
             {
-                LogError($"Error: {ex.Message}");
-                LogError($"Stack Trace: {ex.StackTrace}");
+                ServerLogger.Error("SERVER", "STARTUP", ex.Message);
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }
@@ -83,7 +79,7 @@ namespace Chat.Server
         static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             e.Cancel = true;
-            LogInfo("Shutdown signal received (Ctrl+C)");
+            ServerLogger.Info("Shutdown signal received (Ctrl+C)");
             Console.WriteLine("\nShutting down server...");
 
             if (_serviceHost != null)
@@ -91,89 +87,9 @@ namespace Chat.Server
                 _serviceHost.Stop();
             }
 
-            LogInfo("Server stopped");
+            ServerLogger.Info("Server stopped");
             _shutdownEvent.Set();
             Environment.Exit(0);
-        }
-
-        static void SetupLogging()
-        {
-            try
-            {
-                var logDir = Path.GetDirectoryName(LogFilePath);
-                if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
-                {
-                    Directory.CreateDirectory(logDir);
-                }
-
-                File.WriteAllText(LogFilePath, $"=== Chat Server Log - {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC ===\n");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Could not initialize logging: {ex.Message}");
-            }
-        }
-
-        static void LogInfo(string message)
-        {
-            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
-            string logMessage = $"[{timestamp}] [INFO] {message}";
-            lock (_logLock)
-            {
-                try
-                {
-                    File.AppendAllText(LogFilePath, logMessage + Environment.NewLine);
-                }
-                catch { }
-            }
-
-            // Color-coded console output
-            ConsoleColor originalColor = Console.ForegroundColor;
-
-            // Timestamp in purple
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write($"[{timestamp}] ");
-
-            // Log level in blue
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.Write("[INFO] ");
-
-            // Message in green
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(message);
-
-            Console.ForegroundColor = originalColor;
-        }
-
-        static void LogError(string message)
-        {
-            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
-            string logMessage = $"[{timestamp}] [ERROR] {message}";
-            lock (_logLock)
-            {
-                try
-                {
-                    File.AppendAllText(LogFilePath, logMessage + Environment.NewLine);
-                }
-                catch { }
-            }
-
-            // Color-coded console output
-            ConsoleColor originalColor = Console.ForegroundColor;
-
-            // Timestamp in purple
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write($"[{timestamp}] ");
-
-            // Log level in red
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write("[ERROR] ");
-
-            // Message in yellow
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(message);
-
-            Console.ForegroundColor = originalColor;
         }
 
         static void PrintHelp()
