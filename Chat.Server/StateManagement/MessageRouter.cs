@@ -59,7 +59,11 @@ namespace Chat.Server.StateManagement
 
                 foreach (var memberId in members)
                 {
-                    _userManager.AddPendingChannelMessage(memberId, message);
+                    // Don't add to sender's pending messages - they already know about it
+                    if (memberId != senderId)
+                    {
+                        _userManager.AddPendingChannelMessage(memberId, message);
+                    }
                 }
 
                 _callbackManager.NotifyMessageReceived(channelName, message);
