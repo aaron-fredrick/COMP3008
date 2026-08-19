@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using Chat.Server.Hosting;
 
 namespace Chat.Server
@@ -9,6 +10,7 @@ namespace Chat.Server
         private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ChatServer.log");
         private static ChatServiceHost _serviceHost;
         private static readonly object _logLock = new object();
+        private static readonly ManualResetEvent _shutdownEvent = new ManualResetEvent(false);
 
         static void Main(string[] args)
         {
@@ -60,7 +62,7 @@ namespace Chat.Server
                 LogInfo($"Polling endpoint: {_serviceHost.PollingEndpoint}");
                 LogInfo($"Duplex endpoint: {_serviceHost.DuplexEndpoint}");
                 LogInfo("Press Ctrl+C to stop the server...");
-                Console.ReadLine();
+                _shutdownEvent.WaitOne();
             }
             catch (Exception ex)
             {
@@ -90,6 +92,7 @@ namespace Chat.Server
             }
 
             LogInfo("Server stopped");
+            _shutdownEvent.Set();
             Environment.Exit(0);
         }
 
@@ -122,7 +125,7 @@ namespace Chat.Server
                 }
                 catch { }
             }
-            Console.WriteLine(message);
+            Console.WriteLine(logMessage);
         }
 
         static void LogError(string message)
@@ -136,7 +139,7 @@ namespace Chat.Server
                 }
                 catch { }
             }
-            Console.WriteLine(message);
+            Console.WriteLine(logMessage);
         }
 
         static void PrintHelp()

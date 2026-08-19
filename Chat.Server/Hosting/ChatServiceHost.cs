@@ -57,7 +57,14 @@ namespace Chat.Server.Hosting
             {
                 try
                 {
-                    _serviceHost.Close();
+                    if (_serviceHost.State == CommunicationState.Opened)
+                    {
+                        _serviceHost.Close();
+                    }
+                    else if (_serviceHost.State == CommunicationState.Faulted)
+                    {
+                        _serviceHost.Abort();
+                    }
                     _serviceHost = null;
                 }
                 catch (Exception ex)
