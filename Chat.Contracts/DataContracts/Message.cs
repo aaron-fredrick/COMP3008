@@ -5,7 +5,7 @@ using Chat.Contracts.SharedTypes;
 namespace Chat.Contracts.DataContracts
 {
     [DataContract]
-    public class Message
+    public class Message : IComparable<Message>
     {
         [DataMember]
         public string SenderId { get; set; }
@@ -24,5 +24,14 @@ namespace Chat.Contracts.DataContracts
 
         [DataMember]
         public string RecipientId { get; set; }
+
+        public int CompareTo(Message other)
+        {
+            if (other == null) return 1;
+            int timestampCompare = Timestamp.CompareTo(other.Timestamp);
+            if (timestampCompare != 0) return timestampCompare;
+            // If timestamps are equal, use sender ID as tiebreaker
+            return string.Compare(SenderId ?? "", other.SenderId ?? "", StringComparison.Ordinal);
+        }
     }
 }

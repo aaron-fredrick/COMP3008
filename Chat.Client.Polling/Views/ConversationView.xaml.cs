@@ -12,9 +12,12 @@ namespace Chat.Client.Polling.Views
         public event EventHandler LeaveChannelRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
 
+        private readonly System.Collections.Generic.SortedSet<Message> _messages;
+
         public ConversationView()
         {
             InitializeComponent();
+            _messages = new System.Collections.Generic.SortedSet<Message>();
         }
 
         public void SetChannelName(string channelName)
@@ -34,9 +37,22 @@ namespace Chat.Client.Polling.Views
 
         public void AddMessage(Message message)
         {
-            string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-            MessagesListBox.Items.Add(displayText);
-            MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
+            _messages.Add(message);
+            RefreshMessages();
+        }
+
+        private void RefreshMessages()
+        {
+            MessagesListBox.Items.Clear();
+            foreach (var message in _messages)
+            {
+                string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
+                MessagesListBox.Items.Add(displayText);
+            }
+            if (MessagesListBox.Items.Count > 0)
+            {
+                MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
+            }
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
