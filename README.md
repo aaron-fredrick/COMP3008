@@ -96,7 +96,7 @@ build.bat Chat.Server Release
 
 **Using MSBuild directly:**
 ```powershell
-& "d:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" Chat.Server\Chat.Server.csproj /p:Configuration=Debug
+msbuild Chat.Server\Chat.Server.csproj /p:Configuration=Debug
 ```
 
 ### Running the Server
