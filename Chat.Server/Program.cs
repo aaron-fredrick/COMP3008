@@ -10,31 +10,24 @@ namespace Chat.Server
             Console.WriteLine("Chat Server - COMP3008");
             Console.WriteLine("========================");
 
-            string pollingHost = null;
+            string host = null;
             int? pollingPort = null;
-            string duplexHost = null;
             int? duplexPort = null;
 
             for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i])
                 {
-                    case "--polling-host":
+                    case "--host":
                         if (i + 1 < args.Length)
                         {
-                            pollingHost = args[++i];
+                            host = args[++i];
                         }
                         break;
                     case "--polling-port":
                         if (i + 1 < args.Length && int.TryParse(args[++i], out int pp))
                         {
                             pollingPort = pp;
-                        }
-                        break;
-                    case "--duplex-host":
-                        if (i + 1 < args.Length)
-                        {
-                            duplexHost = args[++i];
                         }
                         break;
                     case "--duplex-port":
@@ -50,7 +43,7 @@ namespace Chat.Server
                 }
             }
 
-            var serviceHost = new ChatServiceHost(pollingHost, pollingPort, duplexHost, duplexPort);
+            var serviceHost = new ChatServiceHost(host, pollingPort, duplexPort);
 
             try
             {
@@ -72,9 +65,8 @@ namespace Chat.Server
             Console.WriteLine("Usage: Chat.Server.exe [options]");
             Console.WriteLine();
             Console.WriteLine("Options:");
-            Console.WriteLine("  --polling-host <host>   Polling endpoint host (default: from App.config or localhost)");
+            Console.WriteLine("  --host <host>           Server host for both endpoints (default: from App.config or localhost)");
             Console.WriteLine("  --polling-port <port>   Polling endpoint port (default: from App.config or 8080)");
-            Console.WriteLine("  --duplex-host <host>    Duplex endpoint host (default: from App.config or localhost)");
             Console.WriteLine("  --duplex-port <port>    Duplex endpoint port (default: from App.config or 8081)");
             Console.WriteLine("  -h, --help              Show this help message");
             Console.WriteLine();

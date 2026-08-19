@@ -85,7 +85,7 @@ Chat.Server.exe
 
 **Using command-line arguments:**
 ```bash
-Chat.Server.exe --polling-host localhost --polling-port 8080 --duplex-host localhost --duplex-port 8081
+Chat.Server.exe --host localhost --polling-port 8080 --duplex-port 8081
 ```
 
 **View help:**
@@ -103,9 +103,8 @@ Server endpoints can be configured in `Chat.Server/App.config`:
 
 ```xml
 <appSettings>
-  <add key="PollingHost" value="localhost" />
+  <add key="Host" value="localhost" />
   <add key="PollingPort" value="8080" />
-  <add key="DuplexHost" value="localhost" />
   <add key="DuplexPort" value="8081" />
 </appSettings>
 ```
