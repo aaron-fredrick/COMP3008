@@ -125,13 +125,8 @@ namespace Chat.Server.Tests
 
             Console.WriteLine("Connected to duplex server successfully.\n");
 
-            // Test 1: RegisterCallback
-            Console.WriteLine("Test 1: RegisterCallback");
-            proxy.RegisterCallback("duplexuser1");
-            Console.WriteLine("  - Callback registered successfully");
-
-            // Test 2: SignIn (via polling endpoint since duplex doesn't have it)
-            Console.WriteLine("\nTest 2: SignIn (via polling endpoint)");
+            // Test 1: SignIn (via polling endpoint since duplex doesn't have it)
+            Console.WriteLine("Test 1: SignIn (via polling endpoint)");
             var pollingBinding = new BasicHttpBinding();
             var pollingEndpoint = new EndpointAddress("http://localhost:9000/ChatService/Polling");
             var pollingFactory = new ChannelFactory<IChatService>(pollingBinding, pollingEndpoint);
@@ -139,10 +134,15 @@ namespace Chat.Server.Tests
             bool signInResult = pollingProxy.SignIn("duplexuser1");
             Console.WriteLine($"  - SignIn result: {signInResult}");
 
-            // Test 3: JoinChannel
-            Console.WriteLine("\nTest 3: JoinChannel");
+            // Test 2: JoinChannel
+            Console.WriteLine("\nTest 2: JoinChannel");
             bool joinResult = pollingProxy.JoinChannel("duplexuser1", "general");
             Console.WriteLine($"  - JoinChannel result: {joinResult}");
+
+            // Test 3: RegisterCallback (must be before sending message to receive callback)
+            Console.WriteLine("\nTest 3: RegisterCallback");
+            proxy.RegisterCallback("duplexuser1");
+            Console.WriteLine("  - Callback registered successfully");
 
             // Test 4: SendMessage (should trigger callback)
             Console.WriteLine("\nTest 4: SendMessage (should trigger callback)");
