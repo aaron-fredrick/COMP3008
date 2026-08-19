@@ -12,6 +12,8 @@ namespace Chat.Client.Polling.Views
         public event EventHandler LeaveChannelRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
 
+        private bool _isLeavingChannel = false;
+
         public ConversationView()
         {
             InitializeComponent();
@@ -20,9 +22,22 @@ namespace Chat.Client.Polling.Views
 
         private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Prevent immediate close, trigger leave channel instead
+            // Allow close if we're already leaving (programmatic close)
+            if (_isLeavingChannel)
+            {
+                return;
+            }
+
+            // User clicked X - trigger leave channel and prevent close
             e.Cancel = true;
+            _isLeavingChannel = true;
             LeaveChannelRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void CloseWindow()
+        {
+            _isLeavingChannel = true;
+            this.Close();
         }
 
         public void SetChannelName(string channelName)

@@ -127,7 +127,7 @@ namespace Chat.Client.Polling
         {
             _serviceClient.LeaveChannel(_currentUserId);
             _currentChannel = null;
-            _conversationView.Close();
+            _conversationView.CloseWindow();
             _channelListView.Show();
             LoadChannels();
         }
