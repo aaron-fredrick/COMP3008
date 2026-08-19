@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Chat.Client.Duplex/Chat.Client.Duplex.csproj" />
+  <Project Path="Chat.Client.Polling/Chat.Client.Polling.csproj" />
+  <Project Path="Chat.Client.Shared/Chat.Client.Shared.csproj" />
+  <Project Path="Chat.Contracts/Chat.Contracts.csproj" />
+  <Project Path="Chat.Server/Chat.Server.csproj" />
+</Solution>

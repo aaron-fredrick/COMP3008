@@ -1,0 +1,8 @@
+<Window x:Class="Chat.Client.Duplex.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Chat Client (Duplex)" Height="450" Width="800">
+    <Grid>
+        <TextBlock Text="Chat Client (Duplex)" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+    </Grid>
+</Window>
