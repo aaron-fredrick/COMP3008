@@ -20,7 +20,9 @@ namespace Chat.Client.Polling.Views
 
         private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Don't prevent closing, just ensure cleanup happens
+            // Prevent immediate close, trigger leave channel instead
+            e.Cancel = true;
+            LeaveChannelRequested?.Invoke(this, EventArgs.Empty);
         }
 
         public void SetChannelName(string channelName)
