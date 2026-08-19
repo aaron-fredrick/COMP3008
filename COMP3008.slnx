@@ -1,7 +1,7 @@
 <Solution>
-  <Project Path="Chat.Client.Duplex/Chat.Client.Duplex.csproj" />
-  <Project Path="Chat.Client.Polling/Chat.Client.Polling.csproj" />
-  <Project Path="Chat.Client.Shared/Chat.Client.Shared.csproj" />
-  <Project Path="Chat.Contracts/Chat.Contracts.csproj" />
-  <Project Path="Chat.Server/Chat.Server.csproj" />
+  <Project Path="Chat.Client.Duplex/Chat.Client.Duplex.csproj" Id="e5f6a7b8-c9d0-4903-e456-78901234ef01" />
+  <Project Path="Chat.Client.Polling/Chat.Client.Polling.csproj" Id="d4e5f6a7-b8c9-4902-d345-67890123def0" />
+  <Project Path="Chat.Client.Shared/Chat.Client.Shared.csproj" Id="b2c3d4e5-f6a7-4890-b123-45678901bcde" />
+  <Project Path="Chat.Contracts/Chat.Contracts.csproj" Id="a1b2c3d4-e5f6-4789-a012-34567890abcd" />
+  <Project Path="Chat.Server/Chat.Server.csproj" Id="c3d4e5f6-a7b8-4901-c234-56789012cdef" />
 </Solution>
