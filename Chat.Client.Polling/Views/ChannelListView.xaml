@@ -1,0 +1,60 @@
+<Window x:Class="Chat.Client.Polling.Views.ChannelListView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Channels" Height="500" Width="700"
+        Background="#1e1e1e"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="COMP3008 Chat" FontSize="24" FontWeight="Bold" 
+                       Foreground="#00bcd4" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeText" FontSize="14" Foreground="#ffffff" 
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Channel List -->
+        <Border Grid.Row="1" Background="#252526" BorderBrush="#404040" BorderThickness="1" Padding="15">
+            <StackPanel>
+                <TextBlock Text="Available Channels" FontSize="16" FontWeight="Bold" 
+                           Foreground="#ffffff" Margin="0,0,0,10"/>
+                <ListBox x:Name="ChannelsListBox" Background="#2d2d2d" 
+                         Foreground="#ffffff" BorderBrush="#404040" Height="250"
+                         SelectionMode="Single" SelectionChanged="ChannelsListBox_SelectionChanged"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Controls -->
+        <StackPanel Grid.Row="2" Margin="0,20,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox x:Name="NewChannelTextBox" Grid.Column="0" FontSize="14" Padding="8"
+                         Background="#2d2d2d" Foreground="#ffffff" BorderBrush="#404040"
+                         Margin="0,0,10,0"/>
+                
+                <Button x:Name="CreateChannelButton" Grid.Column="1" Content="Create Channel" 
+                        FontSize="14" Padding="15,8" Background="#00bcd4" Foreground="#ffffff" 
+                        BorderThickness="0" Cursor="Hand" Margin="0,0,10,0" Click="CreateChannelButton_Click"/>
+                
+                <Button x:Name="JoinButton" Grid.Column="2" Content="Join" 
+                        FontSize="14" Padding="15,8" Background="#4caf50" Foreground="#ffffff" 
+                        BorderThickness="0" Cursor="Hand" Click="JoinButton_Click"/>
+            </Grid>
+            
+            <Button x:Name="SignOutButton" Content="Sign Out" FontSize="12" Padding="8" Margin="0,10,0,0"
+                    Background="#ff5252" Foreground="#ffffff" BorderThickness="0"
+                    Cursor="Hand" HorizontalAlignment="Right" Click="SignOutButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

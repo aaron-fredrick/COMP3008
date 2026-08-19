@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Windows;
 using System.Windows.Threading;
 using Chat.Client.Polling.Services;
+using Chat.Client.Polling.Views;
 using Chat.Contracts.DataContracts;
 
 namespace Chat.Client.Polling
@@ -14,6 +15,8 @@ namespace Chat.Client.Polling
         private string _currentUserId;
         private string _currentChannel;
         private int _pollingInterval;
+        private ChannelListView _channelListView;
+        private ConversationView _conversationView;
 
         public MainWindow()
         {
@@ -44,9 +47,7 @@ namespace Chat.Client.Polling
             if (success)
             {
                 _currentUserId = username;
-                LoginPanel.Visibility = Visibility.Collapsed;
-                MainChatPanel.Visibility = Visibility.Visible;
-                LoadChannels();
+                ShowChannelListView();
                 _pollingTimer.Start();
             }
             else
@@ -55,36 +56,33 @@ namespace Chat.Client.Polling
             }
         }
 
-        private void SignOutButton_Click(object sender, RoutedEventArgs e)
+        private void ShowChannelListView()
         {
-            _pollingTimer.Stop();
-            _serviceClient?.SignOut(_currentUserId);
-            _serviceClient?.Dispose();
+            _channelListView = new ChannelListView();
+            _channelListView.SetWelcomeText(_currentUserId);
+            _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
+            _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
+            _channelListView.SignOutRequested += ChannelListView_SignOutRequested;
             
-            _currentUserId = null;
-            _currentChannel = null;
+            LoadChannels();
+            _channelListView.Show();
+            this.Hide();
+        }
+
+        private void ShowConversationView(string channelName)
+        {
+            _conversationView = new ConversationView();
+            _conversationView.SetChannelName(channelName);
+            _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
+            _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
+            _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
             
-            MainChatPanel.Visibility = Visibility.Collapsed;
-            LoginPanel.Visibility = Visibility.Visible;
-            LoginStatusText.Text = "";
-            UsernameTextBox.Text = "";
+            LoadChannelMembers();
+            _conversationView.Show();
+            _channelListView.Hide();
         }
 
-        private void LoadChannels()
-        {
-            var channels = _serviceClient.GetChannels();
-            ChannelsListBox.ItemsSource = channels;
-        }
-
-        private void ChannelsListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (ChannelsListBox.SelectedItem is Channel selectedChannel)
-            {
-                JoinChannel(selectedChannel.Name);
-            }
-        }
-
-        private void JoinChannel(string channelName)
+        private void ChannelListView_JoinChannelRequested(object sender, string channelName)
         {
             if (_currentChannel != null)
             {
@@ -95,9 +93,59 @@ namespace Chat.Client.Polling
             if (success)
             {
                 _currentChannel = channelName;
-                LoadChannelMembers();
-                MessagesListBox.Items.Clear();
+                ShowConversationView(channelName);
             }
+        }
+
+        private void ChannelListView_CreateChannelRequested(object sender, string channelName)
+        {
+            bool success = _serviceClient.CreateChannel(channelName);
+            if (success)
+            {
+                LoadChannels();
+            }
+            else
+            {
+                MessageBox.Show("Channel already exists or creation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ChannelListView_SignOutRequested(object sender, EventArgs e)
+        {
+            SignOut();
+        }
+
+        private void ConversationView_SendMessageRequested(object sender, string message)
+        {
+            if (!string.IsNullOrEmpty(_currentChannel))
+            {
+                _serviceClient.SendMessage(_currentUserId, _currentChannel, message);
+            }
+        }
+
+        private void ConversationView_LeaveChannelRequested(object sender, EventArgs e)
+        {
+            _serviceClient.LeaveChannel(_currentUserId);
+            _currentChannel = null;
+            _conversationView.Close();
+            _channelListView.Show();
+            LoadChannels();
+        }
+
+        private void ConversationView_FileDownloadRequested(object sender, SharedFile file)
+        {
+            var downloadedFile = _serviceClient.GetFile(_currentChannel, file.FileName);
+            if (downloadedFile != null && downloadedFile.FileData != null)
+            {
+                System.IO.File.WriteAllBytes(file.FileName, downloadedFile.FileData);
+                System.Diagnostics.Process.Start(file.FileName);
+            }
+        }
+
+        private void LoadChannels()
+        {
+            var channels = _serviceClient.GetChannels();
+            _channelListView?.UpdateChannels(channels);
         }
 
         private void LoadChannelMembers()
@@ -105,17 +153,7 @@ namespace Chat.Client.Polling
             if (!string.IsNullOrEmpty(_currentChannel))
             {
                 var members = _serviceClient.GetChannelMembers(_currentChannel);
-                MembersListBox.ItemsSource = members;
-            }
-        }
-
-        private void SendButton_Click(object sender, RoutedEventArgs e)
-        {
-            string message = MessageTextBox.Text.Trim();
-            if (!string.IsNullOrEmpty(message) && !string.IsNullOrEmpty(_currentChannel))
-            {
-                _serviceClient.SendMessage(_currentUserId, _currentChannel, message);
-                MessageTextBox.Clear();
+                _conversationView?.UpdateMembers(members);
             }
         }
 
@@ -126,24 +164,35 @@ namespace Chat.Client.Polling
                 var messages = _serviceClient.GetPendingMessages(_currentUserId);
                 foreach (var message in messages)
                 {
-                    AddMessageToUI(message);
+                    _conversationView?.AddMessage(message);
                 }
 
                 var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);
                 foreach (var message in privateMessages)
                 {
-                    AddMessageToUI(message);
+                    _conversationView?.AddMessage(message);
                 }
 
                 LoadChannelMembers();
+                LoadChannels();
             }
         }
 
-        private void AddMessageToUI(Message message)
+        private void SignOut()
         {
-            string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-            MessagesListBox.Items.Add(displayText);
-            MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
+            _pollingTimer.Stop();
+            _serviceClient?.SignOut(_currentUserId);
+            _serviceClient?.Dispose();
+            
+            _currentUserId = null;
+            _currentChannel = null;
+            
+            _channelListView?.Close();
+            _conversationView?.Close();
+            
+            this.Show();
+            LoginStatusText.Text = "";
+            UsernameTextBox.Text = "";
         }
 
         protected override void OnClosed(EventArgs e)
