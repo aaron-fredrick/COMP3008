@@ -2,7 +2,14 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Private Message" Height="400" Width="500"
-        Background="#1e1e1e" WindowStartupLocation="CenterOwner">
+        Background="{StaticResource BackgroundBrush}" WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -11,15 +18,15 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" x:Name="RecipientText" 
-                   Text="Private Conversation with: User" 
-                   Foreground="#ffffff" FontSize="16" FontWeight="Bold"
+        <TextBlock Grid.Row="0" x:Name="RecipientText"
+                   Text="Private Conversation with: User"
+                   Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="Bold"
                    Margin="0,0,0,10"/>
 
         <!-- Messages -->
-        <ListBox Grid.Row="1" x:Name="MessagesListBox" 
-                 Background="#2d2d2d" Foreground="#ffffff" 
-                 BorderBrush="#404040" BorderThickness="1"
+        <ListBox Grid.Row="1" x:Name="MessagesListBox"
+                 Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
+                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                  Margin="0,0,0,10"/>
 
         <!-- Input -->
@@ -29,14 +36,14 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="0" x:Name="MessageTextBox" 
-                     Background="#2d2d2d" Foreground="#ffffff" 
-                     BorderBrush="#404040" BorderThickness="1"
+            <TextBox Grid.Column="0" x:Name="MessageTextBox"
+                     Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
+                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                      Padding="5" Margin="0,0,10,0"/>
 
-            <Button Grid.Column="1" x:Name="SendButton" Content="Send" 
-                    Background="#00bcd4" Foreground="#ffffff" 
-                    BorderThickness="0" Padding="15,5" 
+            <Button Grid.Column="1" x:Name="SendButton" Content="Send"
+                    Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
+                    BorderThickness="0" Padding="15,5"
                     Click="SendButton_Click"/>
         </Grid>
     </Grid>

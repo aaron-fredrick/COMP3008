@@ -2,31 +2,38 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Chat Client (Polling)" Height="400" Width="400"
-        Background="#1e1e1e"
+        Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
             <TextBlock Text="COMP3008 Chat" FontSize="28" FontWeight="Bold"
-                       Foreground="#00bcd4" HorizontalAlignment="Center" Margin="0,0,0,30"/>
-            <TextBlock Text="Username:" FontSize="14" Foreground="#ffffff" Margin="0,0,0,5"/>
+                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+            <TextBlock Text="Username:" FontSize="14" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
             <TextBox x:Name="UsernameTextBox" FontSize="14" Padding="8" Margin="0,0,0,20"
-                     Background="#2d2d2d" Foreground="#ffffff" BorderBrush="#404040"
+                     Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
                      KeyDown="UsernameTextBox_KeyDown"/>
             <Button x:Name="SignInButton" Content="Sign In" FontSize="14" Padding="10" Margin="0,0,0,10"
-                    Background="#00bcd4" Foreground="#ffffff" BorderThickness="0"
+                    Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                     Cursor="Hand" Click="SignInButton_Click">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#00acc1"/>
+                                <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
             </Button>
-            <TextBlock x:Name="LoginStatusText" FontSize="12" Foreground="#ff5252"
+            <TextBlock x:Name="LoginStatusText" FontSize="12" Foreground="{StaticResource ErrorBrush}"
                        HorizontalAlignment="Center" TextWrapping="Wrap" Height="40"/>
         </StackPanel>
     </Grid>
