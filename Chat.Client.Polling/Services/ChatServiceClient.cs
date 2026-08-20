@@ -176,10 +176,17 @@ namespace Chat.Client.Polling.Services
         {
             try
             {
-                return _proxy.ShareFile(uploaderId, channelName, fileName, fileType, fileData);
+                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] Calling ShareFile: {fileName} to {channelName}");
+                Console.WriteLine($"[SERVICE CLIENT] Calling ShareFile: {fileName} to {channelName}");
+                bool result = _proxy.ShareFile(uploaderId, channelName, fileName, fileType, fileData);
+                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] ShareFile result: {result}");
+                Console.WriteLine($"[SERVICE CLIENT] ShareFile result: {result}");
+                return result;
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] ShareFile exception: {ex.Message}");
+                Console.WriteLine($"[SERVICE CLIENT] ShareFile exception: {ex.Message}");
                 HandleError(ex);
                 return false;
             }
