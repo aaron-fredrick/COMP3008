@@ -22,26 +22,26 @@
 
         <!-- Sidebar -->
         <Border Grid.Column="0" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-            <StackPanel Margin="10">
-                <TextBlock x:Name="ChannelNameText" FontSize="16" FontWeight="Bold"
+            <StackPanel Margin="{StaticResource MarginNormal}">
+                <TextBlock x:Name="ChannelNameText" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
                            Foreground="{StaticResource AccentBrush}" Margin="0,0,0,20" TextWrapping="Wrap"/>
 
-                <TextBlock Text="Members" FontSize="14" FontWeight="Bold"
+                <TextBlock Text="Members" FontSize="{StaticResource FontSizeMedium}" FontWeight="Bold"
                            Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,10"/>
                 <ListBox x:Name="MembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="200"
                          MouseDoubleClick="MembersListBox_MouseDoubleClick"/>
 
-                <TextBlock Text="Shared Files" FontSize="14" FontWeight="Bold"
+                <TextBlock Text="Shared Files" FontSize="{StaticResource FontSizeMedium}" FontWeight="Bold"
                            Foreground="{StaticResource ForegroundBrush}" Margin="0,20,0,10"/>
                 <ListBox x:Name="FilesListBox" Background="{StaticResource SecondaryBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="120"
                          MouseDoubleClick="FilesListBox_MouseDoubleClick">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="5">
-                                <TextBlock Text="{Binding FileName}" Foreground="{StaticResource ForegroundBrush}" FontWeight="Bold" FontSize="12"/>
-                                <TextBlock Foreground="#aaaaaa" FontSize="10">
+                            <StackPanel Margin="{StaticResource PaddingSmall}">
+                                <TextBlock Text="{Binding FileName}" Foreground="{StaticResource ForegroundBrush}" FontWeight="Bold" FontSize="{StaticResource FontSizeNormal}"/>
+                                <TextBlock Foreground="#aaaaaa" FontSize="{StaticResource FontSizeSmall}">
                                     <Run Text="{Binding UploaderId}"/>
                                     <Run Text=" • "/>
                                     <Run Text="{Binding UploadedAt, StringFormat='{}{0:HH:mm}'}"/>
@@ -53,11 +53,11 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Button x:Name="ShareFileButton" Content="Share File" FontSize="12" Padding="8" Margin="0,10,0,0"
+                <Button x:Name="ShareFileButton" Content="Share File" FontSize="{StaticResource FontSizeNormal}" Padding="{StaticResource ButtonPaddingSmall}" Margin="0,10,0,0"
                         Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                         Cursor="Hand" Click="ShareFileButton_Click"/>
 
-                <Button x:Name="LeaveButton" Content="Leave Channel" FontSize="12" Padding="8" Margin="0,20,0,0"
+                <Button x:Name="LeaveButton" Content="Leave Channel" FontSize="{StaticResource FontSizeNormal}" Padding="{StaticResource ButtonPaddingSmall}" Margin="0,20,0,0"
                         Background="{StaticResource ErrorBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                         Cursor="Hand" Click="LeaveButton_Click"/>
             </StackPanel>
@@ -72,19 +72,19 @@
 
             <!-- Messages -->
             <ListBox x:Name="MessagesListBox" Grid.Row="0" Background="{StaticResource BackgroundBrush}"
-                     Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="10"
+                     Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="{StaticResource MarginNormal}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"/>
 
             <!-- Input Area -->
-            <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" Padding="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" Padding="{StaticResource PaddingMedium}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="MessageTextBox" Grid.Column="0" FontSize="14" Padding="8"
+                    <TextBox x:Name="MessageTextBox" Grid.Column="0" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}"
                              Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"/>
-                    <Button x:Name="SendButton" Grid.Column="1" Content="Send" FontSize="14" Padding="15,8"
+                    <Button x:Name="SendButton" Grid.Column="1" Content="Send" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}"
                             Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                             Cursor="Hand" Margin="10,0,0,0" Click="SendButton_Click"/>
                 </Grid>

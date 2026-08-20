@@ -16,13 +16,13 @@
     </Window.Resources>
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
-            <TextBlock Text="COMP3008 Chat" FontSize="28" FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,30"/>
-            <TextBlock Text="Username:" FontSize="14" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
-            <TextBox x:Name="UsernameTextBox" FontSize="14" Padding="8" Margin="0,0,0,20"
+            <TextBlock Text="COMP3008 Chat" FontSize="{StaticResource FontSizeHuge}" FontWeight="Bold"
+                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,{StaticResource MarginExtraLarge}"/>
+            <TextBlock Text="Username:" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
+            <TextBox x:Name="UsernameTextBox" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}" Margin="0,0,0,20"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
                      KeyDown="UsernameTextBox_KeyDown"/>
-            <Button x:Name="SignInButton" Content="Sign In" FontSize="14" Padding="10" Margin="0,0,0,10"
+            <Button x:Name="SignInButton" Content="Sign In" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingNormal}" Margin="0,0,0,10"
                     Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                     Cursor="Hand" Click="SignInButton_Click">
                 <Button.Style>
@@ -35,7 +35,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            <TextBlock x:Name="LoginStatusText" FontSize="12" Foreground="{StaticResource ErrorBrush}"
+            <TextBlock x:Name="LoginStatusText" FontSize="{StaticResource FontSizeNormal}" Foreground="{StaticResource ErrorBrush}"
                        HorizontalAlignment="Center" TextWrapping="Wrap" Height="40"/>
         </StackPanel>
     </Grid>

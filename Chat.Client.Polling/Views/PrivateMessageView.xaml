@@ -12,7 +12,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="10">
+    <Grid Margin="{StaticResource MarginNormal}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -22,7 +22,7 @@
         <!-- Header -->
         <TextBlock Grid.Row="0" x:Name="RecipientText"
                    Text="Private Conversation with: User"
-                   Foreground="{StaticResource ForegroundBrush}" FontSize="16" FontWeight="Bold"
+                   Foreground="{StaticResource ForegroundBrush}" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
                    Margin="0,0,0,10"/>
 
         <!-- Messages -->
@@ -41,11 +41,11 @@
             <TextBox Grid.Column="0" x:Name="MessageTextBox"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                     Padding="5" Margin="0,0,10,0"/>
+                     Padding="{StaticResource PaddingNormal}" Margin="0,0,10,0"/>
 
             <Button Grid.Column="1" x:Name="SendButton" Content="Send"
                     Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
-                    BorderThickness="0" Padding="15,5"
+                    BorderThickness="0" Padding="{StaticResource ButtonPaddingLarge}"
                     Click="SendButton_Click"/>
         </Grid>
     </Grid>

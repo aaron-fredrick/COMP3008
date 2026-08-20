@@ -13,7 +13,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="20">
+    <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -21,17 +21,17 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="COMP3008 Chat" FontSize="24" FontWeight="Bold"
+        <StackPanel Grid.Row="0" Margin="0,0,0,{StaticResource MarginLarge}">
+            <TextBlock Text="COMP3008 Chat" FontSize="{StaticResource FontSizeExtraLarge}" FontWeight="Bold"
                        Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="WelcomeText" FontSize="14" Foreground="{StaticResource ForegroundBrush}"
+            <TextBlock x:Name="WelcomeText" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}"
                        HorizontalAlignment="Center" Margin="0,5,0,0"/>
         </StackPanel>
 
         <!-- Channel List -->
-        <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="15">
+        <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="{StaticResource PaddingLarge}">
             <StackPanel>
-                <TextBlock Text="Available Channels" FontSize="16" FontWeight="Bold"
+                <TextBlock Text="Available Channels" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
                            Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,10"/>
                 <ListBox x:Name="ChannelsListBox" Background="{StaticResource SecondaryBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="250"
@@ -41,7 +41,7 @@
         </Border>
 
         <!-- Controls -->
-        <StackPanel Grid.Row="2" Margin="0,20,0,0">
+        <StackPanel Grid.Row="2" Margin="0,{StaticResource MarginLarge},0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -49,20 +49,20 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBox x:Name="NewChannelTextBox" Grid.Column="0" FontSize="14" Padding="8"
+                <TextBox x:Name="NewChannelTextBox" Grid.Column="0" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}"
                          Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
                          Margin="0,0,10,0"/>
 
                 <Button x:Name="CreateChannelButton" Grid.Column="1" Content="Create Channel"
-                        FontSize="14" Padding="15,8" Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
+                        FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}" Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
                         BorderThickness="0" Cursor="Hand" Margin="0,0,10,0" Click="CreateChannelButton_Click"/>
 
                 <Button x:Name="JoinButton" Grid.Column="2" Content="Join"
-                        FontSize="14" Padding="15,8" Background="#4caf50" Foreground="{StaticResource ForegroundBrush}"
+                        FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}" Background="#4caf50" Foreground="{StaticResource ForegroundBrush}"
                         BorderThickness="0" Cursor="Hand" Click="JoinButton_Click"/>
             </Grid>
 
-            <Button x:Name="SignOutButton" Content="Sign Out" FontSize="12" Padding="8" Margin="0,10,0,0"
+            <Button x:Name="SignOutButton" Content="Sign Out" FontSize="{StaticResource FontSizeNormal}" Padding="{StaticResource ButtonPaddingSmall}" Margin="0,10,0,0"
                     Background="{StaticResource ErrorBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                     Cursor="Hand" HorizontalAlignment="Right" Click="SignOutButton_Click"/>
         </StackPanel>
