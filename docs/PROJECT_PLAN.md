@@ -1,7 +1,239 @@
 # Real-Time Chat Application - Project Plan
 
 ## Project Overview
-A real-time chat application built with .NET Framework, WCF, and WPF supporting both polling and duplex communication patterns.
+A real-time chat application built with .NET Framework, WCF, and WPF supporting both polling and duplex communication patterns. This is a distributed application demonstrating client-server architecture with RPC-based communication.
+
+## COMP3008 Distributed Systems Context
+
+This project is a distributed application implemented using a client-server architecture with two RPC communication mechanisms.
+
+### Distributed Application Characteristics
+
+The application is distributed across multiple processes:
+
+- `Chat.Server` runs as a separate server process.
+- `Chat.Client.Polling` runs as a separate client process.
+- `Chat.Client.Duplex` runs as a separate client process.
+- Communication occurs over network endpoints rather than direct method calls within the same process.
+
+The application performs useful work across multiple processes:
+- Clients provide the user interface and initiate operations.
+- The server maintains shared application state and performs business logic.
+- The server routes messages, manages users/channels, validates files, and maintains sessions.
+- The duplex server additionally invokes client callbacks for real-time events.
+
+This distinguishes the system from a purely local application.
+
+### RPC Architecture
+
+The application uses Windows Communication Foundation (WCF) as its RPC framework.
+
+From the client's perspective, operations such as:
+
+```csharp
+service.SignIn(userId);
+service.JoinChannel(userId, channelName);
+service.SendMessage(message);
+```
+
+appear similar to normal local method calls. However, these operations are executed by the remote `Chat.Server` process.
+
+Conceptually:
+
+```text
+Client Process
+     │
+     │ RPC Request
+     ▼
+Network / WCF
+     │
+     ▼
+Server Process
+     │
+     │ Execute operation
+     ▼
+Server-side Managers
+     │
+     │ RPC Response
+     ▼
+Client Process
+```
+
+WCF handles the underlying communication, serialization/deserialization, and transport details.
+
+### Local Procedure Call vs Remote Procedure Call
+
+The architecture has two layers of procedure calls:
+
+```text
+CLIENT
+──────────────────────────────
+service.SignIn(userId)
+      │
+      │ RPC / WCF (Remote)
+      ▼
+SERVER
+──────────────────────────────
+ChatService.SignIn(userId)
+      │
+      │ Local Procedure Call
+      ▼
+UserManager.SignIn(userId)
+```
+
+- **Remote Procedure Call (RPC)**: `service.SignIn(userId)` from client to server via WCF
+- **Local Procedure Call**: `_userManager.SignIn(userId)` within server process
+
+The client cannot directly call `UserManager.SignIn()` - it must go through the WCF service boundary.
+
+### Communication Models
+
+The project demonstrates two RPC communication models:
+
+#### Polling (Request/Response RPC)
+
+```text
+Polling Client
+      │
+      │ Request
+      ▼
+    Server
+      │
+      │ Response
+      ▼
+Polling Client
+      │
+      │ waits 2 seconds
+      ▼
+    repeat
+```
+
+The polling client periodically invokes server operations such as:
+- `GetMessages()`
+- `GetPrivateMessages()`
+- `GetChannelMembers()`
+- `GetChannels()`
+
+The client is responsible for initiating communication.
+
+#### Duplex RPC / Callback (Bidirectional RPC)
+
+```text
+Client ───────── Request ────────► Server
+Client ◄────── Callback Event ─── Server
+```
+
+The duplex client establishes a callback channel with the server.
+
+After a client registers its `IChatCallback`, the server can invoke callback methods when events occur.
+
+For example:
+
+```text
+Client A
+   │
+   │ SendMessage()
+   ▼
+Server
+   │
+   │ Route message
+   ▼
+CallbackManager
+   │
+   │ NotifyMessageReceived()
+   ▼
+Client B
+```
+
+This avoids the client repeatedly polling for new messages and demonstrates bidirectional communication.
+
+### RPC Failure Considerations
+
+Because operations are remote, they have properties that local method calls do not:
+
+- Network connectivity can fail.
+- The server may be unavailable.
+- A remote call has significantly higher latency than a local method call.
+- A request may fail after the client has sent it.
+- The client cannot assume that the server operation completed simply because the local call was initiated.
+- Client applications must handle communication exceptions and disconnects.
+
+The implementation therefore includes disconnect handling and service connection management.
+
+### Serialization and Service Contracts
+
+The WCF contracts in `Chat.Contracts` define the interface and data exchanged between client and server.
+
+**Service Contracts** (RPC Interface / IDL equivalent):
+- `IChatService` - Defines polling client operations
+- `IDuplexChatService` - Defines duplex client operations
+- `IChatCallback` - Defines server-to-client callback operations
+
+**Data Contracts** (Serialization definitions):
+- `User` - User information
+- `Channel` - Channel information
+- `Message` - Message data
+- `SharedFile` - File metadata and data
+
+These objects are serialized by WCF for transmission across the network and deserialized on the receiving side.
+
+The clients therefore do not directly share memory or object references with the server.
+
+### Why WCF Instead of Raw TCP/UDP?
+
+The project does not implement a custom TCP application protocol.
+
+Raw TCP would require the application to define and maintain its own:
+- Message framing
+- Request/response protocol
+- Serialization format
+- Error handling
+- Connection management
+- Message routing protocol
+
+WCF provides an RPC abstraction over the network and handles much of this infrastructure.
+
+This allows the application to focus on distributed application logic rather than implementing a transport-level protocol from scratch.
+
+### Client-Server vs Distributed Application
+
+Although the system uses a client-server architecture, it qualifies as a distributed application because the application performs coordinated work across multiple processes.
+
+```text
+                    Distributed Chat Application
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+        Client Processes                 Server Process
+              │                               │
+       ┌──────┴──────┐                ┌───────┴────────┐
+       │             │                │                │
+    Polling        Duplex          State            Services
+    Client         Client        Management          / WCF
+       │             │                │
+       └──────┬──────┘                │
+              │                       │
+              └──── Network ──────────┘
+```
+
+The server maintains authoritative shared state while clients provide independent user interfaces and communicate with the server through RPC.
+
+### WCF and RPC
+
+WCF provides the RPC infrastructure used by the application.
+
+The `Chat.Contracts` project acts as the shared service contract definition. Both clients reference these contracts, while `Chat.Server` provides the implementation.
+
+The client uses WCF-generated/provided service proxies to invoke operations on the remote server.
+
+The two endpoints demonstrate different communication patterns:
+
+| Client | Binding | Endpoint | Communication |
+|---|---|---|---|
+| Polling | BasicHttpBinding | HTTP | Request/response RPC |
+| Duplex | NetTcpBinding | TCP | Bidirectional RPC with callbacks |
+
+WCF abstracts the underlying network communication so the client can invoke service operations using normal C# method-call syntax.
 
 ## Technology Stack
 - **Framework**: .NET Framework 4.8
