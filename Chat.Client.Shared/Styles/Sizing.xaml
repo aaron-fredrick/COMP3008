@@ -24,6 +24,17 @@
     <Thickness x:Key="MarginLarge">20</Thickness>
     <Thickness x:Key="MarginExtraLarge">30</Thickness>
 
+    <!-- Directional Margins -->
+    <Thickness x:Key="MarginBottomExtraLarge">0,0,0,30</Thickness>
+    <Thickness x:Key="MarginBottomLarge">0,0,0,20</Thickness>
+    <Thickness x:Key="MarginBottomNormal">0,0,0,10</Thickness>
+    <Thickness x:Key="MarginBottomSmall">0,0,0,5</Thickness>
+    <Thickness x:Key="MarginTopLarge">0,20,0,0</Thickness>
+    <Thickness x:Key="MarginTopNormal">0,10,0,0</Thickness>
+    <Thickness x:Key="MarginTopSmall">0,5,0,0</Thickness>
+    <Thickness x:Key="MarginRightNormal">0,0,10,0</Thickness>
+    <Thickness x:Key="MarginLeftNormal">10,0,0,0</Thickness>
+
     <!-- Button Padding -->
     <Thickness x:Key="ButtonPaddingSmall">8</Thickness>
     <Thickness x:Key="ButtonPaddingNormal">10</Thickness>

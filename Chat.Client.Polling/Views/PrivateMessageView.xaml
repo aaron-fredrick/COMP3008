@@ -14,13 +14,13 @@
         <TextBlock Grid.Row="0" x:Name="RecipientText"
                    Text="Private Conversation with: User"
                    Foreground="{StaticResource ForegroundBrush}" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
-                   Margin="0,0,0,10"/>
+                   Margin="{StaticResource MarginBottomNormal}"/>
 
         <!-- Messages -->
         <ListBox Grid.Row="1" x:Name="MessagesListBox"
                  Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                 Margin="0,0,0,10"/>
+                 Margin="{StaticResource MarginBottomNormal}"/>
 
         <!-- Input -->
         <Grid Grid.Row="2">
@@ -32,7 +32,7 @@
             <TextBox Grid.Column="0" x:Name="MessageTextBox"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                     Padding="{StaticResource PaddingNormal}" Margin="0,0,10,0"/>
+                     Padding="{StaticResource PaddingNormal}" Margin="{StaticResource MarginRightNormal}"/>
 
             <Button Grid.Column="1" x:Name="SendButton" Content="Send"
                     Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"

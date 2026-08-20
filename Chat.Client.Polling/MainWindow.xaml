@@ -8,7 +8,7 @@
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
             <TextBlock Text="COMP3008 Chat" FontSize="{StaticResource FontSizeHuge}" FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,{StaticResource MarginExtraLarge}"/>
+                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="{StaticResource MarginBottomExtraLarge}"/>
             <TextBlock Text="Username:" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
             <TextBox x:Name="UsernameTextBox" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}" Margin="0,0,0,20"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
