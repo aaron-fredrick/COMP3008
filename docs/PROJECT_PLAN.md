@@ -3,46 +3,18 @@
 ## Project Overview
 A real-time chat application built with .NET Framework, WCF, and WPF supporting both polling and duplex communication patterns. This is a distributed application demonstrating client-server architecture with RPC-based communication.
 
-## COMP3008 Lecture 1 Alignment
-
-The project demonstrates the fundamental concepts introduced in Lecture 1:
-
-- Distributed computing
-- Distributed applications
-- Client-server architecture
-- Inter-process communication (IPC)
-- Remote Procedure Calls (RPC)
-- Serialization and deserialization
-- Marshaling
-- Communication failures
-- The distinction between local procedure calls and remote procedure calls
-
-The application is distributed because its components execute in separate processes and communicate over network boundaries.
-
-The project uses WCF as the RPC framework rather than implementing a custom application protocol directly over TCP/UDP.
-
 ## COMP3008 Distributed Systems Context
 
 This project is a distributed application implemented using a client-server architecture with two RPC communication mechanisms.
 
 ### Distributed Application Characteristics
 
-Distributed computing involves coordinating computation across multiple independent processes, typically running on different machines or networked environments, and communicating through IPC mechanisms.
-
-The application is distributed across multiple processes:
+The application is distributed across multiple processes (server, polling client, duplex client) that communicate via WCF RPC over network endpoints. This demonstrates distributed systems concepts of coordinating computation across independent processes using IPC mechanisms (Lecture 1). The server and clients can run on the same physical machine during development but remain separate processes communicating through network endpoints.
 
 - `Chat.Server` runs as a separate server process.
 - `Chat.Client.Polling` runs as a separate client process.
 - `Chat.Client.Duplex` runs as a separate client process.
 - Communication occurs over network endpoints rather than direct method calls within the same process.
-
-**Important distinction:**
-```text
-Physical distribution ≠ required
-Process/network distribution = sufficient for this project
-```
-
-The application can operate with the server and clients on the same physical machine during development, while they remain **separate processes communicating through network endpoints**.
 
 The application performs useful work across multiple processes:
 - Clients provide the user interface and initiate operations.
@@ -50,50 +22,9 @@ The application performs useful work across multiple processes:
 - The server routes messages, manages users/channels, validates files, and maintains sessions.
 - The duplex server additionally invokes client callbacks for real-time events.
 
-### Client-Server Architecture vs Distributed Application
-
-The application is both:
-
-1. A client-server application
-2. A distributed application
-
-These are not mutually exclusive concepts.
-
-The client-server model describes the architectural relationship between participants:
-
-```text
-Client(s) → Server
-```
-
-The distributed-system aspect describes the fact that application components execute in separate processes and communicate through IPC/network communication.
-
-Therefore:
-
-```text
-Client-Server
-        +
-Separate Processes
-        +
-Network IPC / RPC
-        =
-Distributed Application
-```
-
-The project is therefore a client-server distributed application.
-
 ### Client-Server vs Peer-to-Peer
 
-This project is **not peer-to-peer**.
-
-Clients never communicate directly:
-
-```text
-Incorrect:
-
-Client A ◄────────► Client B
-```
-
-Instead:
+The project is not peer-to-peer - clients never communicate directly. All communication flows through the central server, which maintains authoritative shared state.
 
 ```text
 Correct:
@@ -101,403 +32,37 @@ Correct:
 Client A ─────► Server ◄───── Client B
 ```
 
-The server coordinates the application and maintains authoritative state.
-
-The duplex callback:
-
-```text
-Server ─────► Client B
-```
-
-does not make the system peer-to-peer because the communication still originates from the server.
+The duplex callback from server to client does not make the system peer-to-peer because the communication still originates from the server.
 
 ### Inter-Process Communication (IPC)
 
-Because the client and server execute as separate processes, they cannot directly access each other's memory or invoke internal methods directly.
-
-Communication occurs through WCF service calls.
-
-For example:
-
-```text
-Chat.Client.Polling Process
-        │
-        │ WCF / RPC
-        ▼
-Chat.Server Process
-        │
-        ▼
-UserManager
-```
-
-The client does not directly access:
-
-```csharp
-UserManager
-ChannelManager
-MessageRouter
-FileHandler
-```
-
-Instead, it communicates through the WCF service contract.
-
-This is an important characteristic of the distributed architecture.
+Because the client and server execute as separate processes, they cannot directly access each other's memory or invoke internal methods directly. Communication occurs through WCF service calls. The client does not directly access UserManager, ChannelManager, MessageRouter, or FileHandler - it communicates through the WCF service contract.
 
 ### RPC Architecture
 
-The application uses Windows Communication Foundation (WCF) as its RPC framework.
+The application uses Windows Communication Foundation (WCF) as its RPC framework. From the client's perspective, operations like `service.SignIn()` appear similar to local method calls, but they cross process/network boundaries with different failure characteristics (Lecture 1). The architecture has two layers: RPC calls from client to server via WCF, then local procedure calls within the server (e.g., `_userManager.SignIn()`).
 
-From the client's perspective, operations such as:
-
-```csharp
-service.SignIn(userId);
-service.JoinChannel(userId, channelName);
-service.SendMessage(message);
-```
-
-appear similar to normal local method calls. However, these operations are executed by the remote `Chat.Server` process.
-
-Conceptually:
-
-```text
-Client Process
-     │
-     │ RPC Request
-     ▼
-Network / WCF
-     │
-     ▼
-Server Process
-     │
-     │ Execute operation
-     ▼
-Server-side Managers
-     │
-     │ RPC Response
-     ▼
-Client Process
-```
-
-WCF provides the RPC abstraction and handles much of the communication infrastructure, including message encoding, serialization/deserialization, transport communication, and service dispatch.
-
-The application still needs to consider:
-
-- endpoint configuration
-- connectivity
-- timeouts
-- communication failures
-- service availability
-- serialization constraints
-- concurrency
-- callback disconnection
-
-### Local Procedure Call vs Remote Procedure Call
-
-The architecture has two layers of procedure calls:
-
-```text
-CLIENT
-──────────────────────────────
-service.SignIn(userId)
-      │
-      │ RPC / WCF (Remote)
-      ▼
-SERVER
-──────────────────────────────
-ChatService.SignIn(userId)
-      │
-      │ Local Procedure Call
-      ▼
-UserManager.SignIn(userId)
-```
-
-- **Remote Procedure Call (RPC)**: `service.SignIn(userId)` from client to server via WCF
-- **Local Procedure Call**: `_userManager.SignIn(userId)` within server process
-
-### RPC Transparency and Its Problems
-
-A major advantage of RPC is that a remote operation can appear similar to a local function call:
-
-```csharp
-service.SignIn(userId);
-```
-
-However, unlike:
-
-```csharp
-_userManager.SignIn(userId);
-```
-
-the RPC call crosses a process and network boundary.
-
-Therefore:
-
-```text
-Local Procedure Call
---------------------
-Very low latency
-Normally reliable
-Shared process/address space
-
-Remote Procedure Call
----------------------
-Network latency
-Can fail independently
-Requires serialization
-Requires communication
-Remote process may be unavailable
-```
-
-This directly demonstrates the Lecture 1 warning that RPC can hide the distributed nature of an application.
-
-### Why Remote Calls Are Fundamentally Different
-
-A local call normally has a relatively simple execution model:
-
-```text
-Call → Execute → Return
-```
-
-A remote call has multiple possible failure points:
-
-```text
-Client
-  │
-  │ Request
-  ▼
-Network
-  │
-  ▼
-Server
-  │
-  │ Execute
-  ▼
-Network
-  │
-  ▼
-Client
-```
-
-Failures can occur:
-
-- Before the request reaches the server
-- While the request is being transmitted
-- While the server is processing it
-- After the server has completed the operation
-- While the response is being transmitted
-- Before the client receives the response
-
-Therefore, a communication exception does not necessarily prove that the server-side operation did not occur.
-
-This is one of the fundamental differences between local calls and RPC.
+WCF provides the RPC abstraction, handling serialization, marshaling, and transport. Remote calls have multiple possible failure points (network, server availability, serialization) that local calls do not. A communication exception does not necessarily prove the server-side operation did not occur.
 
 ### Communication Models
 
 The project demonstrates two RPC communication models:
 
-#### Polling (Request/Response RPC)
+**Polling (Request/Response RPC)**: The client repeatedly asks the server for updates using operations like `GetMessages()`, `GetPrivateMessages()`, `GetChannelMembers()`, and `GetChannels()`.
 
-```text
-Polling Client
-      │
-      │ Request
-      ▼
-    Server
-      │
-      │ Response
-      ▼
-Polling Client
-      │
-      │ waits 2 seconds
-      ▼
-    repeat
-```
-
-The polling client periodically invokes server operations such as:
-- `GetMessages()`
-- `GetPrivateMessages()`
-- `GetChannelMembers()`
-- `GetChannels()`
-
-### Polling vs Duplex
-
-#### Polling
-
-The client repeatedly asks:
-
-```text
-"Do you have anything new?"
-```
-
-Example:
-
-```text
-Client ── GetMessages() ──► Server
-Client ◄──── Messages ───── Server
-
-wait 2 seconds
-
-Client ── GetMessages() ──► Server
-```
-
-#### Duplex
-
-The client establishes a callback channel and the server can notify the client when an event occurs:
-
-```text
-Client ───── request ─────► Server
-
-Server ───── callback ─────► Client
-```
-
-Therefore the duplex client does not need periodic message polling.
-
-This distinction is important for the Section C requirement.
-
-#### Duplex RPC / Callback (Bidirectional RPC)
-
-Duplex WCF communication provides two-way communication over a client-server relationship. The client sends service requests to the server, while the server can invoke operations on the client's callback contract.
-
-Architecture:
-
-```text
-                WCF Duplex Channel
-
-Client                                      Server
-  │                                            │
-  │────── Service Request ───────────────────►│
-  │                                            │
-  │                                            │
-  │◄───── Callback Invocation ────────────────│
-  │                                            │
-```
-
-The callback is still communication across the process/network boundary. Do not describe the callback as a direct local event.
+**Duplex (Bidirectional RPC)**: The client establishes a callback channel and the server can notify the client when events occur, eliminating the need for periodic polling (Section C requirement). The callback is still communication across the process/network boundary, not a direct local event.
 
 ### RPC Failure Considerations
 
-Because operations are remote, they have properties that local method calls do not:
-
-- Network connectivity can fail.
-- The server may be unavailable.
-- A remote call has significantly higher latency than a local method call.
-- A request may fail after the client has sent it.
-- The client cannot assume that the server operation completed simply because the local call was initiated.
-- Client applications must handle communication exceptions and disconnects.
-
-The implementation therefore includes disconnect handling and service connection management.
+Because operations are remote, they have properties that local method calls do not: network connectivity can fail, the server may be unavailable, remote calls have higher latency, and requests can fail after being sent. The implementation includes disconnect handling and service connection management.
 
 ### Serialization and Service Contracts
 
-The WCF contracts in `Chat.Contracts` define the interface and data exchanged between client and server.
-
-**Service Contracts** (RPC Interface / IDL equivalent):
-- `IChatService` - Defines polling client operations
-- `IDuplexChatService` - Defines duplex client operations
-- `IChatCallback` - Defines server-to-client callback operations
-
-**Data Contracts** (Serialization definitions):
-- `User` - User information
-- `Channel` - Channel information
-- `Message` - Message data
-- `SharedFile` - File metadata and data
-
-### RPC Serialization Example
-
-When the polling client calls:
-
-```csharp
-service.SendMessage(message);
-```
-
-the `Message` object cannot simply be passed as a shared in-memory object.
-
-Conceptually:
-
-```text
-Client Memory
-    │
-    │ Message object
-    ▼
-Serialization
-    │
-    ▼
-Network representation
-    │
-    ▼
-Network
-    │
-    ▼
-Deserialization
-    │
-    ▼
-Server Memory
-    │
-    ▼
-Message object
-```
-
-The response follows the reverse process.
-
-The client and server therefore have independent object instances.
-
-They do not share memory.
-
-### Serialization vs Marshaling
-
-#### Serialization
-
-Converts an object/data structure into a representation suitable for transmission or storage.
-
-Example:
-
-```text
-Message object
-      ↓
-Serialized representation
-      ↓
-Network
-```
-
-#### Marshaling
-
-Refers more broadly to preparing data/arguments for communication between execution contexts.
-
-In this project, WCF handles the required argument/message marshaling and serialization infrastructure.
-
-Serialization is commonly part of the marshaling process in distributed communication systems.
+The WCF contracts in `Chat.Contracts` define the interface and data exchanged between client and server. When the client calls `service.SendMessage(message)`, the `Message` object is serialized for transmission across the network and deserialized on the server side. The client and server therefore have independent object instances and do not share memory. WCF handles the required argument/message marshaling and serialization infrastructure.
 
 ### Why Use RPC Instead of Raw TCP/UDP?
 
-TCP provides reliable byte-stream transport, but it does not define application-level operations.
-
-A custom TCP implementation would need to define:
-
-- Message boundaries
-- Request/response format
-- Serialization
-- Operation identification
-- Error handling
-- Connection management
-- Application protocol rules
-
-WCF provides a higher-level RPC abstraction.
-
-Therefore:
-
-```text
-TCP
- ↓
-Transport-level communication
-
-WCF RPC
- ↓
-Application/service-level remote operations
-```
-
-This corresponds directly to Lecture 1's point that TCP/IP is too general-purpose for directly implementing application-level distributed operations.
-
-### Client-Server vs Distributed Application
+TCP provides reliable byte-stream transport but does not define application-level operations. A custom TCP implementation would need to define message boundaries, request/response format, serialization, operation identification, error handling, connection management, and application protocol rules. WCF provides a higher-level RPC abstraction for application/service-level remote operations (Lecture 1).
 
 ### WCF and RPC
 
@@ -1025,38 +590,3 @@ public class MessageRouter : IMessageRouter { }
 ## Success Criteria
 The implementation targets all assessed assignment requirements and is structured to support the full available mark allocation.
 
-## Lecture 1 Takeaways Demonstrated by This Project
-
-| Lecture 1 Concept         | Project Demonstration                         |
-| ------------------------- | --------------------------------------------- |
-| Distributed computing     | Separate client/server processes              |
-| IPC                       | WCF communication                             |
-| Client-server             | Clients communicate through central server    |
-| RPC                       | WCF service operations                        |
-| Local procedure call      | Manager calls inside server                   |
-| Serialization             | WCF data contract transmission                |
-| Marshaling                | RPC argument/result preparation               |
-| Communication failure     | WCF communication exceptions                  |
-| Polling                   | Client-initiated periodic requests            |
-| Duplex communication      | Server callbacks                              |
-| Coordination              | Server routes messages between clients        |
-| Non-shared memory         | Client/server have independent address spaces |
-| Peer-to-peer distinction  | Clients never directly communicate            |
-| Distribution transparency | Remote calls resemble local C# calls          |
-
-## Phase 5 Definition of Done
-
-Phase 5 is complete when:
-
-- [ ] DuplexChannelFactory successfully connects to server
-- [ ] Callback handler successfully registers
-- [ ] Server can invoke callback methods
-- [ ] Callback methods safely marshal to WPF Dispatcher
-- [ ] No periodic message polling exists in duplex client
-- [ ] Channel updates are received through callbacks
-- [ ] Public messages are received through callbacks
-- [ ] Private messages are received through callbacks
-- [ ] File notifications/updates are received through callbacks where applicable
-- [ ] Sign-out unregisters/cleans callback state
-- [ ] Communication failures are handled
-- [ ] Multiple duplex clients can communicate simultaneously
