@@ -212,13 +212,13 @@ namespace Chat.Client.Polling
                 string fileName = System.IO.Path.GetFileName(filePath);
                 byte[] fileData = System.IO.File.ReadAllBytes(filePath);
 
-                System.Diagnostics.Debug.WriteLine($"[FILE SHARE] Selected file: {fileName}, Size: {fileData.Length} bytes");
+                LogDebug($"[FILE SHARE] Selected file: {fileName}, Size: {fileData.Length} bytes");
 
                 // Check file size limit (2MB)
                 const long maxFileSize = 2 * 1024 * 1024; // 2MB in bytes
                 if (fileData.Length > maxFileSize)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[FILE SHARE] File too large: {fileData.Length} bytes");
+                    LogDebug($"[FILE SHARE] File too large: {fileData.Length} bytes");
                     MessageBox.Show($"File size exceeds 2MB limit. Current size: {FormatFileSize(fileData.Length)}", "File Too Large", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -251,10 +251,10 @@ namespace Chat.Client.Polling
                     fileType = FileType.Txt;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[FILE SHARE] File type: {fileType}, Uploading to channel: {_currentChannel}");
+                LogDebug($"[FILE SHARE] File type: {fileType}, Uploading to channel: {_currentChannel}");
 
                 bool success = _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
-                System.Diagnostics.Debug.WriteLine($"[FILE SHARE] Upload result: {success}");
+                LogDebug($"[FILE SHARE] Upload result: {success}");
 
                 if (success)
                 {
