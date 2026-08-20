@@ -74,20 +74,20 @@
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="{StaticResource AccentDisabledBrush}"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Background" Value="{StaticResource AccentDisabledBrush}"/>
-                            <Setter Property="Foreground" Value="#888888"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
+                </Button.Style>
             </Button>
             <TextBlock x:Name="LoginStatusText" FontSize="{StaticResource FontSizeNormal}" Foreground="{StaticResource ErrorBrush}"
                        HorizontalAlignment="Center" TextWrapping="Wrap" Height="40"/>
