@@ -1,0 +1,60 @@
+using System;
+using System.ServiceModel;
+using System.Windows.Threading;
+using Chat.Contracts.CallbackContracts;
+using Chat.Contracts.DataContracts;
+
+namespace Chat.Client.Duplex.Services
+{
+    public class ChatCallbackHandler : IChatCallback
+    {
+        private readonly Dispatcher _dispatcher;
+        private readonly DuplexServiceClient _serviceClient;
+
+        public ChatCallbackHandler(Dispatcher dispatcher, DuplexServiceClient serviceClient)
+        {
+            _dispatcher = dispatcher;
+            _serviceClient = serviceClient;
+        }
+
+        public void OnChannelListChanged()
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnChannelListChangedInternal();
+            }));
+        }
+
+        public void OnChannelMembersChanged(string channelName)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnChannelMembersChangedInternal(channelName);
+            }));
+        }
+
+        public void OnMessageReceived(Message message)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnMessageReceivedInternal(message);
+            }));
+        }
+
+        public void OnPrivateMessageReceived(Message message)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnPrivateMessageReceivedInternal(message);
+            }));
+        }
+
+        public void OnFileShared(SharedFile file)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnFileSharedInternal(file);
+            }));
+        }
+    }
+}

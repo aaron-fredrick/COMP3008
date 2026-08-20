@@ -1,0 +1,61 @@
+<Window x:Class="Chat.Client.Duplex.Views.ChannelListView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Channels (Duplex)" Height="500" Width="700"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="{StaticResource MarginLarge}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="{StaticResource MarginBottomLarge}">
+            <TextBlock Text="COMP3008 Chat (Duplex)" FontSize="{StaticResource FontSizeExtraLarge}" FontWeight="Bold"
+                       Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeText" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}"
+                       HorizontalAlignment="Center" Margin="{StaticResource MarginBottomSmall}"/>
+        </StackPanel>
+
+        <!-- Channel List -->
+        <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="{StaticResource PaddingLarge}">
+            <StackPanel>
+                <TextBlock Text="Available Channels" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
+                           Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,10"/>
+                <ListBox x:Name="ChannelsListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                         Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="250"
+                         SelectionMode="Single" SelectionChanged="ChannelsListBox_SelectionChanged"
+                         DisplayMemberPath="Name"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Controls -->
+        <StackPanel Grid.Row="2" Margin="{StaticResource MarginTopLarge}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox x:Name="NewChannelTextBox" Grid.Column="0" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}"
+                         Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
+                         Margin="0,0,10,0"/>
+
+                <Button x:Name="CreateChannelButton" Grid.Column="1" Content="Create Channel"
+                        FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}" Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
+                        BorderThickness="0" Cursor="Hand" Margin="0,0,10,0" Click="CreateChannelButton_Click"/>
+
+                <Button x:Name="JoinButton" Grid.Column="2" Content="Join"
+                        FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}" Background="#4caf50" Foreground="{StaticResource ForegroundBrush}"
+                        BorderThickness="0" Cursor="Hand" Click="JoinButton_Click"/>
+            </Grid>
+
+            <Button x:Name="SignOutButton" Content="Sign Out" FontSize="{StaticResource FontSizeNormal}" Padding="{StaticResource ButtonPaddingSmall}" Margin="0,10,0,0"
+                    Background="{StaticResource ErrorBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
+                    Cursor="Hand" HorizontalAlignment="Right" Click="SignOutButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
