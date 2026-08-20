@@ -456,6 +456,414 @@ Therefore `callback.NotifyMessageReceived(message)` is not a normal local callba
 └────────────────────────────────┘
 ```
 
+### Multi-Tier Architecture
+
+The Chat Application follows a simplified multi-tier architecture based on the distributed computing concepts introduced in COMP3008. The system does not require all four conceptual tiers. Instead, it combines the presentation and display responsibilities within the WPF clients while keeping the server-side business logic separate.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    DISPLAY / CLIENT TIER                    │
+│                                                             │
+│  Chat.Client.Polling          Chat.Client.Duplex            │
+│  ┌──────────────────┐         ┌──────────────────┐          │
+│  │ WPF Views        │         │ WPF Views        │          │
+│  │ ViewModels       │         │ ViewModels       │          │
+│  │ User Input       │         │ User Input       │          │
+│  │ UI Validation    │         │ UI Validation    │          │
+│  └────────┬─────────┘         └────────┬─────────┘          │
+└───────────┼────────────────────────────┼────────────────────┘
+            │                            │
+            │ WCF RPC                    │ WCF Duplex RPC
+            ▼                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    BUSINESS / SERVICE TIER                  │
+│                                                             │
+│                       Chat.Server                           │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ ChatService                                            │  │
+│  │ UserManager                                            │  │
+│  │ ChannelManager                                         │  │
+│  │ MessageRouter                                          │  │
+│  │ FileHandler                                            │  │
+│  │ CallbackManager                                        │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│                    In-Memory Application State               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why This Architecture?**
+
+The application separates presentation concerns from server-side business logic. The WPF clients are responsible for displaying information to users, collecting user input, performing client-side validation, managing UI state, initiating WCF operations, and processing polling results or callback events. The server is responsible for user management, channel management, message routing, private messaging, file validation and storage, maintaining authoritative application state, and managing duplex callback connections.
+
+**Why No Data Tier?**
+
+The assignment explicitly requires server state to be held in memory and does not require persistent storage. A traditional database-backed Data Tier is intentionally not implemented. Introducing a database would add an unnecessary distributed component and would conflict with the assignment's requirement that application state does not need to survive a server restart.
+
+**Why Not a Separate Presentation Tier?**
+
+The WPF clients combine presentation and display responsibilities. The application does not expose a separate web/API presentation tier because the WPF applications communicate directly with the WCF service. Display + Presentation → WCF → Business/Service is sufficient for the requirements of this application.
+
+**Architectural Trade-Off**
+
+A four-tier architecture could theoretically separate Display Tier, Presentation Tier, Business Tier, and Data Tier. However, implementing all four would introduce additional network boundaries and components without providing a meaningful benefit for this relatively small application. The selected architecture prioritizes low coupling, clear separation of responsibilities, simplicity, maintainability, appropriate distribution, and compliance with assignment requirements.
+
+### Client-Server and Multi-Tier Classification
+
+The system is both a **client-server application** and a **distributed application**. The client-server classification describes the communication relationship: Client ───── RPC ─────► Server. The distributed-system classification describes how application responsibilities and execution are separated across processes and machines.
+
+The application distributes responsibilities as follows:
+
+| Responsibility            | Location        |
+| ------------------------- | --------------- |
+| User interface            | Client          |
+| User input                | Client          |
+| Client-side validation    | Client          |
+| WCF communication         | Client / Server |
+| User management           | Server          |
+| Channel management        | Server          |
+| Message routing           | Server          |
+| File validation           | Server          |
+| Shared application state  | Server          |
+| Duplex event notification | Server → Client |
+
+This separation creates a low-coupling boundary between the clients and the server. The clients do not access server implementation classes directly. They interact through the WCF service contracts.
+
+```text
+Client implementation
+       │
+       │ Contract boundary
+       ▼
+IChatService / IDuplexChatService
+       │
+       │ RPC
+       ▼
+ChatService
+       │
+       ▼
+Server managers
+```
+
+The WCF service therefore acts as the distributed component interface between the client and business/service tier.
+
+### Components vs Internal Objects
+
+The project distinguishes between distributed components and internal implementation objects.
+
+**Distributed Components**
+
+The WCF services represent the externally accessible components of the server. The primary component interfaces are `IChatService`, `IDuplexChatService`, and `IChatCallback`. These interfaces define the operations available across the process boundary.
+
+```text
+Client
+   │
+   │ WCF
+   ▼
+┌──────────────────────────────┐
+│ Distributed Service Component│
+│                              │
+│ IChatService                 │
+│ IDuplexChatService           │
+└──────────────┬───────────────┘
+               │
+               ▼
+        Internal objects
+```
+
+**Internal Objects**
+
+Classes such as `UserManager`, `ChannelManager`, `MessageRouter`, `FileHandler`, and `CallbackManager` are internal implementation objects. They are not directly accessible to clients.
+
+```text
+Client
+  │
+  │ RPC
+  ▼
+ChatService.SignIn()
+  │
+  │ Local method call
+  ▼
+UserManager.SignIn()
+```
+
+`ChatService` forms part of the distributed service boundary, whereas `UserManager` is an internal server-side implementation object. This distinction is important because internal object references cannot be directly shared across the network. Only the service contract and serializable data cross the distributed boundary.
+
+### Distributed Boundary and Network Failure
+
+The WCF service boundary introduces distributed-system failure modes that do not exist with ordinary local method calls. For example, `_userManager.SignIn(userId)` is a local operation inside the server process. In contrast, `service.SignIn(userId)` from the client crosses the distributed boundary.
+
+The remote call may be affected by network failure, server failure, connection timeout, endpoint configuration errors, serialization failures, client disconnection, or server-side exceptions. Therefore, a remote method call must not be treated as equivalent to a local method call. The client must handle communication failures explicitly and provide appropriate feedback to the user.
+
+**Distributed State**
+
+The server maintains the authoritative application state. Clients maintain local UI state, but they cannot directly modify server state.
+
+```text
+Client A ──────┐
+               │
+Client B ──────┼──► Server State
+               │
+Client C ──────┘
+```
+
+This ensures that operations such as user registration, channel membership, and message routing are centrally coordinated by the server.
+
+### Polling Strategy
+
+The polling client periodically initiates request/response RPC operations to check for updates. The polling interval is configurable, with a default interval of 2 seconds.
+
+```text
+Client
+   │
+   │ GetMessages()
+   ▼
+Server
+   │
+   │ Response
+   ▼
+Client
+   │
+   │ wait
+   ▼
+Client
+   │
+   │ GetMessages()
+   ▼
+Server
+```
+
+Polling is inherently synchronous at the communication level because the client sends a request and receives a response. However, the client should avoid blocking the WPF UI thread while waiting for remote operations. Where supported by the implementation, asynchronous WCF calls can be represented using `Task` and `await`.
+
+```csharp
+private async Task PollMessagesAsync()
+{
+    var messages = await service.GetMessagesAsync(...);
+    UpdateMessages(messages);
+}
+```
+
+The important distinction is: Polling determines when the client asks the server for updates. Async/Await determines how the client waits for the remote operation. WCF RPC determines how the request is communicated to the server. These are separate concepts.
+
+**UI Responsiveness**
+
+The polling client must not block the WPF UI thread while waiting for network communication.
+
+```text
+WPF UI Thread
+     │
+     ├── Display UI
+     │
+     ├── Handle user input
+     │
+     └── Start asynchronous RPC
+                │
+                ▼
+          WCF Communication
+                │
+                ▼
+             Server
+                │
+                ▼
+          RPC completion
+                │
+                ▼
+       Resume UI operation
+```
+
+This allows the application to remain responsive while network operations are in progress.
+
+### Asynchronous Communication
+
+The application distinguishes between synchronous RPC, asynchronous execution, and one-way WCF operations. These mechanisms solve different problems.
+
+**Synchronous Request/Response RPC**
+
+A normal WCF operation follows: Client → Request → Server → Response → Client. The caller logically waits for the operation to complete. For a WPF application, performing a long-running remote operation synchronously on the UI thread can make the interface appear frozen.
+
+**Task-Based Asynchronous Operations**
+
+C# provides `Task` and `async`/`await` for asynchronous operations.
+
+```csharp
+public async Task SendMessageAsync(Message message)
+{
+    await service.SendMessageAsync(message);
+}
+```
+
+`await` allows the method to suspend while the asynchronous operation is incomplete without blocking the current thread. This is particularly useful for WPF because the UI thread remains available to process user input, window rendering, animations, UI events, and other application work.
+
+**Task vs Thread**
+
+A `Task` should not be treated as simply another name for a thread. A thread represents an execution resource. A `Task` represents an asynchronous operation that may complete in the future. For network I/O, asynchronous operations can avoid occupying a thread while waiting for the network operation to complete.
+
+**Async Exception Handling**
+
+Exceptions from an awaited asynchronous operation are propagated through the `await` expression. Therefore remote communication should be handled using normal exception handling:
+
+```csharp
+try
+{
+    await SendMessageAsync(message);
+}
+catch (CommunicationException)
+{
+    // Handle WCF communication failure
+}
+catch (TimeoutException)
+{
+    // Handle timeout
+}
+```
+
+### One-Way WCF Operations
+
+WCF supports one-way operations using `[OperationContract(IsOneWay = true)]`. A one-way operation does not return a result or `out` parameter to the caller.
+
+```csharp
+[OperationContract(IsOneWay = true)]
+void ProcessData(string data);
+```
+
+The client does not receive a normal operation response. However, one-way does not mean that the operation is completely independent of the network. The client still needs to establish communication with the service, and communication failures can still occur. Furthermore, the client does not receive confirmation that the server-side operation completed successfully. Therefore, one-way operations should only be used where the application does not require a response or confirmation.
+
+For this chat application, normal request/response operations remain appropriate for operations where the client needs a result, such as sign-in, getting channels, getting messages, creating a channel, and downloading files. One-way communication may be considered for suitable fire-and-forget operations, but it should not replace request/response communication where confirmation is required.
+
+### Duplex Communication and Asynchronous Execution
+
+The duplex client provides a different form of asynchronous communication from `async`/`await`.
+
+**Duplex Communication**
+
+WCF duplex communication allows the server to initiate communication with the client through a callback contract: Client ───── Request ─────► Server, Client ◄──── Callback ───── Server. The client does not need to continuously request new messages.
+
+**Async/Await**
+
+`async`/`await` is a C# programming model for asynchronously waiting for operations. Duplex: Who initiates communication? Server can initiate callbacks. Async/Await: How does the application wait for an operation? The caller can await completion without blocking the current thread. These are complementary concepts rather than alternatives.
+
+The duplex client therefore uses WCF duplex callbacks for server-initiated events, Dispatcher marshaling for UI thread safety, `Task`/`async`/`await` where asynchronous client operations are appropriate, and WCF communication exception handling for network failures.
+
+### Thread Safety and Synchronization
+
+Different parts of the application have different concurrency requirements.
+
+**Server**
+
+The server may process multiple client requests concurrently. Shared state therefore requires synchronization. The server uses `ReaderWriterLockSlim` to protect shared in-memory state. This prevents concurrent operations from corrupting user collections, channel collections, message collections, file metadata, and callback registrations.
+
+**Polling Client**
+
+The WPF polling client uses the WPF Dispatcher for UI operations. If remote operations are performed asynchronously, the UI must only be updated from the appropriate UI context.
+
+```text
+Async WCF operation
+        │
+        ▼
+     Result
+        │
+        ▼
+WPF Dispatcher
+        │
+        ▼
+    UI update
+```
+
+**Duplex Client**
+
+WCF callbacks may execute on a thread other than the WPF UI thread. Therefore callback handlers must marshal UI changes through the WPF Dispatcher.
+
+```csharp
+Application.Current.Dispatcher.Invoke(() =>
+{
+    // Update UI
+});
+```
+
+The callback handler should perform minimal work before dispatching the update to the UI.
+
+### Architectural Rationale
+
+The selected architecture is intentionally simpler than a full four-tier distributed system.
+
+**Requirements**
+
+The assignment requires a server, a polling client, a duplex client, shared server-side state, real-time communication, file sharing, private messaging, and multiple concurrent clients.
+
+**Architectural Decision**
+
+The application uses WPF Clients → WCF → Chat.Server → In-Memory State. This provides sufficient separation between display/presentation, distributed service boundary, business logic, and application state without introducing unnecessary distributed components.
+
+**Why Not Add a Database?**
+
+The assignment specifies in-memory server state. A database would introduce another component (Client → Server → Database), creating an additional distributed boundary without being necessary for the required functionality.
+
+**Why Not Add a Separate API Gateway?**
+
+The application has only two WPF client implementations and one server. A separate presentation/API tier would add another network hop (Client → API → Business Service). For this project, this would increase complexity without providing meaningful load-balancing or service-specialisation benefits.
+
+**Why Have Two Clients?**
+
+The two clients are deliberately implemented using different communication models:
+
+| Client  | Communication    | Architectural Purpose                       |
+| ------- | ---------------- | ------------------------------------------- |
+| Polling | Request/Response | Demonstrates client-initiated communication |
+| Duplex  | Callback RPC     | Demonstrates server-initiated communication |
+
+This makes the project useful for demonstrating distributed communication concepts rather than simply implementing a single chat client.
+
+### Communication Model Comparison
+
+The project demonstrates two different approaches to distributing communication.
+
+| Property | Polling Client | Duplex Client |
+|---|---|---|
+| Communication initiation | Client | Client + Server |
+| New message detection | Periodic polling | Server callback |
+| WCF model | Request/Response | Duplex |
+| Client requests required for updates | Yes | No |
+| Network overhead | Periodic requests | Event-driven |
+| Real-time behaviour | Depends on polling interval | Immediate callback |
+| UI asynchronous handling | Important | Important |
+| Server callback required | No | Yes |
+| Main educational purpose | Request/response RPC | Bidirectional RPC |
+
+**Polling**
+```text
+Client ── GetMessages() ──► Server
+Client ◄──── Messages ───── Server
+       wait 2 seconds
+Client ── GetMessages() ──► Server
+```
+
+**Duplex**
+```text
+Client ───── Request ─────► Server
+Server ─── Callback ──────► Client
+Server ─── Callback ──────► Client
+Server ─── Callback ──────► Client
+```
+
+The duplex architecture avoids repeatedly querying the server for new events. However, it introduces additional complexity around callback lifetime, connection management, concurrency, and UI-thread synchronization.
+
+### Project Components Mapped to Multi-Tier Architecture
+
+| Project Component | Tier / Role | Responsibility |
+|---|---|---|
+| `Chat.Client.Polling` | Display + Presentation | WPF interface and polling communication |
+| `Chat.Client.Duplex` | Display + Presentation | WPF interface and callback communication |
+| `Chat.Client.Shared` | Client Support | Shared validation, configuration and UI resources |
+| `IChatService` | Service Interface | Defines polling RPC operations |
+| `IDuplexChatService` | Service Interface | Defines duplex RPC operations |
+| `IChatCallback` | Callback Interface | Defines server-to-client callbacks |
+| `ChatService` | Business / Service Tier | Exposes distributed operations |
+| `UserManager` | Business Logic | User management |
+| `ChannelManager` | Business Logic | Channel management |
+| `MessageRouter` | Business Logic | Message distribution |
+| `FileHandler` | Business Logic | File validation and storage |
+| `CallbackManager` | Service Infrastructure | Callback registration and notification |
+| In-memory dictionaries | Data State | Server-side authoritative state |
+
 ### Server Logic Distribution
 
 **UserManager** (`Chat.Server/StateManagement/UserManager.cs`)
@@ -903,4 +1311,30 @@ None currently.
 | Network failure               | WCF communication exceptions/disconnects              |
 | Runtime communication         | WCF ChannelFactory/channel                            |
 | Service-oriented architecture | Clients consume server-provided services              |
+
+## COMP3008 Lecture 3 Success Criteria
+
+### Distributed Architecture
+
+- [x] Clear separation between client presentation and server business logic
+- [x] Distributed service boundary exposed through WCF contracts
+- [x] No direct client access to server implementation objects
+- [x] Server maintains authoritative shared state
+- [x] Architecture avoids unnecessary additional tiers
+
+### Asynchronous Communication
+
+- [ ] WPF UI remains responsive during remote operations
+- [ ] Suitable network operations use Task-based asynchronous execution
+- [ ] `await` is used rather than blocking the UI thread where appropriate
+- [ ] Async communication exceptions are handled correctly
+- [ ] Duplex callbacks are safely marshalled to the WPF Dispatcher
+
+### Concurrency
+
+- [x] Multiple clients can communicate concurrently
+- [x] Server shared state remains thread-safe
+- [ ] Polling and duplex clients can operate simultaneously
+- [x] Client disconnections do not corrupt server state
+- [x] Server shutdown/disconnection is handled gracefully
 
