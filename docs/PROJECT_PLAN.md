@@ -21,11 +21,10 @@ COMP3008.sln
 │   └── SharedTypes/            # Enums, constants, helpers
 │
 ├── Chat.Client.Shared/         # Shared class library for client logic
-│   ├── ViewModels/             # Shared ViewModels (UI logic only)
-│   ├── Services/               # Shared client services (storage, grouping, theme)
+│   ├── Services/               # Shared client services (Validation, FileHelper, Configuration)
 │   ├── Models/                 # Client-side models (UI-specific)
-│   ├── Styles/                 # Resource dictionaries (themes, colors)
-│   ├── Controls/               # Custom user controls
+│   ├── Styles/                 # Resource dictionaries (colors, sizing)
+│   ├── Resources/              # Resource dictionaries (converters, master resources)
 │   └── Converters/             # Value converters
 │
 ├── Chat.Server/                # Console application
@@ -34,12 +33,12 @@ COMP3008.sln
 │   ├── FileStorage/            # File handling and validation
 │   └── Hosting/                # Service host configuration
 │
-├── Chat.Client.Polling/        # WPF application
-│   ├── Views/                  # XAML views
+├── Chat.Client.Polling/        # WPF application (✅ Complete)
+│   ├── Views/                  # XAML views (MainWindow, ChannelListView, ConversationView, PrivateMessageView)
 │   └── Services/               # Polling-specific WCF client + polling logic
 │
-└── Chat.Client.Duplex/         # WPF application
-    ├── Views/                  # XAML views (shared with polling)
+└── Chat.Client.Duplex/         # WPF application (🔄 In Progress)
+    ├── Views/                  # XAML views (to be implemented)
     └── Services/               # Duplex-specific WCF client + callback handling
 ```
 
@@ -68,20 +67,21 @@ COMP3008.sln
   - **Size limit**: 2 MB per file (per assignment)
 
 ### 2. Chat.Client.Shared (Shared Library)
-**Purpose**: Shared client-side logic including ViewModels and services.
+**Purpose**: Shared client-side logic including services and UI resources.
 
-**Shared ViewModels** (UI logic, communication-agnostic):
-- `MainViewModel` - Coordinates all view models
-- `ChannelListViewModel` - Channel list and creation
-- `ConversationViewModel` - Channel conversation with date grouping
-- `PrivateChatViewModel` - Private message windows with date grouping
-- `ActiveDMListViewModel` - Manages active private conversations sidebar
-- `SettingsViewModel` - User settings
+**Shared Services** (communication-agnostic):
+- `ValidationService` - Validates usernames, channel names, messages, and files
+- `FileHelperService` - File operations (size, extension, reading, saving)
+- `ConfigurationService` - Server configuration management
 
-**Shared Client Services**:
-- `LocalMessageStorage` - SQLite for message history (channel + private)
-- `MessageGroupingService` - WhatsApp-style date segmentation logic
-- `ThemeService` - Color theme management
+**Shared Models**:
+- `MessageDisplayModel` - UI-specific message presentation model
+
+**Shared UI Resources**:
+- `Colors.xaml` - Dark theme color brushes
+- `Sizing.xaml` - Font sizes, padding, margins, corner radius
+- `Converters.xaml` - FileSizeConverter
+- `SharedResources.xaml` - Master resource dictionary
 
 ### 3. Chat.Server
 **Purpose**: Self-hosted WCF service managing all shared state.
@@ -102,43 +102,49 @@ COMP3008.sln
 - Nothing survives server restart
 
 ### 4. Chat.Client.Polling
-**Purpose**: WPF client using polling mechanism for updates.
+**Purpose**: WPF client using polling mechanism for updates (✅ Complete).
 
 **Key Components**:
-- `PollingServiceClient` - WCF client wrapper
-- `UpdatePoller` - Background thread for periodic updates
-- **ViewModels**: All ViewModels imported from Chat.Client.Shared (shared)
-- **Services**: LocalMessageStorage, MessageGroupingService, ThemeService from Chat.Client.Shared (shared)
+- `MainWindow` - Sign-in view with validation
+- `ChannelListView` - Channel list and creation UI
+- `ConversationView` - Channel conversation with message display
+- `PrivateMessageView` - Private messaging UI
+- `ChatServiceClient` - WCF client wrapper
+- `DispatcherTimer` - Background polling for updates
 
 **Polling Strategy**:
-- Poll interval: 2-3 seconds (configurable)
+- Poll interval: 2 seconds (configurable)
+- Efficient timestamp-based polling for delta updates
 - Sequential polling: channels → messages → files → members
-- Efficient delta checking to minimize unnecessary updates
 
-**ViewModel Communication**:
-- ViewModels accept data via dependency injection or events
-- PollingServiceClient fetches data and pushes to ViewModels
-- ViewModels are communication-agnostic (don't know about polling vs duplex)
+**Features Implemented**:
+- Sign-in with duplicate username detection
+- Channel creation, joining, and leaving
+- Public messaging with timestamp-based history
+- Private messaging with multiple conversation windows
+- File sharing (2MB limit, specific extensions)
+- File download and opening
+- Sign-out functionality
+- Shared UI resources (colors, sizing, converters)
+- Shared services (ValidationService, FileHelperService)
 
 ### 5. Chat.Client.Duplex
-**Purpose**: WPF client using duplex callbacks for real-time updates.
+**Purpose**: WPF client using duplex callbacks for real-time updates (🔄 In Progress).
 
-**Key Components**:
+**Key Components** (to be implemented):
 - `DuplexServiceClient` - WCF duplex client wrapper
 - `ChatCallbackHandler` - Implements IChatCallback
-- `DispatcherService` - Marshals callbacks to UI thread
-- **ViewModels**: All ViewModels imported from Chat.Client.Shared (shared)
-- **Services**: LocalMessageStorage, MessageGroupingService, ThemeService from Chat.Client.Shared (shared)
+- `Dispatcher marshaling` - Thread-safe UI updates from callbacks
+- Views (MainWindow, ChannelListView, ConversationView, PrivateMessageView)
 
-**Callback Handling**:
-- Server pushes updates immediately
+**Callback Handling** (to be implemented):
+- Server pushes updates immediately via WCF callbacks
 - Thread-safe UI updates via Dispatcher
 - Graceful disconnection detection
 
-**ViewModel Communication**:
-- ViewModels accept data via dependency injection or events
-- ChatCallbackHandler receives callbacks and pushes to ViewModels
-- ViewModels are communication-agnostic (don't know about polling vs duplex)
+**Shared Components** (to be integrated):
+- Shared services (ValidationService, FileHelperService, ConfigurationService)
+- Shared UI resources (colors, sizing, converters)
 
 ## Enhanced Features
 
@@ -345,15 +351,14 @@ public class MessageRouter : IMessageRouter { }
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Foundation ✅ COMPLETED
 - [x] Create solution structure with 5 projects
 - [x] Define all service contracts in Chat.Contracts
 - [x] Define data contracts and shared types
 - [x] Set up basic WCF hosting in Chat.Server
-- [x] Create basic WPF shell for both clients
 - [x] Add configurable endpoints via App.config and command-line
 
-### Phase 2: Server Core (Week 2)
+### Phase 2: Server Core ✅ COMPLETED
 - [x] Implement UserManager with ID uniqueness
 - [x] Implement ChannelManager with CRUD operations
 - [x] Implement MessageRouter for public messages
@@ -361,49 +366,50 @@ public class MessageRouter : IMessageRouter { }
 - [x] Implement CallbackManager for duplex callbacks
 - [x] Implement ChatService WCF service
 - [x] Add thread-safety with ReaderWriterLockSlim
-- [ ] Add basic unit tests for server components
+- [x] Add server integration tests
 
-### Phase 3: Polling Client (Week 3)
-- [ ] Implement sign-in functionality
-- [ ] Implement channel list view with polling
-- [ ] Implement channel creation
-- [ ] Implement conversation view with message polling
-- [ ] Implement member list polling
-- [ ] Add background polling thread
+### Phase 3: Polling Client ✅ COMPLETED
+- [x] Implement sign-in functionality with validation
+- [x] Implement channel list view with polling
+- [x] Implement channel creation
+- [x] Implement conversation view with message polling
+- [x] Implement member list polling
+- [x] Add background polling thread with DispatcherTimer
+- [x] Implement private messaging with multiple windows
+- [x] Implement file sharing UI
+- [x] Implement file download and opening
+- [x] Add sign-out functionality
+- [x] Integrate shared services (ValidationService, FileHelperService)
+- [x] Integrate shared UI resources (colors, sizing, converters)
 
-### Phase 4: Advanced Features (Week 4)
-- [ ] Implement private messaging
-- [ ] Implement file sharing UI
-- [ ] Implement file download and opening
-- [ ] Add sign-out functionality
-- [ ] Implement color theme system
-- [ ] Implement settings feature
+### Phase 4: Shared Components ✅ COMPLETED
+- [x] Create ValidationService for common validation rules
+- [x] Create FileHelperService for file operations
+- [x] Create ConfigurationService for server settings
+- [x] Create shared UI resources (Colors.xaml, Sizing.xaml, Converters.xaml)
+- [x] Create SharedResources.xaml master dictionary
+- [x] Refactor polling client to use shared components
 
-### Phase 5: Session Recovery (Week 5)
-- [ ] Design SQLite schema (optional - client-side only)
-- [ ] Implement SQLite persistence layer (optional - client-side only)
-- [ ] Add periodic checkpointing (optional - client-side only)
-- [ ] Implement recovery on server startup (NOT REQUIRED - assignment states no server persistence)
-- [ ] Test crash recovery scenarios (optional - client-side only)
+### Phase 5: Duplex Client 🔄 IN PROGRESS
+- [ ] Implement DuplexChannelFactory for WCF duplex connection
+- [ ] Implement ChatCallbackHandler for IChatCallback
+- [ ] Implement Dispatcher marshaling for thread-safe UI updates
+- [ ] Build duplex client UI (MainWindow, ChannelListView, ConversationView, PrivateMessageView)
+- [ ] Integrate shared services in duplex client
+- [ ] Integrate shared UI resources in duplex client
+- [ ] Test duplex client sign-in/sign-out
+- [ ] Test duplex client channel management
+- [ ] Test duplex client public messaging with callbacks
+- [ ] Test duplex client private messaging with callbacks
+- [ ] Test duplex client file sharing
 
-### Phase 6: Duplex Client (Week 6)
-- [ ] Implement IDuplexChatService on server
-- [ ] Implement IChatCallback interface
-- [ ] Create DuplexServiceClient
-- [ ] Implement callback registration
-- [ ] Implement thread-safe UI updates
-- [ ] Add disconnection handling
-
-### Phase 7: Testing & Polish (Week 7)
+### Phase 6: Testing & Polish ⏳ PENDING
 - [ ] Test with 3+ concurrent clients
 - [ ] Test both clients against same server
-- [ ] Test crash recovery
-- [ ] Test theme switching
-- [ ] Test all settings
 - [ ] Performance optimization
 - [ ] Code review and cleanup
 
-### Phase 8: Documentation & Submission (Week 8)
+### Phase 7: Documentation & Submission ⏳ PENDING
 - [ ] Add XML documentation comments
 - [ ] Create user guide
 - [ ] Prepare demonstration script
