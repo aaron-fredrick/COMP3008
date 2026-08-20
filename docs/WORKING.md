@@ -781,6 +781,387 @@ Application.Current.Dispatcher.Invoke(() =>
 
 The callback handler should perform minimal work before dispatching the update to the UI.
 
+### Operation Classification
+
+Every major service/API operation should be classified during implementation planning.
+
+| Operation Type | Expected Behaviour | Example |
+|---|---|---|
+| Synchronous | Caller waits for result | GetChannels() |
+| Asynchronous | Caller continues while operation executes | SendMessageAsync() |
+| One-way | Caller sends command without requiring result | (potential future use) |
+| Remote callback | Server sends notification to client | NotifyMessageReceived() |
+| Local GUI dispatch | Worker thread updates GUI through UI thread | UpdateMessageList() |
+
+This classification should be documented for important service operations rather than deciding asynchronously on an ad-hoc basis during implementation.
+
+### Asynchronous Communication Decision Rule
+
+The system should distinguish between synchronous request/response operations, asynchronous operations, one-way operations, remote callbacks/server-to-client notifications, GUI-thread updates, and thread-safe access to shared state. Do not make every remote operation asynchronous by default.
+
+**Use asynchronous execution when:**
+- The operation may take a significant amount of time
+- The operation involves heavy computation
+- The operation involves intensive disk I/O
+- The operation involves long-running database operations
+- The operation involves remote communication where the caller should remain responsive
+- A GUI client would otherwise become unresponsive
+- Multiple independent operations can execute concurrently
+
+**Keep an operation synchronous when:**
+- It is short-running
+- The caller genuinely needs the result immediately
+- Making it asynchronous would add unnecessary complexity
+- There is no meaningful responsiveness or resource-utilisation benefit
+
+### Async/Await/Task Implementation
+
+The C# implementation uses the modern Task-based asynchronous programming model where appropriate. Core concepts: `async` identifies an asynchronous method, `await` asynchronously waits for a `Task`, `Task` represents an asynchronous operation, `Task<T>` represents an asynchronous operation that produces a result.
+
+```csharp
+public async Task<Student> GetStudentAsync(int id)
+{
+    return await dataAccess.GetStudentAsync(id);
+}
+```
+
+The important architectural point is that asynchronous behaviour should propagate through the relevant layers: UI → Presentation/API → Business Tier → Data Tier → Database/External Service. Avoid introducing asynchronous code in only one layer while the surrounding layers remain unnecessarily blocking.
+
+### Async Propagation Through Tiers
+
+Where an operation is genuinely asynchronous, the project plans for asynchronous propagation across the applicable tiers.
+
+```text
+UI
+ |
+ | await
+ v
+Presentation/API
+ |
+ | await
+ v
+Business Tier
+ |
+ | await
+ v
+Data Tier
+ |
+ | await
+ v
+Database / External Service
+```
+
+This prevents a situation where an asynchronous operation is immediately converted back into a blocking operation at another layer. Avoid patterns such as `var result = SomeAsyncMethod().Result;` or `SomeAsyncMethod().Wait();` in GUI/application code unless there is a specific architectural reason. Prefer `var result = await SomeAsyncMethod();`.
+
+### Thread-Safety as Design Requirement
+
+Distributed components must not assume that clients will serialize access to them. A service may receive multiple simultaneous client calls. Therefore: Components containing shared mutable state must be designed to be externally thread-safe. The design should minimise shared mutable state wherever possible. Prefer local variables, immutable data, stateless services, isolated state per request, database transactions where appropriate, and controlled synchronization around genuinely shared state. Avoid unnecessary global/member state.
+
+### Race-Condition Analysis
+
+The implementation plan includes explicit testing for concurrency-related failures. Potential race-condition outcomes include lost updates, out-of-date data, inconsistent state, incorrect counters, duplicate operations, data corruption, and invalid intermediate states.
+
+```text
+Client A ----\
+              ---> Shared Resource
+Client B ----/
+```
+
+If both clients update the same resource concurrently, the design must define how that access is synchronized.
+
+### Synchronization Strategy
+
+Where synchronization is required, a deliberate synchronization strategy is selected. Possible approaches include framework-provided synchronization, `lock`, mutexes, semaphores, database-level transactions, atomic operations, architectural elimination of shared state. For this project, synchronization is applied at the business-logic level where possible rather than indiscriminately locking low-level collections or every method.
+
+**Important rule:** Do not synchronize everything. Excessive locking can reduce concurrency, increase latency, create contention, cause deadlocks, and make the system slower than a single-threaded implementation. The objective is controlled concurrency, not maximum locking.
+
+### Distinguishing One-Way from Async Calls
+
+The architecture documentation explicitly distinguishes these concepts.
+
+**One-Way:**
+```text
+Client
+  |
+  | send command
+  v
+Server
+  |
+  | continues processing
+  v
+(no result returned)
+```
+
+**Asynchronous call:**
+```text
+Client
+  |
+  | start operation
+  v
+Background execution
+  |
+  | result later
+  v
+Client
+```
+
+**Key distinction:** A one-way operation is about the communication contract ("I don't need a response"). An asynchronous call is about the execution model ("I don't want the caller to wait for completion"). These concepts can be used independently.
+
+### Remote Callback Architecture
+
+For long-running operations where the client needs progress information, a callback mechanism is considered.
+
+```text
+Client
+  |
+  | StartLongRunningJob()
+  v
+Server
+  |
+  | processing
+  |
+  +----> ProgressUpdate(20)
+  |
+  +----> ProgressUpdate(40)
+  |
+  +----> ProgressUpdate(60)
+  |
+  +----> ProgressUpdate(100)
+```
+
+For WCF this can be implemented using a duplex channel. The callback contract can be defined separately and associated with the service contract.
+
+### GUI Thread Safety Requirements
+
+For the WPF GUI, callbacks and asynchronous operations must not directly modify GUI controls from arbitrary worker threads. The WPF GUI operates around an event loop.
+
+```text
+Worker Thread
+     |
+     | request GUI update
+     v
+Dispatcher
+     |
+     v
+GUI/Event Thread
+     |
+     v
+GUI Control
+```
+
+```csharp
+Application.Current.Dispatcher.Invoke(() =>
+{
+    progressBar.Value = progress;
+});
+```
+
+For non-blocking GUI dispatch, use the appropriate asynchronous dispatcher mechanism. The architecture treats GUI state as belonging to the GUI thread.
+
+### UI Responsiveness as Non-Functional Requirement
+
+For the WPF GUI, responsiveness is explicitly documented as a requirement. Long-running operations should not execute directly on the GUI event thread. Avoid Button Click → Long Operation → GUI frozen. Prefer Button Click → Start Async Operation → GUI remains responsive → Operation completes → Update GUI. The UI should provide appropriate feedback where an operation is expected to take noticeable time: progress indicator, spinner, status message, progress percentage, cancellation option where appropriate.
+
+### Async Error Handling
+
+Asynchronous operations explicitly consider failure. Potential failures include network timeout, server unavailable, database failure, remote exception, cancellation, connection loss, and invalid response. Use appropriate exception handling around awaited operations.
+
+```csharp
+try
+{
+    var result = await service.ProcessAsync();
+}
+catch (TimeoutException)
+{
+    // Handle timeout
+}
+catch (Exception ex)
+{
+    // Handle unexpected failure
+}
+```
+
+Do not silently swallow asynchronous exceptions.
+
+### Cancellation for Long-Running Operations
+
+For genuinely long-running operations, cancellation is considered. Example conceptual API: `Task<Result> ProcessAsync(CancellationToken cancellationToken);`. The project determines whether each long-running operation needs progress reporting, cancellation, timeout handling, retry behaviour, and failure notification. These are explicit design decisions rather than accidental behaviour.
+
+### Architecture Decision Process
+
+For every major component/service, the project plan answers:
+
+```text
+Component: <component name>
+Tier: <presentation / business / data / display>
+Responsibilities: <responsibilities>
+Communication: <request-response / one-way / duplex>
+Long-running operations: <yes/no>
+Async required: <yes/no>
+Reason: <reason>
+Shared mutable state: <yes/no>
+Thread-safe: <yes/no>
+Synchronization: <mechanism or N/A>
+Progress reporting: <yes/no>
+Cancellation: <yes/no>
+Failure/timeout handling: <approach>
+```
+
+### Concurrency Testing
+
+Testing verifies not only that individual operations work, but also simultaneous execution. Minimum concurrency test cases:
+- Two clients calling the same operation simultaneously
+- Multiple clients modifying the same resource
+- Multiple asynchronous operations running simultaneously
+- Server callback while the client is performing other work
+- GUI callback while the GUI is processing another event
+- Server failure during an asynchronous operation
+- Client disconnect during a callback
+- Timeout during a remote call
+- Long-running operation followed by cancellation
+
+### Architecture Trade-Offs
+
+The architecture explicitly recognises that distribution introduces costs.
+
+**Benefits:** Modularity, lower coupling, scalability, load balancing, fault isolation, multiple clients, specialised services, better separation of concerns.
+
+**Costs:** Network latency, network failure, serialization/deserialization, timeout handling, concurrency, thread synchronization, distributed state, more complex debugging, more complicated deployment, more difficult failure diagnosis.
+
+The architecture distributes components only where the benefits justify these costs.
+
+### Implementation Priority
+
+The implementation order is approximately:
+1. Identify application responsibilities
+2. Identify appropriate tiers
+3. Define interfaces between tiers
+4. Identify components/services that should be remotely accessible
+5. Identify long-running operations
+6. Classify operations as synchronous, asynchronous, one-way or callback-based
+7. Define shared state
+8. Define concurrency requirements
+9. Implement thread-safe service components
+10. Implement asynchronous operations using `Task`/`async`/`await` where appropriate
+11. Implement callbacks/duplex communication only where required
+12. Implement GUI dispatcher logic where required
+13. Add timeout/error/cancellation handling
+14. Test concurrent execution
+15. Test network/service failures
+16. Measure responsiveness and performance
+17. Reassess whether the distribution actually provides a benefit
+
+### Design Principle Hierarchy
+
+The project is NOT designed around "everything should be asynchronous." Instead: "Operations should use the simplest communication and execution model that satisfies their performance, responsiveness and distribution requirements."
+
+**Decision hierarchy:**
+```text
+Does the operation need a result?
+        |
+       Yes
+        |
+        v
+Is it expected to be long-running?
+      /   \
+    No     Yes
+    |       |
+    v       v
+Sync     Async/Task
+```
+
+For operations that do not require a result:
+```text
+Does the client need confirmation?
+      /        \
+    Yes         No
+     |           |
+     v           v
+Normal        One-way
+request       operation
+```
+
+For operations where the server must proactively notify the client:
+```text
+Server needs to notify client?
+            |
+           Yes
+            |
+            v
+       Remote Callback
+            |
+            v
+      Duplex Channel
+```
+
+### Relationship Between Lecture 1-4 Concepts
+
+The architecture connects the concepts from the lectures rather than treating them as independent topics.
+
+```text
+Components
+    |
+    v
+Services / RPC
+    |
+    v
+Multi-Tier Architecture
+    |
+    v
+Distributed Components
+    |
+    v
+Network Communication
+    |
+    +------------------+
+    |                  |
+    v                  v
+Synchronous        Asynchronous
+Calls              Calls
+                       |
+                       v
+                 Task / await
+                       |
+                       v
+                 Concurrency
+                       |
+                       v
+                Thread Safety
+                       |
+             +---------+---------+
+             |                   |
+             v                   v
+        Synchronization     Remote Callback
+                                 |
+                                 v
+                         Duplex Communication
+```
+
+### Final Architecture Checklist
+
+Before finalising the system architecture, verify:
+- [ ] Each component has a clearly defined responsibility
+- [ ] Each tier has a clearly defined responsibility
+- [ ] Interfaces between tiers are explicitly defined
+- [ ] Distribution is justified rather than arbitrary
+- [ ] Long-running operations have been identified
+- [ ] Async operations are explicitly identified
+- [ ] `async`/`await`/`Task` are used where appropriate
+- [ ] Synchronous operations remain synchronous where appropriate
+- [ ] One-way operations are used only where no response is required
+- [ ] Remote callbacks are used only where server-to-client notification is required
+- [ ] GUI updates occur on the GUI/event thread
+- [ ] Shared mutable state has been identified
+- [ ] Stateful components are thread-safe
+- [ ] Race conditions have been considered
+- [ ] Synchronization is applied deliberately
+- [ ] Network failures and timeouts are handled
+- [ ] Long-running operations have appropriate user feedback
+- [ ] Cancellation is considered where appropriate
+- [ ] Concurrent clients have been tested
+- [ ] The number of tiers is justified
+- [ ] Distribution provides a measurable architectural benefit
+
 ### Architectural Rationale
 
 The selected architecture is intentionally simpler than a full four-tier distributed system.

@@ -903,6 +903,173 @@ The duplex architecture avoids repeatedly querying the server for new events. Ho
 | `CallbackManager` | Service Infrastructure | Callback registration and notification |
 | In-memory dictionaries | Data State | Server-side authoritative state |
 
+## Operation Classification
+
+Every major service/API operation should be classified during implementation planning.
+
+| Operation Type | Expected Behaviour | Example |
+|---|---|---|
+| Synchronous | Caller waits for result | GetChannels() |
+| Asynchronous | Caller continues while operation executes | SendMessageAsync() |
+| One-way | Caller sends command without requiring result | (potential future use) |
+| Remote callback | Server sends notification to client | NotifyMessageReceived() |
+| Local GUI dispatch | Worker thread updates GUI through UI thread | UpdateMessageList() |
+
+## Asynchronous Communication Decision Rule
+
+The system should distinguish between synchronous request/response operations, asynchronous operations, one-way operations, remote callbacks/server-to-client notifications, GUI-thread updates, and thread-safe access to shared state. Do not make every remote operation asynchronous by default.
+
+**Use asynchronous execution when:**
+- The operation may take a significant amount of time
+- The operation involves heavy computation
+- The operation involves intensive disk I/O
+- The operation involves long-running database operations
+- The operation involves remote communication where the caller should remain responsive
+- A GUI client would otherwise become unresponsive
+- Multiple independent operations can execute concurrently
+
+**Keep an operation synchronous when:**
+- It is short-running
+- The caller genuinely needs the result immediately
+- Making it asynchronous would add unnecessary complexity
+- There is no meaningful responsiveness or resource-utilisation benefit
+
+## Thread-Safety as Design Requirement
+
+Distributed components must not assume that clients will serialize access to them. A service may receive multiple simultaneous client calls. Therefore: Components containing shared mutable state must be designed to be externally thread-safe. The design should minimise shared mutable state wherever possible. Prefer local variables, immutable data, stateless services, isolated state per request, database transactions where appropriate, and controlled synchronization around genuinely shared state. Avoid unnecessary global/member state.
+
+## Architecture Decision Process
+
+For every major component/service, the project plan answers:
+
+```text
+Component: <component name>
+Tier: <presentation / business / data / display>
+Responsibilities: <responsibilities>
+Communication: <request-response / one-way / duplex>
+Long-running operations: <yes/no>
+Async required: <yes/no>
+Reason: <reason>
+Shared mutable state: <yes/no>
+Thread-safe: <yes/no>
+Synchronization: <mechanism or N/A>
+Progress reporting: <yes/no>
+Cancellation: <yes/no>
+Failure/timeout handling: <approach>
+```
+
+## Concurrency Testing
+
+Testing verifies not only that individual operations work, but also simultaneous execution. Minimum concurrency test cases:
+- Two clients calling the same operation simultaneously
+- Multiple clients modifying the same resource
+- Multiple asynchronous operations running simultaneously
+- Server callback while the client is performing other work
+- GUI callback while the GUI is processing another event
+- Server failure during an asynchronous operation
+- Client disconnect during a callback
+- Timeout during a remote call
+- Long-running operation followed by cancellation
+
+## Architecture Trade-Offs
+
+The architecture explicitly recognises that distribution introduces costs.
+
+**Benefits:** Modularity, lower coupling, scalability, load balancing, fault isolation, multiple clients, specialised services, better separation of concerns.
+
+**Costs:** Network latency, network failure, serialization/deserialization, timeout handling, concurrency, thread synchronization, distributed state, more complex debugging, more complicated deployment, more difficult failure diagnosis.
+
+The architecture distributes components only where the benefits justify these costs.
+
+## Implementation Priority
+
+The implementation order is approximately:
+1. Identify application responsibilities
+2. Identify appropriate tiers
+3. Define interfaces between tiers
+4. Identify components/services that should be remotely accessible
+5. Identify long-running operations
+6. Classify operations as synchronous, asynchronous, one-way or callback-based
+7. Define shared state
+8. Define concurrency requirements
+9. Implement thread-safe service components
+10. Implement asynchronous operations using `Task`/`async`/`await` where appropriate
+11. Implement callbacks/duplex communication only where required
+12. Implement GUI dispatcher logic where required
+13. Add timeout/error/cancellation handling
+14. Test concurrent execution
+15. Test network/service failures
+16. Measure responsiveness and performance
+17. Reassess whether the distribution actually provides a benefit
+
+## Design Principle Hierarchy
+
+The project is NOT designed around "everything should be asynchronous." Instead: "Operations should use the simplest communication and execution model that satisfies their performance, responsiveness and distribution requirements."
+
+**Decision hierarchy:**
+```text
+Does the operation need a result?
+        |
+       Yes
+        |
+        v
+Is it expected to be long-running?
+      /   \
+    No     Yes
+    |       |
+    v       v
+Sync     Async/Task
+```
+
+For operations that do not require a result:
+```text
+Does the client need confirmation?
+      /        \
+    Yes         No
+     |           |
+     v           v
+Normal        One-way
+request       operation
+```
+
+For operations where the server must proactively notify the client:
+```text
+Server needs to notify client?
+            |
+           Yes
+            |
+            v
+       Remote Callback
+            |
+            v
+      Duplex Channel
+```
+
+## Final Architecture Checklist
+
+Before finalising the system architecture, verify:
+- [ ] Each component has a clearly defined responsibility
+- [ ] Each tier has a clearly defined responsibility
+- [ ] Interfaces between tiers are explicitly defined
+- [ ] Distribution is justified rather than arbitrary
+- [ ] Long-running operations have been identified
+- [ ] Async operations are explicitly identified
+- [ ] `async`/`await`/`Task` are used where appropriate
+- [ ] Synchronous operations remain synchronous where appropriate
+- [ ] One-way operations are used only where no response is required
+- [ ] Remote callbacks are used only where server-to-client notification is required
+- [ ] GUI updates occur on the GUI/event thread
+- [ ] Shared mutable state has been identified
+- [ ] Stateful components are thread-safe
+- [ ] Race conditions have been considered
+- [ ] Synchronization is applied deliberately
+- [ ] Network failures and timeouts are handled
+- [ ] Long-running operations have appropriate user feedback
+- [ ] Cancellation is considered where appropriate
+- [ ] Concurrent clients have been tested
+- [ ] The number of tiers is justified
+- [ ] Distribution provides a measurable architectural benefit
+
 ## Success Criteria
 The implementation targets all assessed assignment requirements and is structured to support the full available mark allocation.
 
