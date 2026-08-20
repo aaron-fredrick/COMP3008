@@ -1,11 +1,43 @@
 using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
 namespace Chat.Client.Polling.Views
 {
+    public class FileSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is long bytes)
+            {
+                if (bytes < 1024)
+                {
+                    return $"{bytes} B";
+                }
+                else if (bytes < 1024 * 1024)
+                {
+                    double kb = bytes / 1024.0;
+                    return $"{Math.Round(kb)} kB";
+                }
+                else
+                {
+                    double mb = bytes / (1024.0 * 1024.0);
+                    return $"{Math.Round(mb)} MB";
+                }
+            }
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public partial class ConversationView : Window
     {
         public event EventHandler<string> SendMessageRequested;
@@ -48,7 +80,16 @@ namespace Chat.Client.Polling.Views
             MessagesListBox.Items.Clear();
             foreach (var message in _messages)
             {
-                string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
+                string displayText;
+                if (message.Type == MessageType.File)
+                {
+                    string fileName = message.Content.Replace("Shared file: ", "");
+                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId} shared file: {fileName}";
+                }
+                else
+                {
+                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
+                }
                 MessagesListBox.Items.Add(displayText);
             }
             if (MessagesListBox.Items.Count > 0)

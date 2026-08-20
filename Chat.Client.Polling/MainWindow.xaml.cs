@@ -197,6 +197,14 @@ namespace Chat.Client.Polling
                 string fileName = System.IO.Path.GetFileName(filePath);
                 byte[] fileData = System.IO.File.ReadAllBytes(filePath);
 
+                // Check file size limit (2MB)
+                const long maxFileSize = 2 * 1024 * 1024; // 2MB in bytes
+                if (fileData.Length > maxFileSize)
+                {
+                    MessageBox.Show($"File size exceeds 2MB limit. Current size: {FormatFileSize(fileData.Length)}", "File Too Large", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 // Determine file type
                 FileType fileType = FileType.Unsupported;
                 string extension = System.IO.Path.GetExtension(fileName).ToLower();
@@ -239,6 +247,24 @@ namespace Chat.Client.Polling
             {
                 var files = _serviceClient.GetChannelFiles(_currentChannel);
                 _conversationView?.UpdateFiles(files);
+            }
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            if (bytes < 1024)
+            {
+                return $"{bytes} B";
+            }
+            else if (bytes < 1024 * 1024)
+            {
+                double kb = bytes / 1024.0;
+                return $"{Math.Round(kb)} kB";
+            }
+            else
+            {
+                double mb = bytes / (1024.0 * 1024.0);
+                return $"{Math.Round(mb)} MB";
             }
         }
 

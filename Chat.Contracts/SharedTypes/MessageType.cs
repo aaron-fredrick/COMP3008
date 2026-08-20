@@ -4,6 +4,7 @@ namespace Chat.Contracts.SharedTypes
     {
         Public,
         Private,
-        System
+        System,
+        File
     }
 }
