@@ -349,8 +349,10 @@ namespace Chat.Client.Polling
             if (!string.IsNullOrEmpty(_currentUserId))
             {
                 var messages = _serviceClient.GetPendingMessages(_currentUserId);
+                Console.WriteLine($"[POLLING] Received {messages.Count} public messages");
                 foreach (var message in messages)
                 {
+                    Console.WriteLine($"[POLLING] Message: Type={message.Type}, Sender={message.SenderId}, Content={message.Content}");
                     _conversationView?.AddMessage(message);
                 }
 
