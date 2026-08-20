@@ -12,15 +12,17 @@ namespace Chat.Server.Hosting
         private readonly string _host;
         private readonly int _pollingPort;
         private readonly int _duplexPort;
+        private readonly bool _enablePolling;
 
         public string PollingEndpoint { get; private set; }
         public string DuplexEndpoint { get; private set; }
 
-        public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null)
+        public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null, bool enablePolling = true)
         {
             _host = host ?? ConfigurationManager.AppSettings["Host"] ?? "localhost";
-            _pollingPort = pollingPort ?? int.Parse(ConfigurationManager.AppSettings["PollingPort"] ?? "8080");
+            _pollingPort = pollingPort ?? int.Parse(ConfigurationManager.AppSettings["PollingPort"] ?? "9000");
             _duplexPort = duplexPort ?? int.Parse(ConfigurationManager.AppSettings["DuplexPort"] ?? "8081");
+            _enablePolling = enablePolling;
         }
 
         public void Start()
@@ -29,20 +31,24 @@ namespace Chat.Server.Hosting
             {
                 _serviceHost = new ServiceHost(typeof(ChatService));
 
-                var pollingBinding = new System.ServiceModel.BasicHttpBinding();
-                pollingBinding.MaxBufferSize = 2147483647;
-                pollingBinding.MaxReceivedMessageSize = 2147483647;
-                pollingBinding.MaxBufferPoolSize = 2147483647;
-                pollingBinding.ReaderQuotas.MaxDepth = 2147483647;
-                pollingBinding.ReaderQuotas.MaxStringContentLength = 2147483647;
-                pollingBinding.ReaderQuotas.MaxArrayLength = 2147483647;
-                pollingBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
-                pollingBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+                if (_enablePolling)
+                {
+                    var pollingBinding = new System.ServiceModel.BasicHttpBinding();
+                    pollingBinding.MaxBufferSize = 2147483647;
+                    pollingBinding.MaxReceivedMessageSize = 2147483647;
+                    pollingBinding.MaxBufferPoolSize = 2147483647;
+                    pollingBinding.ReaderQuotas.MaxDepth = 2147483647;
+                    pollingBinding.ReaderQuotas.MaxStringContentLength = 2147483647;
+                    pollingBinding.ReaderQuotas.MaxArrayLength = 2147483647;
+                    pollingBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
+                    pollingBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
 
-                var pollingEndpoint = _serviceHost.AddServiceEndpoint(
-                    typeof(IChatService),
-                    pollingBinding,
-                    $"http://{_host}:{_pollingPort}/ChatService/Polling");
+                    var pollingEndpoint = _serviceHost.AddServiceEndpoint(
+                        typeof(IChatService),
+                        pollingBinding,
+                        $"http://{_host}:{_pollingPort}/ChatService/Polling");
+                    PollingEndpoint = pollingEndpoint.Address.ToString();
+                }
 
                 var duplexBinding = new System.ServiceModel.NetTcpBinding();
                 duplexBinding.MaxBufferSize = 2147483647;
@@ -60,7 +66,6 @@ namespace Chat.Server.Hosting
                     $"net.tcp://{_host}:{_duplexPort}/ChatService/Duplex");
 
                 _serviceHost.Open();
-                PollingEndpoint = pollingEndpoint.Address.ToString();
                 DuplexEndpoint = duplexEndpoint.Address.ToString();
             }
             catch (Exception ex)

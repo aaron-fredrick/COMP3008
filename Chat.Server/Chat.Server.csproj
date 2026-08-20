@@ -59,6 +59,9 @@
     <Compile Include="Logging\ServerLogger.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj">
       <Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project>
       <Name>Chat.Contracts</Name>
