@@ -201,11 +201,11 @@ namespace Chat.Client.Polling.Services
             }
         }
 
-        public SharedFile GetFile(string channelName, string fileName)
+        public SharedFile GetFile(Guid fileId)
         {
             try
             {
-                return _proxy.GetFile(channelName, fileName);
+                return _proxy.GetFile(fileId);
             }
             catch (Exception ex)
             {

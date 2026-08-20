@@ -8,6 +8,9 @@ namespace Chat.Contracts.DataContracts
     public class SharedFile
     {
         [DataMember]
+        public Guid FileId { get; set; }
+
+        [DataMember]
         public string FileName { get; set; }
 
         [DataMember]

@@ -11,7 +11,7 @@ namespace Chat.Server.FileStorage
     public class FileHandler
     {
         private readonly string _storageDirectory;
-        private readonly Dictionary<string, SharedFile> _files;
+        private readonly Dictionary<Guid, SharedFile> _files;
         private readonly ReaderWriterLockSlim _lock;
         private readonly HashSet<string> _allowedExtensions;
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
@@ -19,7 +19,7 @@ namespace Chat.Server.FileStorage
         public FileHandler()
         {
             _storageDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StoredFiles");
-            _files = new Dictionary<string, SharedFile>();
+            _files = new Dictionary<Guid, SharedFile>();
             _lock = new ReaderWriterLockSlim();
             _allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -77,18 +77,13 @@ namespace Chat.Server.FileStorage
                     return false;
                 }
 
-                var fileKey = $"{channelName}_{fileName}";
-                if (_files.ContainsKey(fileKey))
-                {
-                    reason = $"A file named '{fileName}' already exists in this channel.";
-                    return false;
-                }
-
-                var filePath = Path.Combine(_storageDirectory, fileKey);
+                var fileId = Guid.NewGuid();
+                var filePath = Path.Combine(_storageDirectory, fileId.ToString());
                 File.WriteAllBytes(filePath, fileData);
 
                 var sharedFile = new SharedFile
                 {
+                    FileId = fileId,
                     FileName = fileName,
                     FileType = fileType,
                     FileSize = fileData.Length,
@@ -98,7 +93,7 @@ namespace Chat.Server.FileStorage
                     FileData = fileData
                 };
 
-                _files[fileKey] = sharedFile;
+                _files[fileId] = sharedFile;
                 return true;
             }
             catch (Exception ex)
@@ -112,15 +107,14 @@ namespace Chat.Server.FileStorage
             }
         }
 
-        public SharedFile GetFile(string channelName, string fileName)
+        public SharedFile GetFile(Guid fileId)
         {
             _lock.EnterReadLock();
             try
             {
-                var fileKey = $"{channelName}_{fileName}";
-                if (_files.ContainsKey(fileKey))
+                if (_files.ContainsKey(fileId))
                 {
-                    return _files[fileKey];
+                    return _files[fileId];
                 }
                 return null;
             }
@@ -160,15 +154,19 @@ namespace Chat.Server.FileStorage
             _lock.EnterWriteLock();
             try
             {
-                var filesToRemove = _files.Keys.Where(k => k.StartsWith($"{channelName}_")).ToList();
-                foreach (var fileKey in filesToRemove)
+                var filesToRemove = _files.Values
+                    .Where(f => f.ChannelName == channelName)
+                    .Select(f => f.FileId)
+                    .ToList();
+
+                foreach (var fileId in filesToRemove)
                 {
-                    var filePath = Path.Combine(_storageDirectory, fileKey);
+                    var filePath = Path.Combine(_storageDirectory, fileId.ToString());
                     if (File.Exists(filePath))
                     {
                         File.Delete(filePath);
                     }
-                    _files.Remove(fileKey);
+                    _files.Remove(fileId);
                 }
             }
             finally

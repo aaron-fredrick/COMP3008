@@ -175,11 +175,11 @@ namespace Chat.Server.Services
             return result;
         }
 
-        public SharedFile GetFile(string channelName, string fileName)
+        public SharedFile GetFile(Guid fileId)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "FILE", $"Download {fileName} from {channelName}");
-            return _fileHandler.GetFile(channelName, fileName);
+            ServerLogger.Request(clientType, "FILE", $"Download file {fileId}");
+            return _fileHandler.GetFile(fileId);
         }
 
         public List<SharedFile> GetChannelFiles(string channelName)

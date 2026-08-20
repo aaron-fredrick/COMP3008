@@ -40,7 +40,7 @@ namespace Chat.Contracts.ServiceContracts
         bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData);
 
         [OperationContract]
-        SharedFile GetFile(string channelName, string fileName);
+        SharedFile GetFile(Guid fileId);
 
         [OperationContract]
         List<SharedFile> GetChannelFiles(string channelName);

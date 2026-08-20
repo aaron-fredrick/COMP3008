@@ -208,7 +208,7 @@ namespace Chat.Client.Polling
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file)
         {
             LogDebug($"[FILE DOWNLOAD] Requested: {file.FileName}");
-            var downloadedFile = _serviceClient.GetFile(_currentChannel, file.FileName);
+            var downloadedFile = _serviceClient.GetFile(file.FileId);
             if (downloadedFile != null && downloadedFile.FileData != null)
             {
                 string downloadsPath = _fileHelperService.GetDownloadsPath();
