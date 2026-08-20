@@ -40,4 +40,8 @@
     <Thickness x:Key="ButtonPaddingNormal">10</Thickness>
     <Thickness x:Key="ButtonPaddingLarge">15,8</Thickness>
 
+    <!-- Corner Radius -->
+    <CornerRadius x:Key="CornerRadiusNormal">4</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusSmall">2</CornerRadius>
+
 </ResourceDictionary>

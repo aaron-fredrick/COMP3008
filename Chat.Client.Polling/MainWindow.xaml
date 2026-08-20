@@ -12,7 +12,25 @@
             <TextBlock Text="Username:" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
             <TextBox x:Name="UsernameTextBox" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}" Margin="0,0,0,20"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
-                     KeyDown="UsernameTextBox_KeyDown"/>
+                     KeyDown="UsernameTextBox_KeyDown">
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TextBox">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource CornerRadiusNormal}"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
             <Button x:Name="SignInButton" Content="Sign In" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingNormal}" Margin="0,0,0,10"
                     Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                     Cursor="Hand" Click="SignInButton_Click">
@@ -23,7 +41,7 @@
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="{TemplateBinding Background}"
                                             BorderThickness="0"
-                                            CornerRadius="0"
+                                            CornerRadius="{StaticResource CornerRadiusNormal}"
                                             Padding="{TemplateBinding Padding}">
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
