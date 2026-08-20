@@ -349,10 +349,10 @@ namespace Chat.Client.Polling
             if (!string.IsNullOrEmpty(_currentUserId))
             {
                 var messages = _serviceClient.GetPendingMessages(_currentUserId);
-                Console.WriteLine($"[POLLING] Received {messages.Count} public messages");
+                LogDebug($"[POLLING] Received {messages.Count} public messages");
                 foreach (var message in messages)
                 {
-                    Console.WriteLine($"[POLLING] Message: Type={message.Type}, Sender={message.SenderId}, Content={message.Content}");
+                    LogDebug($"[POLLING] Message: Type={message.Type}, Sender={message.SenderId}, Content={message.Content}");
                     _conversationView?.AddMessage(message);
                 }
 
@@ -379,6 +379,16 @@ namespace Chat.Client.Polling
                 LoadChannelFiles();
                 LoadChannels();
             }
+        }
+
+        private void LogDebug(string message)
+        {
+            System.Diagnostics.Debug.WriteLine(message);
+            try
+            {
+                System.IO.File.AppendAllText("client_debug.log", $"{DateTime.Now:HH:mm:ss.fff} {message}\n");
+            }
+            catch { }
         }
 
         private void SignOut()
