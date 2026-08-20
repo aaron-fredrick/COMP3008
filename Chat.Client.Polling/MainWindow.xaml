@@ -9,6 +9,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Sizing.xaml"/>
+                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Converters.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
