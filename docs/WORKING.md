@@ -1,4 +1,55 @@
-# COMP3008 Chat Application - Working Notes
+# COMP3008 Chat Application - Working Document
+
+## Current Status
+
+**Phase:** Server and Polling Client Implementation Complete; Duplex Client Pending
+
+**Overall Status:** In Progress
+
+**Last Updated:** 2026-08-20
+
+### Completed
+- [x] Service contracts defined (IChatService, IDuplexChatService, IChatCallback)
+- [x] DTOs created (Channel, Message, PrivateMessage, SharedFile)
+- [x] Server implementation (ChatService, UserManager, ChannelManager, MessageRouter, FileHandler, CallbackManager)
+- [x] Polling client implementation (sign-in, channel management, messaging, file sharing)
+- [x] Thread-safe server state management
+- [x] Configuration service (host/port configuration)
+- [x] Validation service (user ID, channel name, file validation)
+- [x] File helper service (file type/size validation)
+
+### In Progress
+- [ ] Duplex client implementation
+- [ ] Duplex callback handler
+- [ ] WPF Dispatcher marshaling for callbacks
+
+### Blocked
+- None
+
+### Next
+1. Implement Duplex Client WCF connection using DuplexChannelFactory
+2. Implement callback handler for server notifications
+3. Implement Dispatcher marshaling for UI thread updates
+4. Build duplex client UI
+5. Test duplex client functionality
+6. Integration testing with polling and duplex clients
+
+> **Implementation Rule**
+>
+> Do not implement architecture that exists only in this document without
+> first checking the current source code. This document describes the intended
+> architecture and implementation state, but the repository is the authority
+> for what is actually implemented.
+>
+> Before modifying an existing component, inspect its current implementation
+> and make the smallest change necessary to satisfy the assignment.
+
+## Status Legend
+
+- `[x]` Implemented and verified
+- `[~]` Implemented but not fully tested
+- `[ ]` Planned/not implemented
+- `[!]` Known issue
 
 ## Assignment Requirements Traceability
 
@@ -501,7 +552,7 @@ The application follows a multi-tier architecture derived from the distributed c
    - Maintains authoritative application state
    - Validates operations before modifying state
 
-4. **Data Tier**
+4. **Server-Side Application State**
    - For this assignment, persistent storage is not required
    - Application state is held in server memory
    - File contents are stored by the server while the server is running
@@ -891,24 +942,22 @@ Where an operation is genuinely asynchronous, the project plans for asynchronous
 ```text
 UI
  |
- | await
+ | await where appropriate
  v
-Presentation/API
+WCF Client
  |
- | await
+ | remote operation
  v
-Business Tier
+Chat Server
  |
- | await
- v
-Data Tier
+ +--> Business Logic
  |
- | await
- v
-Database / External Service
+ +--> In-Memory State
 ```
 
 This prevents a situation where an asynchronous operation is immediately converted back into a blocking operation at another layer. Avoid patterns such as `var result = SomeAsyncMethod().Result;` or `SomeAsyncMethod().Wait();` in GUI/application code unless there is a specific architectural reason. Prefer `var result = await SomeAsyncMethod();`.
+
+Note: The application uses in-memory state rather than a database. Server-side business logic primarily uses synchronous operations, while asynchronous execution is used for client-side network operations to maintain UI responsiveness.
 
 ### Thread-Safety as Design Requirement
 
@@ -1132,7 +1181,7 @@ The Polling Client uses asynchronous polling to obtain updates from the server. 
 - private messages
 - shared files
 
-The polling operation must execute away from the WPF UI thread so that a network call cannot freeze the interface.
+The polling timer itself executes on the WPF Dispatcher thread. However, the network operation triggered by the timer should not block the UI thread when the operation may take noticeable time.
 
 **Rationale:** Polling is intentionally used for Section A because the assignment specifically requires a pull-based strategy. The polling interval should provide a reasonable balance: too short → unnecessary server/network load; too long → poor perceived responsiveness. The polling mechanism is therefore configurable rather than using hard-coded delays.
 
@@ -2210,29 +2259,990 @@ None currently.
 | Implementation priority | 17-step implementation order | Ensures systematic development |
 | Design principle hierarchy | Decision trees for operation type | Prevents over-engineering |
 
-## COMP3008 Lecture 3 Success Criteria
+# Working Document Instructions
 
-### Distributed Architecture
+This document is the authoritative implementation reference for the project.
 
-- [x] Clear separation between client presentation and server business logic
-- [x] Distributed service boundary exposed through WCF contracts
-- [x] No direct client access to server implementation objects
-- [x] Server maintains authoritative shared state
-- [x] Architecture avoids unnecessary additional tiers
+When implementing or modifying the system, follow these rules unless the assignment requirements explicitly require otherwise.
 
-### Asynchronous Communication
+## 1. Source of Truth
 
-- [ ] WPF UI remains responsive during remote operations
-- [ ] Suitable network operations use Task-based asynchronous execution
-- [ ] `await` is used rather than blocking the UI thread where appropriate
-- [ ] Async communication exceptions are handled correctly
-- [ ] Duplex callbacks are safely marshalled to the WPF Dispatcher
+The implementation must remain consistent with:
 
-### Concurrency
+1. Assignment requirements
+2. WCF service contracts
+3. This `working.md`
+4. Existing working server/polling-client implementation
 
-- [x] Multiple clients can communicate concurrently
-- [x] Server shared state remains thread-safe
-- [ ] Polling and duplex clients can operate simultaneously
-- [x] Client disconnections do not corrupt server state
-- [x] Server shutdown/disconnection is handled gracefully
+When these conflict, the assignment requirements take priority.
+
+Do not introduce architectural changes merely for convenience.
+
+## 2. Preserve the Existing Working Implementation
+
+The existing server and polling client are considered the working baseline.
+
+When implementing the Duplex Client:
+
+- Do not rewrite working server functionality unnecessarily.
+- Do not refactor the polling client unless required for shared functionality.
+- Do not change existing service behaviour merely to make the Duplex Client easier to implement.
+- Reuse existing contracts, DTOs, validation rules, configuration and models where appropriate.
+- Any server-side modification required for duplex communication must preserve polling-client compatibility.
+
+The Duplex Client must be an additional client implementation, not a replacement for the polling client.
+
+## 3. Duplex Client Must Not Poll
+
+The Duplex Client must receive real-time updates exclusively through WCF callbacks.
+
+The Duplex Client must contain:
+
+- No `DispatcherTimer` used for server polling
+- No polling thread
+- No periodic `Task.Delay` polling loop
+- No `GetMessages()` loop
+- No `RefreshMessages()` timer
+- No periodic `GetChannels()` calls
+- No refresh button used as the core real-time update mechanism
+
+The server must proactively notify the Duplex Client through `IChatCallback`.
+
+A manual refresh may exist only for non-real-time functionality if explicitly justified and must not replace callback-based updates.
+
+## 4. Duplex Connection
+
+The Duplex Client must establish its WCF connection using:
+
+- `InstanceContext`
+- `DuplexChannelFactory<T>`
+- `NetTcpBinding`
+- The configured duplex endpoint
+
+Conceptually:
+
+```text
+WPF Client
+    |
+    | InstanceContext
+    v
+ChatCallbackHandler
+    |
+    v
+DuplexChannelFactory<IDuplexChatService>
+    |
+    | NetTcpBinding
+    v
+Chat Server
+```
+
+The callback implementation must be registered when the duplex channel is established.
+
+## 5. Callback Contract
+
+`IChatCallback` is a remote callback contract.
+
+It must contain only server-to-client notification operations.
+
+Example:
+
+```csharp
+[ServiceContract]
+public interface IChatCallback
+{
+    [OperationContract(IsOneWay = true)]
+    void ChannelListUpdated(...);
+
+    [OperationContract(IsOneWay = true)]
+    void MemberListUpdated(...);
+
+    [OperationContract(IsOneWay = true)]
+    void MessageReceived(...);
+
+    [OperationContract(IsOneWay = true)]
+    void PrivateMessageReceived(...);
+
+    [OperationContract(IsOneWay = true)]
+    void FileShared(...);
+
+    [OperationContract(IsOneWay = true)]
+    void UserDisconnected(...);
+}
+```
+
+The exact operation signatures must match the existing project contracts and assignment requirements.
+
+Do not add callback operations merely because they appear useful.
+
+## 6. One-Way Operations
+
+Do not equate one-way communication with asynchronous execution.
+
+```text
+One-way:
+"I do not require a response."
+
+Async:
+"I do not want the caller to block while waiting."
+```
+
+A one-way WCF operation can still experience communication failure.
+
+Use `[OperationContract(IsOneWay = true)]` primarily for notifications where the sender does not require an operation response.
+
+Do not convert normal request/response operations into one-way operations merely to make them appear asynchronous.
+
+Operations such as:
+
+* SignIn
+* GetChannels
+* CreateChannel
+* JoinChannel
+* LeaveChannel
+* SendMessage
+* SendPrivateMessage
+* Upload/ShareFile
+* Download/GetFile
+
+must remain request/response where the caller requires confirmation or a result.
+
+## 7. Async/Await
+
+Do not make every WCF operation asynchronous by default.
+
+Use `Task`/`async`/`await` where asynchronous execution provides a real benefit, particularly for:
+
+* Network operations performed from the WPF UI
+* File transfers
+* Long-running operations
+* Potentially expensive processing
+* Operations where blocking the GUI would reduce responsiveness
+
+Prefer:
+
+```csharp
+var result = await SomeAsyncOperation();
+```
+
+Avoid:
+
+```csharp
+var result = SomeAsyncOperation().Result;
+```
+
+and:
+
+```csharp
+SomeAsyncOperation().Wait();
+```
+
+in WPF application code.
+
+Do not introduce fake asynchronous code such as wrapping every synchronous WCF call in `Task.Run()` without an architectural reason.
+
+## 8. WPF Thread Affinity
+
+WPF controls belong to the WPF UI thread.
+
+The following must not directly modify WPF controls when executing on a WCF callback thread:
+
+```csharp
+void MessageReceived(...)
+{
+    messageList.Items.Add(...); // Incorrect
+}
+```
+
+Instead:
+
+```csharp
+void MessageReceived(...)
+{
+    Application.Current.Dispatcher.BeginInvoke(() =>
+    {
+        messageList.Items.Add(...);
+    });
+}
+```
+
+Use `BeginInvoke`/appropriate asynchronous Dispatcher mechanisms where possible so that callback processing does not unnecessarily block the callback thread.
+
+Callback handlers should perform minimal work before dispatching to the UI.
+
+## 9. Callback Thread Safety
+
+A WCF callback is a remote operation.
+
+Do not assume that callbacks:
+
+* Execute on the WPF UI thread
+* Execute sequentially
+* Execute on the same thread
+* Complete immediately
+
+The callback implementation must therefore be thread-safe.
+
+Do not perform expensive processing inside the callback method.
+
+Preferred flow:
+
+```text
+WCF Callback Thread
+        |
+        v
+Receive notification
+        |
+        v
+Prepare minimal data
+        |
+        v
+Dispatcher.BeginInvoke
+        |
+        v
+WPF UI Thread
+```
+
+## 10. CallbackManager Locking
+
+Never hold a synchronization lock while performing a remote WCF callback.
+
+Avoid:
+
+```csharp
+lock (_callbacks)
+{
+    callback.MessageReceived(message);
+}
+```
+
+A remote callback may block, fail, timeout or disconnect.
+
+Prefer:
+
+```text
+Acquire lock
+    ↓
+Copy required callback references
+    ↓
+Release lock
+    ↓
+Invoke callbacks
+    ↓
+Handle failures
+    ↓
+Remove failed callbacks
+```
+
+The synchronization mechanism protects callback registration state, not the duration of remote network communication.
+
+## 11. Dead Callback Handling
+
+A failed callback must not:
+
+* Crash the server
+* Block other clients
+* Prevent other callbacks
+* Corrupt callback state
+* Hold a synchronization lock indefinitely
+
+Callback invocation must handle communication failures.
+
+Conceptually:
+
+```csharp
+try
+{
+    callback.MessageReceived(message);
+}
+catch (CommunicationException)
+{
+    // Mark/remove failed callback
+}
+catch (TimeoutException)
+{
+    // Mark/remove failed callback
+}
+```
+
+The exact exception-handling strategy must remain consistent with the WCF configuration.
+
+After a callback failure, the server must clean up the associated client state as appropriate.
+
+## 12. Server State Consistency
+
+The server is the authoritative owner of:
+
+* Users
+* Current channel membership
+* Pending polling messages
+* Private messages
+* File metadata
+* File contents
+* Duplex callback registrations
+
+Clients must never become authoritative sources of shared state.
+
+Client-side state is only a representation/cache of server state.
+
+## 13. Atomic State Changes
+
+Operations that modify related pieces of server state must maintain the required invariants.
+
+For example, leaving a channel may require:
+
+```text
+Remove user from channel
+        +
+Clear CurrentChannel
+        +
+Update callback/pending state
+        +
+Notify remaining members
+```
+
+Do not update only one part of the state and assume another operation will eventually correct it.
+
+Where multiple managers participate in a single logical operation, the implementation must ensure that the resulting state is consistent.
+
+## 14. Do Not Hold Locks During Network Operations
+
+Server-side locks must protect shared in-memory state only.
+
+Do not perform:
+
+* WCF callbacks
+* File transfers
+* Long-running processing
+* Blocking I/O
+
+while holding a synchronization lock unless there is a specific and documented reason.
+
+The preferred pattern is:
+
+```text
+Acquire lock
+    ↓
+Read/update shared state
+    ↓
+Copy required data
+    ↓
+Release lock
+    ↓
+Perform external/expensive operation
+```
+
+## 15. Message Semantics
+
+The server remains responsible for message routing.
+
+### Public Messages
+
+A public message is delivered to users who are members of the channel at the time the message is sent.
+
+Do not:
+
+* Store permanent message history
+* Deliver old messages to users joining later
+* Allow clients to determine recipients
+* Send messages directly between clients
+
+### Private Messages
+
+A private message is delivered only to the intended recipient.
+
+Before sending:
+
+```text
+Sender exists?
+    ↓
+Recipient exists?
+    ↓
+Both users signed in?
+    ↓
+Both users currently in same channel?
+    ↓
+Deliver message
+```
+
+The server performs the authoritative validation.
+
+## 16. Polling Message Queues
+
+The polling client may use pending message queues because it obtains updates through request/response polling.
+
+The Duplex Client must not depend on polling queues to receive real-time events.
+
+The server may internally share routing logic between polling and duplex clients, but the delivery mechanisms remain distinct:
+
+```text
+Polling:
+Server → pending state → GetMessages() → Polling Client
+
+Duplex:
+Server → CallbackManager → IChatCallback → Duplex Client
+```
+
+## 17. Shared Server Logic
+
+Polling and Duplex clients must use the same authoritative business rules.
+
+Do not implement separate versions of:
+
+* User validation
+* Channel membership rules
+* Private-message rules
+* File validation
+* File access rules
+* Server state management
+
+The communication mechanism may differ, but business rules must remain centralized on the server.
+
+## 18. File Sharing
+
+All file validation must be performed server-side.
+
+Allowed:
+
+```text
+.png
+.jpg
+.jpeg
+.gif
+.bmp
+.txt
+```
+
+Maximum size:
+
+```text
+2,097,152 bytes
+```
+
+The client may perform preliminary validation for user experience, but this is not authoritative.
+
+Never send a local filesystem path to another client.
+
+Correct model:
+
+```text
+Client A
+   |
+   | file bytes
+   v
+Server
+   |
+   | stored file
+   v
+Client B
+```
+
+## 19. File Access Control
+
+A user must only access files belonging to a channel they are currently authorised to access.
+
+The server must verify channel membership before returning protected file data.
+
+Do not rely on the client hiding unauthorized files.
+
+## 20. Configuration
+
+Do not hard-code server addresses, ports or polling intervals inside client implementation code.
+
+Use the existing configuration mechanism:
+
+```text
+App.config
+    ↓
+ConfigurationService
+    ↓
+Client service
+```
+
+Command-line configuration may override configuration-file values according to the existing server design.
+
+## 21. Implementation Style
+
+Do not introduce unnecessary architecture.
+
+Avoid adding:
+
+* Database layers
+* Repository patterns
+* Dependency injection frameworks
+* MVVM frameworks
+* API gateways
+* Message brokers
+* Event buses
+* Additional services
+* Additional network boundaries
+
+unless the assignment explicitly requires them.
+
+The current architecture is intentionally simple:
+
+```text
+WPF Client
+    ↓
+WCF
+    ↓
+Chat Server
+    ↓
+In-Memory State
+```
+
+## 22. Duplex Client UI
+
+The Duplex Client should follow the existing Polling Client structure where practical.
+
+Reuse:
+
+* DTOs
+* ValidationService
+* FileHelperService
+* ConfigurationService
+* Shared UI resources
+* Common UI conventions
+
+However, communication logic must remain separate.
+
+Do not simply copy the polling implementation and leave its polling mechanism enabled.
+
+## 23. Duplex Client Service Separation
+
+The Duplex Client should have a dedicated communication service responsible for:
+
+* Creating the duplex channel
+* Managing `InstanceContext`
+* Connecting
+* Disconnecting
+* Calling service operations
+* Exposing the callback handler to the UI/application layer
+* Handling WCF communication failures
+
+The callback handler should be responsible for receiving server notifications, not for owning the entire application state.
+
+## 24. Connection Lifecycle
+
+The Duplex Client lifecycle should be:
+
+```text
+Application Start
+      ↓
+Sign-In Window
+      ↓
+User enters ID
+      ↓
+Create callback handler
+      ↓
+Create InstanceContext
+      ↓
+Create DuplexChannelFactory
+      ↓
+Open channel
+      ↓
+Sign in
+      ↓
+Register callback
+      ↓
+Normal operation
+      ↓
+Sign out / disconnect
+      ↓
+Close/abort channel
+      ↓
+Return to sign-in
+```
+
+If communication fails, the client must not assume the channel is still usable.
+
+## 25. Graceful vs Abnormal Disconnect
+
+The implementation must handle both:
+
+### Graceful disconnect
+
+```text
+User clicks Sign Out
+        ↓
+Server SignOut
+        ↓
+Server cleanup
+        ↓
+Client closes WCF channel
+```
+
+### Abnormal disconnect
+
+```text
+Window closed / process killed / network failure
+        ↓
+WCF communication failure
+        ↓
+Server detects disconnected client
+        ↓
+Server cleanup
+        ↓
+Remaining clients notified
+```
+
+The server must not depend exclusively on explicit `SignOut()` calls.
+
+## 26. Testing Requirements
+
+Every feature must be tested individually and under concurrent use.
+
+At minimum test:
+
+* Two clients signing in simultaneously
+* Duplicate sign-in
+* Simultaneous channel creation
+* Simultaneous channel joins
+* Simultaneous public messages
+* Simultaneous private messages
+* Simultaneous file uploads
+* Polling and Duplex clients communicating together
+* Duplex callback while another operation is running
+* Client terminated using X
+* Network/channel failure
+* Dead callback
+* Server continuing after a client failure
+
+## 27. Regression Testing
+
+After modifying the server for Duplex functionality, verify that the Polling Client still passes:
+
+* Sign-in
+* Sign-out
+* Channel creation
+* Channel listing
+* Join
+* Leave
+* Public messages
+* Private messages
+* File upload
+* File download
+* Polling updates
+
+A Duplex feature is not considered complete if it breaks the existing polling implementation.
+
+## 28. Documentation Accuracy
+
+The documentation must distinguish between:
+
+```text
+Implemented
+Planned
+Partially implemented
+Tested
+Untested
+Known issue
+```
+
+Do not mark a feature `[x]` merely because the architecture has been designed.
+
+For example:
+
+```text
+[x] Duplex callback contract implemented
+[ ] Duplex callback contract planned
+```
+
+must reflect the actual repository state.
+
+The document must not claim that a feature is working unless it has been implemented and tested.
+
+## 29. Before Modifying the Server
+
+Before changing server code for Duplex functionality:
+
+1. Inspect the existing service contracts.
+2. Inspect the existing `ChatService`.
+3. Inspect the existing callback/state management code.
+4. Identify which functionality already exists.
+5. Determine the minimum required change.
+6. Preserve existing polling behaviour.
+7. Implement the smallest compatible change.
+8. Build.
+9. Test the polling client.
+10. Then test the Duplex Client.
+
+Do not rewrite working components based solely on assumptions about their implementation.
+
+## 30. Before Implementing a New Operation
+
+For every new operation, explicitly determine:
+
+```text
+Operation:
+Purpose:
+Caller:
+Result required:
+Communication model:
+Sync / Async:
+One-way:
+Callback:
+Long-running:
+Shared state:
+Synchronization required:
+Failure modes:
+Timeout:
+Cancellation:
+UI update required:
+```
+
+Only then implement the operation.
+
+## 31. Definition of Done — Duplex Client
+
+The Duplex Client is considered complete only when:
+
+* [ ] DuplexChannelFactory is working
+* [ ] InstanceContext is correctly configured
+* [ ] Callback handler is registered
+* [ ] Sign-in works
+* [ ] Sign-out works
+* [ ] Channel creation works
+* [ ] Channel listing updates through callbacks
+* [ ] Channel membership updates through callbacks
+* [ ] Public messages arrive through callbacks
+* [ ] Private messages arrive through callbacks
+* [ ] File notifications arrive through callbacks
+* [ ] File download works
+* [ ] No polling mechanism exists
+* [ ] No refresh button is required for core updates
+* [ ] Callback UI updates use Dispatcher
+* [ ] Communication failures are handled
+* [ ] Dead callbacks do not crash the server
+* [ ] Polling and Duplex clients interoperate
+* [ ] Three or more concurrent clients have been tested
+* [ ] Abnormal client termination has been tested
+
+## 32. Definition of Done — Final System
+
+The final system must demonstrate:
+
+```text
+                    ┌──────────────────┐
+                    │   Chat Server    │
+                    │                  │
+                    │ Authoritative    │
+                    │ In-Memory State  │
+                    └────────┬─────────┘
+                             │
+                 ┌───────────┴───────────┐
+                 │                       │
+            BasicHttp                 NetTcp
+                 │                       │
+                 ▼                       ▼
+       ┌─────────────────┐     ┌─────────────────┐
+       │ Polling Client  │     │ Duplex Client   │
+       │                 │     │                 │
+       │ Request/Response│     │ Server Callback │
+       └─────────────────┘     └─────────────────┘
+```
+
+Both clients must operate against the same server instance and observe consistent shared state.
+
+The architecture must demonstrate:
+
+* Distributed components
+* WCF services
+* RPC
+* Request/response communication
+* Polling
+* Duplex communication
+* Remote callbacks
+* Asynchronous execution where appropriate
+* WPF Dispatcher usage
+* Concurrent clients
+* Thread-safe shared state
+* Network failure handling
+* Controlled synchronization
+* Server-authoritative state
+
+## Design Decisions
+
+### DD-001 — Server Owns Authoritative State
+
+**Decision:**
+All users, channels, memberships and shared-file metadata are owned by the server.
+
+**Reason:**
+Clients must not maintain authoritative distributed state.
+
+**Alternatives Considered:**
+- Client-owned state
+- Shared database
+
+**Decision Rationale:**
+The assignment requires a central server architecture and does not require persistent storage.
+
+**Status:** Accepted
+
+### DD-002 — Polling vs Duplex Communication
+
+**Decision:**
+Section A uses polling (request/response). Section C uses duplex callbacks.
+
+**Reason:**
+Assignment requirements explicitly require both communication models.
+
+**Alternatives Considered:**
+- Polling for all clients
+- Duplex for all clients
+
+**Decision Rationale:**
+Demonstrates understanding of both pull-based and push-based communication patterns.
+
+**Status:** Accepted
+
+### DD-003 — In-Memory State Only
+
+**Decision:**
+Server state is held in memory; no database is used.
+
+**Reason:**
+Assignment explicitly requires in-memory state and does not require persistence.
+
+**Alternatives Considered:**
+- SQLite database
+- File-based persistence
+
+**Decision Rationale:**
+Database would add unnecessary complexity and violate assignment constraints.
+
+**Status:** Accepted
+
+## Operation Classification
+
+| Operation | Client | Communication | Execution | Reason |
+|---|---|---|---|---|
+| SignIn | Both | RPC | Sync | Immediate authentication result required |
+| SignOut | Both | RPC | Sync | Immediate cleanup confirmation |
+| GetChannels | Polling | RPC | Async from UI | Prevent UI blocking |
+| CreateChannel | Both | RPC | Sync/Async | Validation result required |
+| JoinChannel | Both | RPC | Sync/Async | Membership confirmation required |
+| LeaveChannel | Both | RPC | Sync/Async | Leave confirmation required |
+| GetChannelMembers | Polling | RPC | Async from UI | Prevent UI blocking |
+| SendMessage | Both | RPC | Async from UI | Network operation |
+| SendPrivateMessage | Both | RPC | Async from UI | Network operation |
+| ShareFile | Both | RPC | Async | File transfer |
+| GetFile | Both | RPC | Async | File transfer |
+| GetChannelFiles | Polling | RPC | Async from UI | Prevent UI blocking |
+| GetPendingMessages | Polling | RPC | Async from UI | Prevent UI blocking |
+| GetPendingPrivateMessages | Polling | RPC | Async from UI | Prevent UI blocking |
+| RegisterCallback | Duplex | One-way RPC | One-way | Callback registration |
+| UnregisterCallback | Duplex | One-way RPC | One-way | Callback cleanup |
+| ChannelListUpdated | Duplex | Callback | Callback | Server notification |
+| MemberListUpdated | Duplex | Callback | Callback | Server notification |
+| MessageReceived | Duplex | Callback | Callback | Server notification |
+| PrivateMessageReceived | Duplex | Callback | Callback | Server notification |
+| FileShared | Duplex | Callback | Callback | Server notification |
+| UserDisconnected | Duplex | Callback | Callback | Server notification |
+
+## Test Results
+
+### Server and Polling Client Tests
+
+#### Concurrent Duplicate Sign-In
+
+**Result:** PASS
+
+**Clients:** 5
+
+**Scenario:** All clients attempted to sign in using the same user ID.
+
+**Observed:** Exactly one client was accepted.
+
+**Server State:** Consistent.
+
+**Notes:** Server correctly enforces unique user ID constraint.
+
+#### Channel Creation and Join
+
+**Result:** PASS
+
+**Clients:** 3
+
+**Scenario:** Clients created channels and joined simultaneously.
+
+**Observed:** All channels created successfully, membership correctly tracked.
+
+**Server State:** Consistent.
+
+#### Public Messaging
+
+**Result:** PASS
+
+**Clients:** 3
+
+**Scenario:** Multiple clients sent messages to the same channel.
+
+**Observed:** All current members received messages.
+
+**Server State:** Consistent.
+
+**Notes:** Message history not retained as required.
+
+#### Private Messaging
+
+**Result:** PASS
+
+**Clients:** 2
+
+**Scenario:** Users sent private messages within same channel.
+
+**Observed:** Only intended recipient received messages.
+
+**Server State:** Consistent.
+
+**Notes:** Server validates same-channel membership.
+
+#### File Sharing
+
+**Result:** PASS
+
+**Clients:** 2
+
+**Scenario:** User uploaded valid image file.
+
+**Observed:** File appeared to all channel members.
+
+**Server State:** Consistent.
+
+**Notes:** Server enforces 2 MB limit and extension whitelist.
+
+#### File Validation
+
+**Result:** PASS
+
+**Scenario:** Attempted upload of unsupported file type.
+
+**Observed:** Server rejected with appropriate error message.
+
+**Server State:** Consistent.
+
+#### Client Disconnect
+
+**Result:** PASS
+
+**Scenario:** Client terminated using X button.
+
+**Observed:** Server detected disconnection, removed user from channel, released user ID.
+
+**Server State:** Consistent.
+
+**Notes:** Server continues serving other clients.
+
+### Duplex Client Tests
+
+**Status:** Not Yet Implemented
+
+The duplex client has not yet been implemented. Tests will be performed after implementation.
+
+### Integration Tests
+
+**Status:** Not Yet Performed
+
+Integration testing with both polling and duplex clients will be performed after duplex client implementation.
 
