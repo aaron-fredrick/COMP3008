@@ -1,5 +1,28 @@
 # COMP3008 Chat Application - Working Notes
 
+## Assignment Requirements Traceability
+
+The implementation must directly satisfy the three assessed sections of Assignment 1A.
+
+| Section | Requirement | Planned Implementation | Marks |
+|---|---|---|---:|
+| A1 | Sign in | WPF sign-in view + server-side unique user ID validation | 2 |
+| A2 | Channel list | Server channel state + polling updates | 2 |
+| A3 | Channel creation | Server-side unique channel validation | 2 |
+| A4 | Conversation | Server message distribution + polling updates | 2 |
+| A5 | Private conversation | Private-message routing + dedicated WPF windows | 2 |
+| A6 | File sharing | Server-side file validation/storage + polling updates | 3 |
+| A7 | Sign out | Explicit sign-out + disconnect cleanup | 1 |
+| B1 | User management | Thread-safe in-memory user registry | 2 |
+| B2 | Channel management | Thread-safe authoritative channel state | 2 |
+| B3 | Message distribution | Server-side channel membership routing, no history | 2 |
+| B4 | Private messaging | Server validates same-channel membership | 2 |
+| B5 | File handling | Server validates, stores and serves file contents | 2 |
+| C1 | Duplex contract | WCF duplex service/callback contract over `netTcpBinding` | 2 |
+| C2 | No polling | Callback-driven updates with no timer/refresh mechanism | 2 |
+| C3 | Thread safety | Server synchronisation + WPF Dispatcher marshaling | 2 |
+| C4 | Disconnection handling | WCF communication failure detection + cleanup | 2 |
+
 ## Project Status
 
 **Current Phase**: Phase 5 - Duplex Client Implementation (In Progress)
@@ -458,7 +481,41 @@ Therefore `callback.NotifyMessageReceived(message)` is not a normal local callba
 
 ### Multi-Tier Architecture
 
-The Chat Application follows a simplified multi-tier architecture based on the distributed computing concepts introduced in COMP3008. The system does not require all four conceptual tiers. Instead, it combines the presentation and display responsibilities within the WPF clients while keeping the server-side business logic separate.
+The application follows a multi-tier architecture derived from the distributed computing concepts covered in Lectures 1–4.
+
+### Logical Tiers
+
+1. **Display Tier**
+   - WPF windows and controls
+   - Handles user interaction and visual presentation
+   - Must execute UI updates on the WPF UI thread
+
+2. **Presentation Tier**
+   - Client-side service interaction
+   - Converts WCF service responses/callbacks into data suitable for the display tier
+   - Provides the client-facing interface to the server
+
+3. **Business Tier**
+   - Hosted within the Chat Server
+   - Contains user, channel, messaging and file-sharing rules
+   - Maintains authoritative application state
+   - Validates operations before modifying state
+
+4. **Data Tier**
+   - For this assignment, persistent storage is not required
+   - Application state is held in server memory
+   - File contents are stored by the server while the server is running
+
+### Physical Project Structure
+
+The logical tiers do not necessarily correspond to separate executable projects. The solution contains:
+- `Chat.Server`
+- `Chat.Client.Polling`
+- `Chat.Client.Duplex`
+- `Chat.Contracts` (shared class library)
+- `Chat.Client.Shared` (shared validation, configuration, UI resources)
+
+Shared contracts and DTOs are placed in the shared project rather than duplicated between clients.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -1029,6 +1086,427 @@ The architecture explicitly recognises that distribution introduces costs.
 **Costs:** Network latency, network failure, serialization/deserialization, timeout handling, concurrency, thread synchronization, distributed state, more complex debugging, more complicated deployment, more difficult failure diagnosis.
 
 The architecture distributes components only where the benefits justify these costs.
+
+### Distribution Strategy
+
+The system uses a client-server distributed architecture.
+
+```text
++--------------------+
+|   Polling Client   |
+|       WPF          |
++---------+----------+
+          |
+          | WCF / BasicHttpBinding
+          |
++---------v----------+
+|                    |
+|    Chat Server     |
+|                    |
+| User Management    |
+| Channel Management |
+| Messaging          |
+| Private Messaging  |
+| File Management    |
+| Callback Manager   |
+|                    |
++--------------------+
+          ^
+          |
+          | WCF / NetTcpBinding
+          |
++---------+----------+
+|    Duplex Client   |
+|       WPF          |
++--------------------+
+```
+
+The server is the authoritative owner of shared state. Clients never communicate directly with one another. All communication passes through the Chat Server.
+
+### Polling Client Communication Strategy
+
+The Polling Client uses asynchronous polling to obtain updates from the server. The polling loop periodically requests changes including:
+- channel list changes
+- channel membership changes
+- new channel messages
+- private messages
+- shared files
+
+The polling operation must execute away from the WPF UI thread so that a network call cannot freeze the interface.
+
+**Rationale:** Polling is intentionally used for Section A because the assignment specifically requires a pull-based strategy. The polling interval should provide a reasonable balance: too short → unnecessary server/network load; too long → poor perceived responsiveness. The polling mechanism is therefore configurable rather than using hard-coded delays.
+
+### Polling vs Duplex Comparison
+
+| Feature | Polling Client | Duplex Client |
+|---|---|---|
+| Communication model | Pull | Push |
+| Update mechanism | Periodic server requests | WCF callbacks |
+| Background polling | Required | Prohibited |
+| Refresh button | Optional fallback only | Prohibited for core updates |
+| WCF channel | Normal service channel | Duplex channel |
+| Callback contract | No | Yes |
+| Real-time updates | Polling interval dependent | Server initiated |
+| UI thread handling | Required for background results | Required for callbacks |
+| Section | A/B | C |
+
+### Duplex Client Architecture
+
+The Duplex Client uses WCF duplex communication. The client provides a callback implementation to the server when establishing the connection.
+
+```text
+Client                          Server
+
+IServer
+  |                               |
+  |---- Register / Connect ------>|
+  |                               |
+  |<--- Callback -----------------|
+  |                               |
+  |<--- ChannelUpdate ------------|
+  |<--- MessageReceived ----------|
+  |<--- MemberUpdate -------------|
+  |<--- PrivateMessage -----------|
+  |<--- FileShared ---------------|
+```
+
+The server maintains the callback associated with each signed-in user. When an event occurs, the server invokes the relevant callback rather than waiting for the client to poll.
+
+**Duplex Client Restrictions:** The Duplex Client must contain no polling timer, no polling thread, no periodic refresh operation, and no refresh button used to implement core real-time updates. All real-time updates must arrive through the WCF callback channel.
+
+### Duplex Contracts
+
+The duplex service contract follows the WCF pattern:
+
+```csharp
+[ServiceContract(CallbackContract = typeof(IChatCallback))]
+public interface IChatService
+{
+    ...
+}
+
+[ServiceContract]
+public interface IChatCallback
+{
+    ...
+}
+```
+
+The callback contract provides operations for server-to-client notifications:
+- `ChannelListUpdated`
+- `MemberListUpdated`
+- `MessageReceived`
+- `PrivateMessageReceived`
+- `FileShared`
+- `UserDisconnected`
+
+Callbacks that do not require a response are candidates for `[OperationContract(IsOneWay = true)]` to avoid unnecessarily blocking the server while delivering notifications.
+
+### Callback Terminology
+
+The project distinguishes between two different concepts.
+
+**Async Completion Callback:** A completion callback informs the caller that an asynchronous operation has completed.
+
+```text
+Client
+ |
+ | start async operation
+ v
+Task / worker
+ |
+ | completed
+ v
+Completion callback
+```
+
+**Remote Callback:** A remote callback is server-to-client communication during a distributed operation.
+
+```text
+Client
+ |
+ | RPC
+ v
+Server
+ |
+ | callback
+ v
+Client
+```
+
+The Duplex Client uses **remote callbacks**. It must not be described as merely an "async completion callback."
+
+### Disconnection Handling
+
+The server must handle clients disappearing without performing an explicit sign-out. Possible causes include:
+- WPF window closed using X
+- application crash
+- process termination
+- network/channel failure
+
+The server must:
+1. Detect the failed/disconnected client
+2. Release its user ID
+3. Remove it from its current channel
+4. Remove its duplex callback registration
+5. Notify remaining channel members
+6. Continue serving other connected clients
+
+A failed callback must not crash the server or prevent notifications to other clients.
+
+**Cleanup Invariant:** After a client has disconnected:
+```text
+User ID       → released
+Channel       → user removed
+Callback      → removed
+Other clients → notified
+Server        → continues running
+```
+
+### Server State
+
+The server owns all authoritative application state.
+
+**User State:**
+```text
+User
+- UserId
+- CurrentChannel
+- Connection / Callback information
+```
+
+**Channel State:**
+```text
+Channel
+- Name
+- Members
+- SharedFiles
+```
+
+**Message State:** Messages are transient. The server does NOT maintain message history. A message is distributed only to users who are members of the channel at the time it is sent.
+
+**File State:**
+```text
+SharedFile
+- FileId
+- FileName
+- FileType
+- FileSize
+- SharedBy
+- Channel
+- FileContents
+```
+
+File contents must exist on the server. A local path from one client must never be sent to another client as the mechanism for file sharing.
+
+### Server Invariants
+
+The following conditions must always hold:
+1. Every signed-in user ID is unique
+2. A user belongs to at most one channel
+3. A channel name is unique
+4. A user can only send channel messages to their current channel
+5. A private message can only be sent between members of the same channel
+6. A channel message is delivered only to members present when it is sent
+7. Message history is not retained
+8. A file is accessible only to members of the channel where it was shared
+9. Files exceeding 2 MB are rejected
+10. Unsupported file extensions are rejected
+11. A disconnected user no longer occupies their user ID
+12. A disconnected user is removed from their channel
+13. A dead callback cannot terminate the server
+14. Duplex clients receive updates through callbacks rather than polling
+
+### File Sharing
+
+**Allowed Extensions:** Only `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.txt` are accepted.
+
+**Size Limit:** Maximum 2 MB. The server is responsible for enforcing both extension and size restrictions.
+
+**Transfer Model:**
+```text
+Client
+  |
+  | file bytes
+  v
+Server
+  |
+  | store
+  v
+Server File State
+  |
+  | file bytes
+  v
+Client
+```
+
+The system must never rely on clients sharing local filesystem paths.
+
+**Security/Validation Principle:** Validation must occur on the server even if the client performs preliminary validation. The client-side validation exists for user experience. The server-side validation is authoritative.
+
+### Message Semantics
+
+**Channel Messages:** When a user sends a message:
+1. Server verifies the sender is currently in a channel
+2. Server obtains the current members of that channel
+3. Server distributes the message to those members
+4. No message history is stored
+
+A user joining later must not receive messages sent before joining.
+
+**Private Messages:** When a user sends a private message:
+1. Verify sender is signed in
+2. Verify recipient exists
+3. Verify both users are currently members of the same channel
+4. Deliver only to the intended recipient
+5. The server must not broadcast the private message to the channel
+
+### Solution Structure
+
+```text
+Assignment1/
+│
+├── Chat.Server/
+│   ├── Program.cs
+│   ├── Services/
+│   │   └── ChatService.cs
+│   ├── StateManagement/
+│   │   ├── UserManager.cs
+│   │   ├── ChannelManager.cs
+│   │   ├── MessageRouter.cs
+│   │   ├── FileHandler.cs
+│   │   └── CallbackManager.cs
+│   └── Models/
+│
+├── Chat.Client.Polling/
+│   ├── App.xaml
+│   ├── Views/
+│   │   ├── SignInWindow.xaml
+│   │   ├── ChannelListWindow.xaml
+│   │   ├── ChannelWindow.xaml
+│   │   └── PrivateChatWindow.xaml
+│   ├── Services/
+│   │   └── PollingClientService.cs
+│   └── ViewModels/
+│
+├── Chat.Client.Duplex/
+│   ├── App.xaml
+│   ├── Views/
+│   │   ├── SignInWindow.xaml
+│   │   ├── ChannelListWindow.xaml
+│   │   ├── ChannelWindow.xaml
+│   │   └── PrivateChatWindow.xaml
+│   ├── Services/
+│   │   ├── DuplexClientService.cs
+│   │   └── ChatCallbackHandler.cs
+│   └── ViewModels/
+│
+├── Chat.Contracts/
+│   ├── IChatService.cs
+│   ├── IDuplexChatService.cs
+│   ├── IChatCallback.cs
+│   ├── ChatMessage.cs
+│   ├── PrivateMessage.cs
+│   ├── SharedFile.cs
+│   └── DTOs/
+│
+└── Chat.Client.Shared/
+    ├── Services/
+    │   ├── ValidationService.cs
+    │   ├── FileHelperService.cs
+    │   └── ConfigurationService.cs
+    └── Resources/
+        ├── Colors.xaml
+        ├── Sizing.xaml
+        └── Converters.xaml
+```
+
+### Implementation Order
+
+Implementation must follow the assignment's recommended progression.
+
+**Phase 1 — Shared Contracts:** Implement service contract, DTOs, message models, channel models, file metadata models. Do not implement UI yet.
+
+**Phase 2 — Server Core:** Implement and test user sign-in, sign-out, channel creation, join/leave channel, channel listing, public messaging, private messaging, file upload/download, thread-safe state management.
+
+**Phase 3 — Polling Client:** Implement sign-in, channel list, channel creation, join/leave, public conversation, member list, private conversations, file sharing, sign-out, background polling, UI thread marshaling. The polling client must be functionally complete before beginning the duplex client.
+
+**Phase 4 — Concurrency Testing:** Run 3–5 clients, duplicate sign-ins, simultaneous channel joins, simultaneous messages, private messages, simultaneous file sharing, client disconnect via X, server-side state verification.
+
+**Phase 5 — Duplex Client:** Implement callback contract, duplex `ChannelFactory`, callback registration, server callback storage, public message callbacks, member updates, channel updates, private-message callbacks, file notifications, WPF Dispatcher handling, disconnection cleanup.
+
+**Phase 6 — Demonstration Testing:** Run both client types simultaneously against the same server. Verify that polling client sees duplex-client messages, duplex client sees polling-client messages, both clients share the same channel state, files are accessible from both clients, killing a client releases its ID, remaining clients continue operating.
+
+### Assessment Test Matrix
+
+| Test | Expected Result | Rubric |
+|---|---|---|
+| Sign in with unique ID | User enters system | A1/B1 |
+| Sign in with duplicate ID | Rejected with readable reason | A1/B1 |
+| Create unique channel | Channel appears | A3/B2 |
+| Create duplicate channel | Rejected with readable reason | A3/B2 |
+| Join channel | User appears in member list | A2/A4/B2 |
+| Leave channel | User removed from channel | A4/B2 |
+| Send public message | All current members receive it | A4/B3 |
+| Join after previous message | Previous message not shown | A4/B3 |
+| Send private message | Only recipient receives it | A5/B4 |
+| Private chat history | Exchange remains in dedicated window | A5 |
+| Upload valid image | File appears to members | A6/B5 |
+| Upload valid text file | File appears to members | A6/B5 |
+| Upload unsupported file | Server rejects with reason | A6/B5 |
+| Upload >2 MB | Server rejects with reason | A6/B5 |
+| Open shared file | Contents retrieved from server | A6/B5 |
+| Sign out | ID released and channel membership removed | A7/B1/B2 |
+| Polling client receives update | Update arrives without user action | A2/A4/A6 |
+| Duplex client receives update | Callback delivers update | C1/C2 |
+| Duplex client has no polling | No timer/background refresh path | C2 |
+| Concurrent server operations | State remains consistent | C3 |
+| Callback updates WPF UI | No cross-thread exception | C3 |
+| Kill client with X | Server detects/removes user | C4 |
+| Dead callback | Server continues serving others | C4 |
+| Polling + duplex together | Both share same server state | C1/C2 |
+
+### Assignment Constraints
+
+The following implementations must not be used as substitutes for the required architecture:
+- Do not allow clients to communicate directly with each other
+- Do not store authoritative shared state in the clients
+- Do not use a database; it is unnecessary for this assignment
+- Do not persist state between server restarts
+- Do not store message history
+- Do not send local filesystem paths between clients
+- Do not allow unsupported file types
+- Do not allow files larger than 2 MB
+- Do not implement the Duplex Client as a setting inside the Polling Client
+- Do not use polling in the Duplex Client
+- Do not add a refresh button as the core update mechanism in the Duplex Client
+- Do not update WPF controls directly from WCF callback threads
+- Do not assume that server methods execute sequentially
+- Do not rely exclusively on client-side validation
+- Do not assume a client always performs an explicit sign-out
+- Do not allow a failed callback to terminate or block the server
+
+### Lecture-to-Implementation Mapping
+
+| Lecture Concept | Application |
+|---|---|
+| Components | Chat Server, Polling Client and Duplex Client act as distributed components |
+| Service-oriented architecture | WCF service exposes chat functionality |
+| RPC | Clients invoke operations on the remote Chat Server |
+| Multi-tier architecture | Display, presentation and server-side business responsibilities are separated |
+| Business tier | User/channel/message/file rules live on the server |
+| Presentation tier | Client-facing WCF service interface |
+| Display tier | WPF UI |
+| Asynchronous communication | Polling and long-running client operations avoid blocking the UI |
+| `async` / `await` | Client network operations |
+| Threads | Concurrent WCF requests and background polling |
+| Thread safety | Synchronisation of shared server state |
+| One-way calls | Suitable server-to-client notification callbacks |
+| Remote callbacks | Duplex client's server-to-client updates |
+| Duplex channels | WCF callback communication |
+| Dispatcher | Marshals callback updates onto WPF UI thread |
+| Delegates | Used through WPF/WCF callback and Dispatcher mechanisms |
+| Lambda expressions | May be used for concise Dispatcher actions |
 
 ### Implementation Priority
 
