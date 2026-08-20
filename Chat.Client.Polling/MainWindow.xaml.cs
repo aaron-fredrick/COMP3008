@@ -259,6 +259,17 @@ namespace Chat.Client.Polling
                 if (success)
                 {
                     LoadChannelFiles();
+
+                    // Add file message to conversation view immediately
+                    var fileMessage = new Message
+                    {
+                        SenderId = _currentUserId,
+                        Content = $"Shared file: {fileName}",
+                        Timestamp = DateTime.UtcNow,
+                        Type = MessageType.File,
+                        ChannelName = _currentChannel
+                    };
+                    _conversationView?.AddMessage(fileMessage);
                 }
             }
         }
