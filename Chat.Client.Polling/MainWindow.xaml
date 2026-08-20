@@ -5,15 +5,6 @@
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize">
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Sizing.xaml"/>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Resources/Converters.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
             <TextBlock Text="COMP3008 Chat" FontSize="{StaticResource FontSizeHuge}" FontWeight="Bold"

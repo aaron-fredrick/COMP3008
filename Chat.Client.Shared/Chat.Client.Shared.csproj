@@ -48,18 +48,10 @@
     <Compile Include="Models\MessageDisplayModel.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Styles\Colors.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Styles\Sizing.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Converters.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
+    <Resource Include="Styles\Colors.xaml" />
+    <Resource Include="Styles\Sizing.xaml" />
+    <Resource Include="Resources\Converters.xaml" />
+    <Resource Include="Resources\SharedResources.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj" />

@@ -4,15 +4,6 @@
         Title="Channels" Height="500" Width="700"
         Background="{StaticResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Sizing.xaml"/>
-                <ResourceDictionary Source="/Chat.Client.Shared;component/Resources/Converters.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
     <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
