@@ -10,7 +10,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            <local:FileSizeConverter x:Key="FileSizeConverter"/>
         </ResourceDictionary>
     </Window.Resources>
     <Grid>
