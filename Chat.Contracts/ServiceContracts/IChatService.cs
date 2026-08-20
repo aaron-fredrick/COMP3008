@@ -43,6 +43,9 @@ namespace Chat.Contracts.ServiceContracts
         SharedFile GetFile(string channelName, string fileName);
 
         [OperationContract]
+        List<SharedFile> GetChannelFiles(string channelName);
+
+        [OperationContract]
         List<Message> GetPendingMessages(string userId);
 
         [OperationContract]

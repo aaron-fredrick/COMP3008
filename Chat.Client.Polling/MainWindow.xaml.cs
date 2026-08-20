@@ -18,12 +18,14 @@ namespace Chat.Client.Polling
         private int _pollingInterval;
         private ChannelListView _channelListView;
         private ConversationView _conversationView;
+        private System.Collections.Generic.Dictionary<string, PrivateMessageView> _privateMessageViews;
         private bool _isSigningOut = false;
 
         public MainWindow()
         {
             InitializeComponent();
             _pollingInterval = int.Parse(ConfigurationManager.AppSettings["PollingInterval"] ?? "2000");
+            _privateMessageViews = new System.Collections.Generic.Dictionary<string, PrivateMessageView>();
             InitializePollingTimer();
         }
 
@@ -79,8 +81,10 @@ namespace Chat.Client.Polling
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
+            _conversationView.PrivateMessageRequested += ConversationView_PrivateMessageRequested;
+            _conversationView.FileShareRequested += ConversationView_FileShareRequested;
             _conversationView.Closing += ConversationView_Closing;
-            
+
             LoadChannelMembers();
             _conversationView.Show();
             _channelListView.Hide();
@@ -179,6 +183,116 @@ namespace Chat.Client.Polling
             }
         }
 
+        private void ConversationView_FileShareRequested(object sender, EventArgs e)
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Select a file to share",
+                Filter = "All files (*.*)|*.*"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string filePath = openFileDialog.FileName;
+                string fileName = System.IO.Path.GetFileName(filePath);
+                byte[] fileData = System.IO.File.ReadAllBytes(filePath);
+
+                // Determine file type
+                FileType fileType = FileType.Unsupported;
+                string extension = System.IO.Path.GetExtension(fileName).ToLower();
+                if (extension == ".jpg")
+                {
+                    fileType = FileType.Jpg;
+                }
+                else if (extension == ".jpeg")
+                {
+                    fileType = FileType.Jpeg;
+                }
+                else if (extension == ".png")
+                {
+                    fileType = FileType.Png;
+                }
+                else if (extension == ".gif")
+                {
+                    fileType = FileType.Gif;
+                }
+                else if (extension == ".bmp")
+                {
+                    fileType = FileType.Bmp;
+                }
+                else if (extension == ".txt")
+                {
+                    fileType = FileType.Txt;
+                }
+
+                bool success = _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
+                if (success)
+                {
+                    LoadChannelFiles();
+                }
+            }
+        }
+
+        private void LoadChannelFiles()
+        {
+            if (!string.IsNullOrEmpty(_currentChannel))
+            {
+                var files = _serviceClient.GetChannelFiles(_currentChannel);
+                _conversationView?.UpdateFiles(files);
+            }
+        }
+
+        private void ConversationView_PrivateMessageRequested(object sender, string recipientId)
+        {
+            if (recipientId == _currentUserId)
+            {
+                return; // Can't send private message to self
+            }
+
+            if (!_privateMessageViews.ContainsKey(recipientId))
+            {
+                var privateMessageView = new PrivateMessageView(recipientId);
+                privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
+                privateMessageView.Closing += PrivateMessageView_Closing;
+                privateMessageView.Owner = _conversationView;
+                _privateMessageViews[recipientId] = privateMessageView;
+                privateMessageView.Show();
+            }
+            else
+            {
+                _privateMessageViews[recipientId].Focus();
+            }
+        }
+
+        private void PrivateMessageView_SendMessageRequested(object sender, string message)
+        {
+            if (sender is PrivateMessageView privateMessageView)
+            {
+                string recipientId = privateMessageView.Title.Replace("Private Conversation with: ", "");
+                _serviceClient.SendPrivateMessage(_currentUserId, recipientId, message);
+
+                // Display own message immediately
+                var ownMessage = new Message
+                {
+                    SenderId = _currentUserId,
+                    Content = message,
+                    Timestamp = DateTime.UtcNow,
+                    Type = MessageType.Private,
+                    RecipientId = recipientId
+                };
+                privateMessageView.AddMessage(ownMessage);
+            }
+        }
+
+        private void PrivateMessageView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (sender is PrivateMessageView privateMessageView)
+            {
+                string recipientId = privateMessageView.Title.Replace("Private Conversation with: ", "");
+                _privateMessageViews.Remove(recipientId);
+            }
+        }
+
         private void LoadChannels()
         {
             if (!_isSigningOut)
@@ -210,10 +324,24 @@ namespace Chat.Client.Polling
                 var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);
                 foreach (var message in privateMessages)
                 {
-                    _conversationView?.AddMessage(message);
+                    // Determine which private message view should receive this
+                    string otherUserId = (message.SenderId == _currentUserId) ? message.RecipientId : message.SenderId;
+
+                    if (!_privateMessageViews.ContainsKey(otherUserId))
+                    {
+                        var privateMessageView = new PrivateMessageView(otherUserId);
+                        privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
+                        privateMessageView.Closing += PrivateMessageView_Closing;
+                        privateMessageView.Owner = _conversationView;
+                        _privateMessageViews[otherUserId] = privateMessageView;
+                        privateMessageView.Show();
+                    }
+
+                    _privateMessageViews[otherUserId].AddMessage(message);
                 }
 
                 LoadChannelMembers();
+                LoadChannelFiles();
                 LoadChannels();
             }
         }
@@ -227,27 +355,34 @@ namespace Chat.Client.Polling
 
             _isSigningOut = true;
             _pollingTimer.Stop();
-            
+
             // Leave channel if in one
             if (!string.IsNullOrEmpty(_currentChannel))
             {
                 _serviceClient?.LeaveChannel(_currentUserId);
             }
-            
+
             // Sign out from server
             _serviceClient?.SignOut(_currentUserId);
             _serviceClient?.Dispose();
-            
+
             _currentUserId = null;
             _currentChannel = null;
-            
+
+            // Close all private message views
+            foreach (var privateMessageView in _privateMessageViews.Values)
+            {
+                privateMessageView.Close();
+            }
+            _privateMessageViews.Clear();
+
             _channelListView?.Close();
             _conversationView?.Close();
-            
+
             this.Show();
             LoginStatusText.Text = "";
             UsernameTextBox.Text = "";
-            
+
             _isSigningOut = false;
         }
 

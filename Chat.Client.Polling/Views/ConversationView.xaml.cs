@@ -11,6 +11,8 @@ namespace Chat.Client.Polling.Views
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
+        public event EventHandler<string> PrivateMessageRequested;
+        public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
 
@@ -76,6 +78,19 @@ namespace Chat.Client.Polling.Views
             {
                 FileDownloadRequested?.Invoke(this, selectedFile);
             }
+        }
+
+        private void MembersListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (MembersListBox.SelectedItem is string selectedMember)
+            {
+                PrivateMessageRequested?.Invoke(this, selectedMember);
+            }
+        }
+
+        private void ShareFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            FileShareRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 }

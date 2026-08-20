@@ -171,6 +171,13 @@ namespace Chat.Server.Services
             return _fileHandler.GetFile(channelName, fileName);
         }
 
+        public List<SharedFile> GetChannelFiles(string channelName)
+        {
+            var files = _fileHandler.GetChannelFiles(channelName);
+            // Don't log polling requests to reduce noise
+            return files;
+        }
+
         public List<Message> GetPendingMessages(string userId)
         {
             string clientType = DetectClientType();

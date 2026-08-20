@@ -198,6 +198,19 @@ namespace Chat.Client.Polling.Services
             }
         }
 
+        public System.Collections.Generic.List<SharedFile> GetChannelFiles(string channelName)
+        {
+            try
+            {
+                return _proxy.GetChannelFiles(channelName);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                return new System.Collections.Generic.List<SharedFile>();
+            }
+        }
+
         private void HandleError(Exception ex)
         {
             // Log error or raise event for UI to handle
