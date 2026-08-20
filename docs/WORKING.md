@@ -96,6 +96,80 @@ Polling Client   Duplex Client      ChatService       State Managers
 
 The project is not peer-to-peer - clients never communicate directly. All communication flows through the central server, which maintains authoritative shared state.
 
+### Distributed Components
+
+The application is composed of independently executing components/processes:
+
+```text
+Distributed Chat Application
+│
+├── Chat.Server
+│   ├── ChatService
+│   ├── UserManager
+│   ├── ChannelManager
+│   ├── MessageRouter
+│   ├── CallbackManager
+│   └── FileHandler
+│
+├── Chat.Client.Polling
+│   └── WPF client component
+│
+├── Chat.Client.Duplex
+│   └── WPF client component
+│
+└── Chat.Contracts
+    └── Shared contract/data definitions
+```
+
+Not every class in the system is itself a distributed component. `UserManager`, `ChannelManager`, `MessageRouter`, `CallbackManager`, and `FileHandler` are primarily internal server-side objects/classes. The externally accessible distributed service component is exposed through the WCF service boundary represented by `ChatService` implementing `IChatService`, `IDuplexChatService`, and `IChatCallback`.
+
+### Why These Components Are Distributed
+
+The architectural reasoning addresses the lecture's question: What do we distribute, where do we put the parts, and why?
+
+**CLIENT SIDE**
+- Presentation/UI
+- User interaction
+- Client-side validation
+- Local file operations
+- WCF proxy/channel
+
+**SERVER SIDE**
+- Authoritative users
+- Channels and membership
+- Message routing
+- File validation/storage
+- Duplex callback registration
+- Business/application state
+
+Clients require an independent UI/process. Shared application state must be authoritative and coordinated centrally. Multiple clients need to access the same users, channels, messages, and files. The server therefore owns the authoritative application state. Clients do not directly access server-side objects or memory. WCF provides the service boundary through which clients communicate with the server. This separation allows multiple independent client processes to interact with one server process.
+
+### Objects vs Distributed Components
+
+The distinction from Lecture 1:
+
+```text
+Client
+   │
+   │ WCF RPC
+   ▼
+Distributed Service Component
+ChatService
+   │
+   │ local method calls
+   ▼
+Internal Objects
+├── UserManager
+├── ChannelManager
+├── MessageRouter
+├── CallbackManager
+└── FileHandler
+```
+
+`ChatService` is the externally exposed service boundary. The managers are implementation objects inside the server. Clients should not know about or directly reference those internal objects. Clients communicate through service contracts. The implementation details behind the service boundary are hidden from the client.
+
+Example: `service.SignIn(userId)` is a remote operation. Inside the server, `_userManager.SignIn(userId)` is a local operation. The distributed boundary exists between the client WCF proxy/channel and the server WCF service, not between every individual server class.
+
 ### RPC Lifecycle
 
 WCF provides the RPC infrastructure, handling serialization, marshaling, and transport. From the client's perspective, remote calls (`service.SignIn()`) appear similar to local method calls, but they cross process/network boundaries with different failure characteristics (Lecture 1). The architecture has two layers: RPC calls from client to server via WCF, then local procedure calls within the server (e.g., `_userManager.SignIn()`).
@@ -145,6 +219,242 @@ WPF UI
 ```
 
 Remote calls have multiple possible failure points (network, server availability, serialization) that local calls do not. A communication exception does not necessarily prove the server-side operation did not occur.
+
+### RPC as Communication Between Components
+
+RPC is the communication mechanism between distributed components, not the architectural goal itself.
+
+```text
+Distributed Component
+        │
+        │ RPC
+        ▼
+Distributed Component
+```
+
+Mapped to this application:
+
+```text
+Polling Client Component
+        │
+        │ BasicHttpBinding / WCF RPC
+        ▼
+Chat.Server Service Component
+```
+
+and:
+
+```text
+Duplex Client Component
+        │
+        │ NetTcpBinding / WCF RPC
+        ▼
+Chat.Server Service Component
+        │
+        │ Callback RPC
+        ▼
+Duplex Client Component
+```
+
+Lecture 1 distinguishes the communication problem from the architectural question: RPC solves how components communicate; the architecture determines what functionality is placed into each component.
+
+### Service-Oriented Architecture
+
+The application follows a service-oriented approach at the distributed boundary. `ChatService` is a service that exposes operations to clients.
+
+```text
+Client
+  │
+  ├── SignIn()
+  ├── CreateChannel()
+  ├── JoinChannel()
+  ├── SendMessage()
+  ├── SendPrivateMessage()
+  ├── ShareFile()
+  └── GetMessages()
+  │
+  ▼
+ChatService
+```
+
+Clients request services rather than accessing server objects. Server implementation is encapsulated behind the service contract. Clients depend on the contract rather than the implementation. The server remains responsible for shared state and business logic.
+
+### WCF Service Architecture
+
+The three fundamental WCF endpoint concepts:
+
+```text
+Endpoint
+├── Address
+├── Binding
+└── Contract
+```
+
+Mapped to the project:
+
+**Polling Endpoint**
+```text
+Contract: IChatService
+Binding: BasicHttpBinding
+Address: http://localhost:8080/ChatService/Polling
+```
+
+**Duplex Endpoint**
+```text
+Contract: IDuplexChatService
+Binding: NetTcpBinding
+Address: net.tcp://localhost:8081/ChatService/Duplex
+```
+
+The contract defines what operations are available. The binding defines how communication is performed. The address identifies where the service is located. Together these form the WCF endpoint.
+
+### WCF ChannelFactory
+
+The client uses the shared service contract and binding configuration to create a communication channel to the server.
+
+```text
+Service Contract
+      +
+Binding
+      ↓
+ChannelFactory
+      ↓
+WCF Channel / Proxy
+      ↓
+Remote ChatService
+```
+
+For duplex communication, the duplex channel additionally associates the callback implementation with the WCF channel. The client does not directly instantiate `ChatService`.
+
+### Runtime Service Connection
+
+The client and server are compiled as separate applications. The client does not statically link the server's implementation classes. The client references the service contract and creates a WCF communication channel. The actual communication occurs at runtime over the configured endpoint. The server implementation can therefore remain encapsulated within the server process.
+
+```text
+Compile Time
+────────────
+Client
+   │
+   └── references Chat.Contracts
+
+Runtime
+────────
+Client WCF Channel
+       │
+       │ network
+       ▼
+Server WCF Endpoint
+       │
+       ▼
+ChatService implementation
+```
+
+`Chat.Contracts` is shared source/binary contract code, but `Chat.Server` implementation is not linked into the client.
+
+### The Network Is Not RAM
+
+A remote call cannot be treated as equivalent to a local method call. For this project, `service.SendMessage(message)` may fail because the server is stopped, network connection is unavailable, endpoint is unreachable, WCF communication channel has faulted, timeout occurs, or server-side operation throws an exception. This is fundamentally different from `_messageRouter.RoutePublicMessage(message)`, which is a local server-side call. A distributed system must account for communication failure because components do not share the same memory space.
+
+### No Shared Memory Across Components
+
+```text
+Polling Client Memory
+        X
+        │
+        X   No shared memory
+        │
+        X
+Server Memory
+```
+
+The same applies to the duplex client. Client and server run in separate processes. Server dictionaries are not directly accessible by clients. C# object references cannot simply be passed between machines/processes. Data must cross the service boundary through WCF serialization. Data contracts define the information exchanged between processes.
+
+### Serialization at the Component Boundary
+
+```text
+Client Object
+     │
+     │ Serialization
+     ▼
+Network Message
+     │
+     │ WCF
+     ▼
+Server
+     │
+     │ Deserialization
+     ▼
+Server Object
+```
+
+`Message`, `User`, `Channel`, and `SharedFile` are data transferred across the component boundary. The client and server do not share the same object instance. Each side receives its own deserialized representation.
+
+### Duplex Architecture
+
+The callback is itself a remote invocation:
+
+```text
+                 Duplex RPC
+
+Client A
+   │
+   │ Request RPC
+   ▼
+Chat.Server
+   │
+   │ Callback RPC
+   ▼
+Client B
+```
+
+Therefore `callback.NotifyMessageReceived(message)` is not a normal local callback when viewed architecturally. It crosses the network from the server process to the client process.
+
+### Component Boundary Diagram
+
+```text
+┌───────────────────────────────┐
+│ Chat.Client.Polling           │
+│                               │
+│ WPF UI                        │
+│ Client Services               │
+│ WCF Channel                   │
+└───────────────┬───────────────┘
+                │
+                │ RPC
+                │ BasicHttpBinding
+                ▼
+┌─────────────────────────────────────────┐
+│ Chat.Server                             │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ WCF Service Boundary                │ │
+│ │ ChatService                         │ │
+│ └──────────────────┬──────────────────┘ │
+│                    │                    │
+│             Local Calls                 │
+│                    ▼                    │
+│ ┌────────────┐ ┌────────────┐          │
+│ │UserManager │ │ChannelMgr  │          │
+│ ├────────────┤ ├────────────┤          │
+│ │MessageRouter││CallbackMgr │          │
+│ ├────────────┤ ├────────────┤          │
+│ │FileHandler │ │In-memory   │          │
+│ │            │ │state       │          │
+│ └────────────┘ └────────────┘          │
+└─────────────────────────────────────────┘
+                ▲
+                │
+                │ RPC + Callback
+                │ NetTcpBinding
+                │
+┌───────────────┴───────────────┐
+│ Chat.Client.Duplex             │
+│                                │
+│ WPF UI                         │
+│ Callback Handler               │
+│ WCF Duplex Channel              │
+└────────────────────────────────┘
+```
 
 ### Server Logic Distribution
 
@@ -574,4 +884,23 @@ None currently.
 - [PROJECT_PLAN.md](PROJECT_PLAN.md) - Detailed project plan
 - [SHARED_COMPONENTS_SPRINT.md](../SHARED_COMPONENTS_SPRINT.md) - Sprint plan for shared components and duplex client
 - [Part A.md](Part%20A.md) - Assignment requirements
+
+## COMP3008 Lecture 1 Concept Mapping
+
+| Lecture Concept               | Project Implementation                                |
+| ----------------------------- | ----------------------------------------------------- |
+| Component                     | Client/server service boundary                        |
+| Service                       | `ChatService`                                         |
+| Service contract              | `IChatService`, `IDuplexChatService`, `IChatCallback` |
+| RPC                           | WCF service invocation                                |
+| Endpoint                      | Address + binding + contract                          |
+| BasicHttpBinding              | Polling RPC                                           |
+| NetTcpBinding                 | Duplex RPC                                            |
+| Distributed state             | Server-side user/channel/message state                |
+| Objects                       | Server managers and client-side classes               |
+| Component boundary            | WCF service boundary                                  |
+| Serialization                 | WCF data contract serialization                       |
+| Network failure               | WCF communication exceptions/disconnects              |
+| Runtime communication         | WCF ChannelFactory/channel                            |
+| Service-oriented architecture | Clients consume server-provided services              |
 

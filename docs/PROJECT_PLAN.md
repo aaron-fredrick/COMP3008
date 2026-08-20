@@ -3,6 +3,41 @@
 ## Project Overview
 A real-time chat application built with .NET Framework, WCF, and WPF supporting both polling and duplex communication patterns. This is a distributed application demonstrating client-server architecture with RPC-based communication.
 
+## Distributed Computing Architecture Goals
+
+The project explicitly demonstrates the following COMP3008 concepts:
+
+- Decomposition into distributed components
+- Service-oriented architecture
+- RPC as the communication mechanism between components
+- Service contracts as component interfaces
+- WCF endpoints as component access points
+- Separation between distributed components and internal objects
+- Serialization across process boundaries
+- Runtime communication through WCF channels
+- Handling of network failure
+- Server-side ownership of authoritative shared state
+
+The project is not merely demonstrating "how to call a WCF method." It demonstrates:
+
+```text
+What is distributed?
+        ↓
+Client UI + server service
+        ↓
+Where is it placed?
+        ↓
+Separate processes
+        ↓
+Why?
+        ↓
+Independent clients require shared authoritative server state
+        ↓
+How do they communicate?
+        ↓
+WCF RPC
+```
+
 ## COMP3008 Distributed Systems Context
 
 This project is a distributed application implemented using a client-server architecture with two RPC communication mechanisms.
@@ -38,6 +73,66 @@ The duplex callback from server to client does not make the system peer-to-peer 
 
 Because the client and server execute as separate processes, they cannot directly access each other's memory or invoke internal methods directly. Communication occurs through WCF service calls. The client does not directly access UserManager, ChannelManager, MessageRouter, or FileHandler - it communicates through the WCF service contract.
 
+### Component Decomposition
+
+The architectural components are:
+
+**Client Components**
+```text
+Chat.Client.Polling
+Chat.Client.Duplex
+```
+Responsibilities:
+- Presentation
+- User interaction
+- Client-side validation
+- Client-side file operations
+- WCF communication
+
+**Server Service Component**
+```text
+Chat.Server
+    └── ChatService
+```
+Responsibilities:
+- Expose service operations
+- Coordinate server-side application logic
+- Maintain authoritative state
+- Communicate with clients
+
+**Internal Server Objects**
+```text
+UserManager
+ChannelManager
+MessageRouter
+CallbackManager
+FileHandler
+```
+These are internal implementation objects rather than independently exposed distributed components.
+
+### Component Interfaces
+
+The distributed component boundary is defined by WCF service contracts:
+```text
+IChatService
+IDuplexChatService
+IChatCallback
+```
+
+Service contracts provide the public interface of the distributed service. Internal interfaces/classes are implementation details and are not directly exposed to clients.
+
+### WCF Endpoint Design
+
+| Component Access | Contract             | Binding            | Address                                       | Purpose                   |
+| ---------------- | -------------------- | ------------------ | --------------------------------------------- | ------------------------- |
+| Polling client   | `IChatService`       | `BasicHttpBinding` | `http://localhost:8080/ChatService/Polling`   | Request/response RPC      |
+| Duplex client    | `IDuplexChatService` | `NetTcpBinding`    | `net.tcp://localhost:8081/ChatService/Duplex` | Duplex RPC                |
+| Server callback  | `IChatCallback`      | Duplex channel     | Client callback channel                       | Server-to-client callback |
+
+```text
+Endpoint = Address + Binding + Contract
+```
+
 ### RPC Architecture
 
 The application uses Windows Communication Foundation (WCF) as its RPC framework. From the client's perspective, operations like `service.SignIn()` appear similar to local method calls, but they cross process/network boundaries with different failure characteristics (Lecture 1). The architecture has two layers: RPC calls from client to server via WCF, then local procedure calls within the server (e.g., `_userManager.SignIn()`).
@@ -63,6 +158,105 @@ The WCF contracts in `Chat.Contracts` define the interface and data exchanged be
 ### Why Use RPC Instead of Raw TCP/UDP?
 
 TCP provides reliable byte-stream transport but does not define application-level operations. A custom TCP implementation would need to define message boundaries, request/response format, serialization, operation identification, error handling, connection management, and application protocol rules. WCF provides a higher-level RPC abstraction for application/service-level remote operations (Lecture 1).
+
+### Runtime Communication Model
+
+```text
+Client Application
+      │
+      │ Chat.Contracts
+      ▼
+ChannelFactory
+      │
+      ▼
+WCF Channel
+      │
+      │ Network
+      ▼
+WCF Endpoint
+      │
+      ▼
+ChatService
+      │
+      ▼
+Internal Server Objects
+```
+
+The client does not link directly to the server implementation. The client references the service contract and creates a WCF communication channel. The actual communication occurs at runtime over the configured endpoint.
+
+### Distributed Failure Model
+
+Remote calls must be treated differently from local calls. Potential failures include:
+- Server unavailable
+- Endpoint unavailable
+- Network disconnected
+- Timeout
+- Communication channel fault
+- Callback channel failure
+- Server-side exception
+
+Implementation requirements:
+- Handle CommunicationException
+- Handle TimeoutException
+- Detect faulted WCF channels
+- Close/abort channels correctly
+- Prevent callback failures from crashing the client
+- Provide user-visible connection error messages
+
+### Data Serialization
+
+Data crossing the distributed boundary must be serializable. Relevant objects: `User`, `Channel`, `Message`, `SharedFile`.
+
+```text
+Client Object
+      ↓
+WCF Serialization
+      ↓
+Network
+      ↓
+WCF Deserialization
+      ↓
+Server Object
+```
+
+Object references are not shared across the process/network boundary.
+
+### State Placement Rationale
+
+State is maintained by the server because:
+- Multiple clients require a consistent view of users/channels
+- Message routing requires a central authority
+- Channel membership must be coordinated
+- Private-message authorization depends on server-side membership
+- Files must pass through the server
+- Clients cannot safely coordinate authoritative shared state independently
+
+```text
+             Server
+       Authoritative State
+              │
+       ┌──────┴──────┐
+       │             │
+    Client A      Client B
+       │             │
+       └──────┬──────┘
+              │
+          Client C
+```
+
+### Distributed Architecture Principles
+
+**1. Service Boundary**: Clients interact with server functionality through WCF contracts.
+
+**2. Encapsulation**: Server implementation objects remain inside the server process.
+
+**3. No Shared Memory**: Clients and server exchange serialized data rather than memory references.
+
+**4. Explicit Communication**: Remote operations occur through WCF rather than direct object calls.
+
+**5. Failure Awareness**: Network operations are assumed to be fallible.
+
+**6. Component Cohesion**: Each distributed component has a clear responsibility.
 
 ### WCF and RPC
 
@@ -472,9 +666,13 @@ public class MessageRouter : IMessageRouter { }
 - [x] Refactor polling client to use shared components
 
 ### Phase 5: Duplex Client 🔄 IN PROGRESS
-- [ ] Implement DuplexChannelFactory for WCF duplex connection
-- [ ] Implement ChatCallbackHandler for IChatCallback
-- [ ] Implement Dispatcher marshaling for thread-safe UI updates
+- [ ] Define duplex callback instance
+- [ ] Create `InstanceContext` for callback handler
+- [ ] Create `DuplexChannelFactory<IDuplexChatService>`
+- [ ] Create duplex service channel
+- [ ] Register callback with server
+- [ ] Handle callback events
+- [ ] Marshal callback events to WPF Dispatcher
 - [ ] Build duplex client UI (MainWindow, ChannelListView, ConversationView, PrivateMessageView)
 - [ ] Integrate shared services in duplex client
 - [ ] Integrate shared UI resources in duplex client
@@ -589,4 +787,23 @@ public class MessageRouter : IMessageRouter { }
 
 ## Success Criteria
 The implementation targets all assessed assignment requirements and is structured to support the full available mark allocation.
+
+## COMP3008 Lecture 1 Alignment
+
+| Concept                       | Demonstrated By                           |
+| ----------------------------- | ----------------------------------------- |
+| Components                    | Separate client/server processes          |
+| Service-oriented architecture | `ChatService`                             |
+| Component interfaces          | WCF service contracts                     |
+| RPC                           | WCF operations                            |
+| Endpoint                      | Address + binding + contract              |
+| BasicHttpBinding              | Polling communication                     |
+| NetTcpBinding                 | Duplex communication                      |
+| ChannelFactory                | Client-side WCF channel creation          |
+| Objects vs components         | Internal managers vs exposed service      |
+| Serialization                 | WCF data contracts                        |
+| Distributed state             | Server-owned state                        |
+| Network failure               | Communication/disconnection handling      |
+| Runtime communication         | WCF channels                              |
+| Service encapsulation         | Server implementation hidden from clients |
 
