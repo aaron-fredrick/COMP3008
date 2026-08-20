@@ -22,10 +22,10 @@ This chat application supports both polling and duplex communication patterns:
 ```
 COMP3008/
 ├── Chat.Contracts/          # WCF service contracts, data contracts, shared types
-├── Chat.Client.Shared/      # Shared client logic (ViewModels, Services, Models)
+├── Chat.Client.Shared/      # Shared client logic (Services, Models, UI Resources)
 ├── Chat.Server/             # WCF server console application
-├── Chat.Client.Polling/     # WPF polling client
-├── Chat.Client.Duplex/      # WPF duplex client
+├── Chat.Client.Polling/     # WPF polling client (✅ Complete)
+├── Chat.Client.Duplex/      # WPF duplex client (🔄 In Progress)
 └── docs/                    # Documentation
 ```
 
@@ -185,6 +185,7 @@ Server → Push Event → Client (via callback)
 
 ## Documentation
 
+- [Shared Components Sprint Plan](SHARED_COMPONENTS_SPRINT.md) - Sprint plan for shared components and duplex client
 - [Project Plan](docs/PROJECT_PLAN.md) - Detailed project plan and architecture
 - [Part A Requirements](docs/Part%20A.md) - Assignment requirements
 - [Working Notes](docs/WORKING.md) - Development notes and progress

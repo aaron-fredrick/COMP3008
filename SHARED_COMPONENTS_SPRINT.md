@@ -117,35 +117,35 @@ Needs to implement:
 
 # Refined Sprint Structure
 
-## Sprint 0 — Baseline and Safety
+## Sprint 0 — Baseline and Safety ✅ COMPLETED
 
 Before refactoring anything:
 
 ### Tasks
 
-1. Build the entire solution.
-2. Start the server.
-3. Run the existing server integration tests.
-4. Run the polling client manually.
+1. Build the entire solution. ✅
+2. Start the server. ✅
+3. Run the existing server integration tests. ✅
+4. Run the polling client manually. ✅
 5. Verify:
-   - Sign in
-   - Channel creation
-   - Join/leave
-   - Public messages
-   - Private messages
-   - File upload/download
-   - Sign out
-6. Confirm the current polling client is the baseline.
+   - Sign in ✅
+   - Channel creation ✅
+   - Join/leave ✅
+   - Public messages ✅
+   - Private messages ✅
+   - File upload/download ✅
+   - Sign out ✅
+6. Confirm the current polling client is the baseline. ✅
 
 ### Requirement
 
-Do not start refactoring until the baseline passes.
+Do not start refactoring until the baseline passes. ✅
 
-Every subsequent sprint must preserve this behaviour.
+Every subsequent sprint must preserve this behaviour. ✅
 
 ---
 
-# Sprint 1 — Shared Foundation
+# Sprint 1 — Shared Foundation ✅ COMPLETED
 
 ## Goal
 
@@ -159,9 +159,9 @@ Do NOT rewrite the polling client UI.
 
 ---
 
-## 1. ConfigurationService
+## 1. ConfigurationService ✅ COMPLETED
 
-Create:
+Created:
 
 `Chat.Client.Shared/Services/ConfigurationService.cs`
 
@@ -174,46 +174,30 @@ Responsibilities:
 - Provide defaults
 - Optionally parse command-line arguments if useful
 
-Example conceptual API:
-
-```csharp
-public class AppSettings
-{
-    public string ServerHost { get; set; }
-    public int PollingPort { get; set; }
-    public int DuplexPort { get; set; }
-    public int PollingIntervalMs { get; set; }
-}
-```
-
-However, do not duplicate configuration models if an existing configuration mechanism already exists.
-
 ### Important
 
-The service must NOT:
+The service does NOT:
 
 * Create WCF channels
 * Know about WPF
 * Know about `Dispatcher`
 * Contain polling logic
 
-It should only provide configuration.
+It only provides configuration.
 
 ---
 
-# 2. ValidationService
+# 2. ValidationService ✅ COMPLETED
 
-Create:
+Created:
 
 `Chat.Client.Shared/Services/ValidationService.cs`
 
-Move common validation rules here.
-
-At minimum:
+Moved common validation rules here.
 
 ### Username
 
-Validate:
+Validates:
 
 * Not null/empty
 * Allowed characters
@@ -222,7 +206,7 @@ Validate:
 
 ### Channel name
 
-Validate:
+Validates:
 
 * Not null/empty
 * Maximum length
@@ -230,14 +214,14 @@ Validate:
 
 ### Message
 
-Validate:
+Validates:
 
 * Not null/empty
 * Maximum length if the contract/server imposes one
 
 ### File
 
-Validate:
+Validates:
 
 * File extension
 * Maximum size: 2 MB
@@ -252,17 +236,13 @@ Validate:
 .txt
 ```
 
-The validation rules should match the server's rules.
-
-Do not duplicate contradictory validation rules between client and server.
-
-The server remains authoritative.
+The validation rules match the server's rules.
 
 ---
 
-# 3. FileHelperService
+# 3. FileHelperService ✅ COMPLETED
 
-Create:
+Created:
 
 `Chat.Client.Shared/Services/FileHelperService.cs`
 
@@ -277,33 +257,11 @@ Responsibilities:
 * Save downloaded `byte[]`
 * Open downloaded file if appropriate
 
-Do not put WCF calls inside this class.
-
-For example:
-
-```text
-FileHelperService
-    ↓
-reads local file
-    ↓
-byte[]
-    ↓
-client service layer sends it to WCF
-```
-
-NOT:
-
-```text
-FileHelperService
-    ↓
-WCF
-    ↓
-Server
-```
+Does not put WCF calls inside this class.
 
 ---
 
-# Sprint 2 — Shared Models
+# Sprint 2 — Shared Models ✅ COMPLETED
 
 ## Goal
 
@@ -311,53 +269,18 @@ Create only models that are actually useful to both clients.
 
 Do NOT create artificial models simply to increase abstraction.
 
-Potential models:
+Created models:
 
 ```text
 Models/
-    AppSettings.cs
     MessageDisplayModel.cs
-    ChannelDisplayModel.cs
-    UserDisplayModel.cs
-    FileDisplayModel.cs
 ```
 
-Only create a model if it solves a real duplication problem.
+Created `MessageDisplayModel` to solve a real duplication problem for UI presentation.
 
 ---
 
-## Important distinction
-
-Do not duplicate contract objects unnecessarily.
-
-For example, if:
-
-```csharp
-Chat.Contracts.DataContracts.Message
-```
-
-already contains everything needed by the UI, use it directly.
-
-A `MessageDisplayModel` should only exist if the UI needs additional presentation-specific information.
-
-Example:
-
-```csharp
-public class MessageDisplayModel
-{
-    public Message Message { get; set; }
-
-    public bool IsOwnMessage { get; set; }
-
-    public bool IsPrivateMessage { get; set; }
-}
-```
-
-Do not wrap every contract type just for architectural purity.
-
----
-
-# Sprint 3 — Polling Client Refactor
+# Sprint 3 — Polling Client Refactor ✅ COMPLETED
 
 ## Goal
 
@@ -371,9 +294,9 @@ Do NOT change the user experience.
 
 ---
 
-## Refactor only:
+## Refactored:
 
-### Replace duplicated validation
+### Replaced duplicated validation
 
 Before:
 
@@ -393,7 +316,7 @@ ValidationService
 
 ---
 
-### Replace duplicated file handling
+### Replaced duplicated file handling
 
 Before:
 
@@ -413,7 +336,7 @@ FileHelperService
 
 ---
 
-### Replace configuration logic
+### Replaced configuration logic
 
 Before:
 
@@ -433,7 +356,24 @@ ConfigurationService
 
 ---
 
-## Do NOT move:
+### Shared UI Resources ✅ COMPLETED
+
+Added shared resources to Chat.Client.Shared:
+
+- Colors.xaml: Dark theme color brushes
+- Sizing.xaml: Font sizes, padding, margins, corner radius
+- Converters.xaml: FileSizeConverter
+- SharedResources.xaml: Master resource dictionary
+
+Updated all polling client views to use shared resources:
+- MainWindow.xaml
+- ChannelListView.xaml
+- ConversationView.xaml
+- PrivateMessageView.xaml
+
+---
+
+## Did NOT move:
 
 * XAML event handlers
 * `DispatcherTimer`
@@ -446,11 +386,11 @@ These remain in the polling client.
 
 ---
 
-# Sprint 4 — Build Duplex Client
+# Sprint 4 — Build Duplex Client 🔄 IN PROGRESS
 
 This is now the primary development task.
 
-## Step 1 — Duplex ChannelFactory
+## Step 1 — Duplex ChannelFactory ⏳ PENDING
 
 Create a duplex WCF connection using the existing contracts.
 
@@ -479,7 +419,7 @@ Do not create duplicate contracts.
 
 ---
 
-# Step 2 — Callback Handler
+# Step 2 — Callback Handler ⏳ PENDING
 
 Create something similar to:
 
@@ -515,20 +455,20 @@ WPF UI
 
 ---
 
-# Step 3 — Reuse Shared UI-independent functionality
+# Step 3 — Reuse Shared UI-independent functionality ⏳ PENDING
 
 The duplex client should reuse:
 
-* `ValidationService`
-* `FileHelperService`
-* `ConfigurationService`
-* Shared models where actually useful
-* Shared styles
-* Shared converters
+* `ValidationService` ✅ Available
+* `FileHelperService` ✅ Available
+* `ConfigurationService` ✅ Available
+* Shared models where actually useful ✅ Available
+* Shared styles ✅ Available
+* Shared converters ✅ Available
 
 ---
 
-# Step 4 — Build Duplex UI
+# Step 4 — Build Duplex UI ⏳ PENDING
 
 Reuse the same conceptual UI structure as polling:
 
@@ -548,7 +488,7 @@ Do not create a massive UserControl hierarchy unless there is actual duplication
 
 ---
 
-# Sprint 5 — Shared UI Improvements
+# Sprint 5 — Shared UI Improvements ⏳ PENDING
 
 Only do this AFTER the duplex client is working.
 
@@ -574,7 +514,7 @@ Do not create controls simply because the project plan says so.
 
 ---
 
-# Sprint 6 — Optional MVVM
+# Sprint 6 — Optional MVVM ⏳ PENDING
 
 This sprint is OPTIONAL.
 
