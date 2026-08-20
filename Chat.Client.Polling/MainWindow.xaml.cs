@@ -41,6 +41,11 @@ namespace Chat.Client.Polling
             _pollingTimer.Tick += PollingTimer_Tick;
         }
 
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         private void SignInButton_Click(object sender, RoutedEventArgs e)
         {
             string username = UsernameTextBox.Text.Trim();
