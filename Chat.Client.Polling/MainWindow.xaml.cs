@@ -175,11 +175,26 @@ namespace Chat.Client.Polling
 
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file)
         {
+            LogDebug($"[FILE DOWNLOAD] Requested: {file.FileName}");
             var downloadedFile = _serviceClient.GetFile(_currentChannel, file.FileName);
             if (downloadedFile != null && downloadedFile.FileData != null)
             {
-                System.IO.File.WriteAllBytes(file.FileName, downloadedFile.FileData);
-                System.Diagnostics.Process.Start(file.FileName);
+                string downloadsPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
+                string filePath = System.IO.Path.Combine(downloadsPath, file.FileName);
+                
+                LogDebug($"[FILE DOWNLOAD] Saving to: {filePath}");
+                System.IO.File.WriteAllBytes(filePath, downloadedFile.FileData);
+                
+                LogDebug($"[FILE DOWNLOAD] Opening file");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                LogDebug($"[FILE DOWNLOAD] Failed: file is null or has no data");
             }
         }
 
