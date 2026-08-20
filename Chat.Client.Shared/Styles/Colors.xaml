@@ -8,6 +8,8 @@
     <SolidColorBrush x:Key="ForegroundBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#00bcd4"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#00acc1"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#0097a7"/>
+    <SolidColorBrush x:Key="AccentDisabledBrush" Color="#555555"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="#ff5252"/>
 
     <!-- Color Values -->
@@ -17,6 +19,8 @@
     <Color x:Key="ForegroundColor">#ffffff</Color>
     <Color x:Key="AccentColor">#00bcd4</Color>
     <Color x:Key="AccentHoverColor">#00acc1</Color>
+    <Color x:Key="AccentPressedColor">#0097a7</Color>
+    <Color x:Key="AccentDisabledColor">#555555</Color>
     <Color x:Key="ErrorColor">#ff5252</Color>
 
 </ResourceDictionary>
