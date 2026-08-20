@@ -1096,59 +1096,59 @@ The implementation targets all assessed assignment requirements and is structure
 
 ## COMP3008 Lecture 1 Alignment
 
-| Concept | Lecture | Demonstrated By | Why Applied |
-|---|---|---|---|
-| Components | Lecture 1 | Separate client/server processes | Separates distributed concerns across process boundaries |
-| Service-oriented architecture | Lecture 1 | `ChatService` | Provides distributed operations through WCF |
-| Component interfaces | Lecture 1 | WCF service contracts | Defines interface between distributed components |
-| RPC | Lecture 1 | WCF operations | Enables remote procedure calls across network |
-| Endpoint | Lecture 1 | Address + binding + contract | Specifies how clients access distributed service |
-| BasicHttpBinding | Lecture 1 | Polling communication | Simple request/response communication model |
-| NetTcpBinding | Lecture 1 | Duplex communication | Supports bidirectional communication |
-| ChannelFactory | Lecture 1 | Client-side WCF channel creation | Establishes communication at runtime |
-| Objects vs components | Lecture 1 | Internal managers vs exposed service | Distinguishes implementation from distributed boundary |
-| Serialization | Lecture 1 | WCF data contracts | Enables data transfer across process boundaries |
-| Distributed state | Lecture 1 | Server-owned state | Central authoritative state for coordination |
-| Network failure | Lecture 1 | Communication/disconnection handling | Handles distributed system failure modes |
-| Runtime communication | Lecture 1 | WCF channels | Establishes communication at runtime |
-| Service encapsulation | Lecture 1 | Server implementation hidden from clients | Protects internal implementation details |
+| Concept | Demonstrated By | Why Applied |
+|---|---|---|
+| Components | Separate client/server processes | Separates distributed concerns across process boundaries |
+| Service-oriented architecture | `ChatService` | Provides distributed operations through WCF |
+| Component interfaces | WCF service contracts | Defines interface between distributed components |
+| RPC | WCF operations | Enables remote procedure calls across network |
+| Endpoint | Address + binding + contract | Specifies how clients access distributed service |
+| BasicHttpBinding | Polling communication | Simple request/response communication model |
+| NetTcpBinding | Duplex communication | Supports bidirectional communication |
+| ChannelFactory | Client-side WCF channel creation | Establishes communication at runtime |
+| Objects vs components | Internal managers vs exposed service | Distinguishes implementation from distributed boundary |
+| Serialization | WCF data contracts | Enables data transfer across process boundaries |
+| Distributed state | Server-owned state | Central authoritative state for coordination |
+| Network failure | Communication/disconnection handling | Handles distributed system failure modes |
+| Runtime communication | WCF channels | Establishes communication at runtime |
+| Service encapsulation | Server implementation hidden from clients | Protects internal implementation details |
 
 ## COMP3008 Lecture 3 Alignment
 
-| Concept | Lecture | Demonstrated By | Why Applied |
-|---|---|---|---|
-| Multi-tier architecture | Lecture 3 | Display/Client + Business/Service tiers | Separates presentation from business logic |
-| Display tier | Lecture 3 | WPF clients | Handles user interface and input |
-| Business tier | Lecture 3 | ChatService + managers | Contains application logic and state |
-| Data tier | Lecture 3 | In-memory state | Assignment requirement for in-memory state |
-| Async/await | Lecture 3 | Task-based WCF operations | Prevents UI thread blocking during network calls |
-| Task vs Thread | Lecture 3 | Task for async operations | Avoids thread blocking for network I/O |
-| UI responsiveness | Lecture 3 | Dispatcher marshaling | Keeps GUI responsive during async operations |
-| One-way operations | Lecture 3 | `[OperationContract(IsOneWay = true)]` | For fire-and-forget operations where response not needed |
-| Duplex communication | Lecture 3 | WCF duplex callbacks | Enables server-to-client notifications |
-| Callback vs async | Lecture 3 | Separate concepts distinguished | Callbacks are remote notifications, async is execution model |
-| Concurrency | Lecture 3 | Multiple simultaneous clients | Server handles concurrent requests |
-| Thread safety | Lecture 3 | ReaderWriterLockSlim | Protects shared mutable state |
+| Concept | Demonstrated By | Why Applied |
+|---|---|---|
+| Multi-tier architecture | Display/Client + Business/Service tiers | Separates presentation from business logic |
+| Display tier | WPF clients | Handles user interface and input |
+| Business tier | ChatService + managers | Contains application logic and state |
+| Data tier | In-memory state | Assignment requirement for in-memory state |
+| Async/await | Task-based WCF operations | Prevents UI thread blocking during network calls |
+| Task vs Thread | Task for async operations | Avoids thread blocking for network I/O |
+| UI responsiveness | Dispatcher marshaling | Keeps GUI responsive during async operations |
+| One-way operations | `[OperationContract(IsOneWay = true)]` | For fire-and-forget operations where response not needed |
+| Duplex communication | WCF duplex callbacks | Enables server-to-client notifications |
+| Callback vs async | Separate concepts distinguished | Callbacks are remote notifications, async is execution model |
+| Concurrency | Multiple simultaneous clients | Server handles concurrent requests |
+| Thread safety | ReaderWriterLockSlim | Protects shared mutable state |
 
 ## COMP3008 Lecture 4 Alignment
 
-| Concept | Lecture | Demonstrated By | Why Applied |
-|---|---|---|---|
-| Operation classification | Lecture 4 | Sync/async/one-way/callback table | Explicit classification prevents ad-hoc decisions |
-| Async decision rule | Lecture 4 | Use async only when long-running | Avoids unnecessary complexity for short operations |
-| Async propagation | Lecture 4 | await through UI → Business → Data | Prevents async-to-blocking conversion |
-| Thread-safety requirement | Lecture 4 | Components with shared state are thread-safe | Distributed components receive concurrent calls |
-| Race condition analysis | Lecture 4 | Concurrent client testing | Identifies and prevents race conditions |
-| Synchronization strategy | Lecture 4 | Business-logic level locking | Controlled concurrency, not maximum locking |
-| One-way vs async distinction | Lecture 4 | Contract vs execution model | Different concepts used independently |
-| Remote callback architecture | Lecture 4 | Duplex channel for progress | Server-initiated notifications |
-| GUI thread safety | Lecture 4 | Dispatcher.Invoke for UI updates | Prevents cross-thread GUI access |
-| UI responsiveness NFR | Lecture 4 | Async operations for long tasks | Explicit non-functional requirement |
-| Async error handling | Lecture 4 | try-catch around awaited operations | Handles network failures and timeouts |
-| Cancellation | Lecture 4 | CancellationToken consideration | For long-running operations |
-| Architecture decision process | Lecture 4 | Component analysis template | Systematic approach to design decisions |
-| Concurrency testing | Lecture 4 | Simultaneous client tests | Verifies thread-safety under load |
-| Architecture trade-offs | Lecture 4 | Benefits vs costs of distribution | Justifies architectural decisions |
-| Implementation priority | Lecture 4 | 17-step implementation order | Ensures systematic development |
-| Design principle hierarchy | Lecture 4 | Decision trees for operation type | Prevents over-engineering |
+| Concept | Demonstrated By | Why Applied |
+|---|---|---|
+| Operation classification | Sync/async/one-way/callback table | Explicit classification prevents ad-hoc decisions |
+| Async decision rule | Use async only when long-running | Avoids unnecessary complexity for short operations |
+| Async propagation | await through UI → Business → Data | Prevents async-to-blocking conversion |
+| Thread-safety requirement | Components with shared state are thread-safe | Distributed components receive concurrent calls |
+| Race condition analysis | Concurrent client testing | Identifies and prevents race conditions |
+| Synchronization strategy | Business-logic level locking | Controlled concurrency, not maximum locking |
+| One-way vs async distinction | Contract vs execution model | Different concepts used independently |
+| Remote callback architecture | Duplex channel for progress | Server-initiated notifications |
+| GUI thread safety | Dispatcher.Invoke for UI updates | Prevents cross-thread GUI access |
+| UI responsiveness NFR | Async operations for long tasks | Explicit non-functional requirement |
+| Async error handling | try-catch around awaited operations | Handles network failures and timeouts |
+| Cancellation | CancellationToken consideration | For long-running operations |
+| Architecture decision process | Component analysis template | Systematic approach to design decisions |
+| Concurrency testing | Simultaneous client tests | Verifies thread-safety under load |
+| Architecture trade-offs | Benefits vs costs of distribution | Justifies architectural decisions |
+| Implementation priority | 17-step implementation order | Ensures systematic development |
+| Design principle hierarchy | Decision trees for operation type | Prevents over-engineering |
 
