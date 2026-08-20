@@ -101,6 +101,11 @@ namespace Chat.Server.FileStorage
                 _files[fileKey] = sharedFile;
                 return true;
             }
+            catch (Exception ex)
+            {
+                reason = $"Exception during file storage: {ex.Message}";
+                return false;
+            }
             finally
             {
                 _lock.ExitWriteLock();
