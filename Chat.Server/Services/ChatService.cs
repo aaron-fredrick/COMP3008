@@ -156,7 +156,7 @@ namespace Chat.Server.Services
             if (result)
             {
                 ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
-                
+
                 // Send file message to channel
                 var fileMessage = new Message
                 {
@@ -166,7 +166,7 @@ namespace Chat.Server.Services
                     Type = MessageType.File,
                     ChannelName = channelName
                 };
-                _messageRouter.RoutePublicMessage(uploaderId, channelName, $"Shared file: {fileName}", out string _);
+                _messageRouter.RoutePublicMessage(fileMessage, out string _);
             }
             else
             {

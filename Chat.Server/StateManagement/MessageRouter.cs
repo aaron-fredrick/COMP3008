@@ -23,45 +23,48 @@ namespace Chat.Server.StateManagement
 
         public bool RoutePublicMessage(string senderId, string channelName, string content, out string reason)
         {
+            var message = new Message
+            {
+                SenderId = senderId,
+                Content = content,
+                Timestamp = DateTime.UtcNow,
+                Type = MessageType.Public,
+                ChannelName = channelName
+            };
+            return RoutePublicMessage(message, out reason);
+        }
+
+        public bool RoutePublicMessage(Message message, out string reason)
+        {
             _lock.EnterWriteLock();
             try
             {
                 reason = null;
 
-                if (!_userManager.IsUserSignedIn(senderId))
+                if (!_userManager.IsUserSignedIn(message.SenderId))
                 {
                     reason = "User is not signed in.";
                     return false;
                 }
 
-                if (!_channelManager.ChannelExists(channelName))
+                if (!_channelManager.ChannelExists(message.ChannelName))
                 {
                     reason = "Channel does not exist.";
                     return false;
                 }
 
-                var members = _channelManager.GetChannelMembers(channelName);
-                if (!members.Contains(senderId))
+                var members = _channelManager.GetChannelMembers(message.ChannelName);
+                if (!members.Contains(message.SenderId))
                 {
                     reason = "User is not a member of this channel.";
                     return false;
                 }
 
-                var message = new Message
-                {
-                    SenderId = senderId,
-                    Content = content,
-                    Timestamp = DateTime.UtcNow,
-                    Type = MessageType.Public,
-                    ChannelName = channelName,
-                    RecipientId = null
-                };
-
                 // Add to channel message history
-                _channelManager.AddChannelMessage(channelName, message);
+                _channelManager.AddChannelMessage(message.ChannelName, message);
 
                 // Notify via callbacks for duplex clients
-                _callbackManager.NotifyMessageReceived(channelName, message);
+                _callbackManager.NotifyMessageReceived(message.ChannelName, message);
 
                 return true;
             }
