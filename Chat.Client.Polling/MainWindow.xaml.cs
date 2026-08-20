@@ -384,6 +384,7 @@ namespace Chat.Client.Polling
         private void LogDebug(string message)
         {
             System.Diagnostics.Debug.WriteLine(message);
+            Console.WriteLine(message);
             try
             {
                 System.IO.File.AppendAllText("client_debug.log", $"{DateTime.Now:HH:mm:ss.fff} {message}\n");
