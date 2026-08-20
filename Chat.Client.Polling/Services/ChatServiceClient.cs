@@ -28,6 +28,15 @@ namespace Chat.Client.Polling.Services
         private void Initialize()
         {
             var binding = new BasicHttpBinding();
+            binding.MaxBufferSize = 2147483647;
+            binding.MaxReceivedMessageSize = 2147483647;
+            binding.MaxBufferPoolSize = 2147483647;
+            binding.ReaderQuotas.MaxDepth = 2147483647;
+            binding.ReaderQuotas.MaxStringContentLength = 2147483647;
+            binding.ReaderQuotas.MaxArrayLength = 2147483647;
+            binding.ReaderQuotas.MaxBytesPerRead = 2147483647;
+            binding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+
             var endpoint = new EndpointAddress(_serverUrl);
             _channelFactory = new ChannelFactory<IChatService>(binding, endpoint);
             _proxy = _channelFactory.CreateChannel();
