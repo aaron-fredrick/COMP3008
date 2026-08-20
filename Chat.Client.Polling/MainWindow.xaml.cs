@@ -45,18 +45,38 @@ namespace Chat.Client.Polling
                 return;
             }
 
-            _serviceClient = new ChatServiceClient();
-            bool success = _serviceClient.SignIn(username);
+            LoginStatusText.Text = "Connecting to server...";
+            SignInButton.IsEnabled = false;
 
-            if (success)
+            try
             {
-                _currentUserId = username;
-                ShowChannelListView();
-                _pollingTimer.Start();
+                _serviceClient = new ChatServiceClient();
+                bool success = _serviceClient.SignIn(username);
+
+                if (success)
+                {
+                    _currentUserId = username;
+                    ShowChannelListView();
+                    _pollingTimer.Start();
+                }
+                else
+                {
+                    LoginStatusText.Text = "Sign in failed. Username may already be in use.";
+                    SignInButton.IsEnabled = true;
+                }
             }
-            else
+            catch (Exception)
             {
-                LoginStatusText.Text = "Sign in failed. Username may already be in use.";
+                LoginStatusText.Text = "Server not responding. Please check if the server is running.";
+                SignInButton.IsEnabled = true;
+            }
+        }
+
+        private void UsernameTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                SignInButton_Click(sender, e);
             }
         }
 
