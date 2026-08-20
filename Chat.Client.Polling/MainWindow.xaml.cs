@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Chat.Client.Polling.Services;
 using Chat.Client.Polling.Views;
+using Chat.Client.Shared.Services;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -20,12 +21,16 @@ namespace Chat.Client.Polling
         private ConversationView _conversationView;
         private System.Collections.Generic.Dictionary<string, PrivateMessageView> _privateMessageViews;
         private bool _isSigningOut = false;
+        private ValidationService _validationService;
+        private FileHelperService _fileHelperService;
 
         public MainWindow()
         {
             InitializeComponent();
             _pollingInterval = int.Parse(ConfigurationManager.AppSettings["PollingInterval"] ?? "2000");
             _privateMessageViews = new System.Collections.Generic.Dictionary<string, PrivateMessageView>();
+            _validationService = new ValidationService();
+            _fileHelperService = new FileHelperService();
             InitializePollingTimer();
         }
 
@@ -39,9 +44,11 @@ namespace Chat.Client.Polling
         private void SignInButton_Click(object sender, RoutedEventArgs e)
         {
             string username = UsernameTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(username))
+            
+            var validationResult = _validationService.ValidateUsername(username);
+            if (!validationResult.IsValid)
             {
-                LoginStatusText.Text = "Please enter a username";
+                LoginStatusText.Text = validationResult.ErrorMessage;
                 return;
             }
 
@@ -199,18 +206,20 @@ namespace Chat.Client.Polling
             var downloadedFile = _serviceClient.GetFile(_currentChannel, file.FileName);
             if (downloadedFile != null && downloadedFile.FileData != null)
             {
-                string downloadsPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
-                string filePath = System.IO.Path.Combine(downloadsPath, file.FileName);
+                string downloadsPath = _fileHelperService.GetDownloadsPath();
+                bool saved = _fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath);
                 
-                LogDebug($"[FILE DOWNLOAD] Saving to: {filePath}");
-                System.IO.File.WriteAllBytes(filePath, downloadedFile.FileData);
-                
-                LogDebug($"[FILE DOWNLOAD] Opening file");
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                if (saved)
                 {
-                    FileName = filePath,
-                    UseShellExecute = true
-                });
+                    string filePath = System.IO.Path.Combine(downloadsPath, file.FileName);
+                    LogDebug($"[FILE DOWNLOAD] Saved to: {filePath}");
+                    LogDebug($"[FILE DOWNLOAD] Opening file");
+                    _fileHelperService.OpenFile(filePath);
+                }
+                else
+                {
+                    LogDebug($"[FILE DOWNLOAD] Failed to save file");
+                }
             }
             else
             {
@@ -229,47 +238,18 @@ namespace Chat.Client.Polling
             if (openFileDialog.ShowDialog() == true)
             {
                 string filePath = openFileDialog.FileName;
-                string fileName = System.IO.Path.GetFileName(filePath);
-                byte[] fileData = System.IO.File.ReadAllBytes(filePath);
-
-                LogDebug($"[FILE SHARE] Selected file: {fileName}, Size: {fileData.Length} bytes");
-
-                // Check file size limit (2MB)
-                const long maxFileSize = 2 * 1024 * 1024; // 2MB in bytes
-                if (fileData.Length > maxFileSize)
+                string fileName = _fileHelperService.GetFileName(filePath);
+                
+                // Validate file using shared service
+                var validationResult = _validationService.ValidateFile(filePath);
+                if (!validationResult.IsValid)
                 {
-                    LogDebug($"[FILE SHARE] File too large: {fileData.Length} bytes");
-                    MessageBox.Show($"File size exceeds 2MB limit. Current size: {FormatFileSize(fileData.Length)}", "File Too Large", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(validationResult.ErrorMessage, "File Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                // Determine file type
-                FileType fileType = FileType.Unsupported;
-                string extension = System.IO.Path.GetExtension(fileName).ToLower();
-                if (extension == ".jpg")
-                {
-                    fileType = FileType.Jpg;
-                }
-                else if (extension == ".jpeg")
-                {
-                    fileType = FileType.Jpeg;
-                }
-                else if (extension == ".png")
-                {
-                    fileType = FileType.Png;
-                }
-                else if (extension == ".gif")
-                {
-                    fileType = FileType.Gif;
-                }
-                else if (extension == ".bmp")
-                {
-                    fileType = FileType.Bmp;
-                }
-                else if (extension == ".txt")
-                {
-                    fileType = FileType.Txt;
-                }
+                byte[] fileData = _fileHelperService.ReadFile(filePath);
+                FileType fileType = _validationService.DetermineFileType(fileName);
 
                 LogDebug($"[FILE SHARE] File type: {fileType}, Uploading to channel: {_currentChannel}");
 
@@ -300,24 +280,6 @@ namespace Chat.Client.Polling
             {
                 var files = _serviceClient.GetChannelFiles(_currentChannel);
                 _conversationView?.UpdateFiles(files);
-            }
-        }
-
-        private string FormatFileSize(long bytes)
-        {
-            if (bytes < 1024)
-            {
-                return $"{bytes} B";
-            }
-            else if (bytes < 1024 * 1024)
-            {
-                double kb = bytes / 1024.0;
-                return $"{Math.Round(kb)} kB";
-            }
-            else
-            {
-                double mb = bytes / (1024.0 * 1024.0);
-                return $"{Math.Round(mb)} MB";
             }
         }
 
