@@ -30,7 +30,6 @@ namespace Chat.Contracts.DataContracts
             if (other == null) return 1;
             int timestampCompare = Timestamp.CompareTo(other.Timestamp);
             if (timestampCompare != 0) return timestampCompare;
-            // If timestamps are equal, use sender ID as tiebreaker
             return string.Compare(SenderId ?? "", other.SenderId ?? "", StringComparison.Ordinal);
         }
     }

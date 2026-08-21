@@ -246,7 +246,6 @@ namespace Chat.Client.Polling.Services
 
         private void HandleError(Exception ex)
         {
-            // Log error or raise event for UI to handle
             System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
             _isConnected = false;
         }

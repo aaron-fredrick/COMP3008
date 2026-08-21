@@ -98,10 +98,6 @@ namespace Chat.Client.Duplex.Views
             }
         }
 
-        /// <summary>
-        /// Appends a system-level notice to the conversation list (e.g. "User X has left").
-        /// These are ephemeral UI-only entries, not persisted in the message collection.
-        /// </summary>
         public void AddSystemMessage(string text)
         {
             MessagesListBox.Items.Add($"--- {text} ---");

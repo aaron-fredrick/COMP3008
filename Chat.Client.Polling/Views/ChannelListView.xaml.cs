@@ -20,21 +20,10 @@ namespace Chat.Client.Polling.Views
         private System.Collections.Generic.List<Channel> _allChannels;
         private string _currentSearchTerm = string.Empty;
 
-        // Dependency property for dynamic card width
-        public static readonly DependencyProperty CardWidthProperty =
-            DependencyProperty.Register("CardWidth", typeof(double), typeof(ChannelListView),
-                new PropertyMetadata(250.0));
-
-        public double CardWidth
-        {
-            get { return (double)GetValue(CardWidthProperty); }
-            set { SetValue(CardWidthProperty, value); }
-        }
-
         public ChannelListView()
         {
             InitializeComponent();
-            UpdateViewToggleButtons(false); // Initialize with grid view active (matches HTML default)
+            UpdateViewToggleButtons(false);
         }
 
         public void SetServiceClient(ChatServiceClient serviceClient)
@@ -46,8 +35,7 @@ namespace Chat.Client.Polling.Views
         public void UpdateChannels(System.Collections.Generic.List<Channel> channels)
         {
             _allChannels = channels;
-            
-            // Apply current search filter if there is one
+
             if (!string.IsNullOrEmpty(_currentSearchTerm))
             {
                 var filtered = _allChannels
@@ -106,14 +94,12 @@ namespace Chat.Client.Polling.Views
         {
             if (isListView)
             {
-                // Highlight list view button
                 var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
                 if (listBorder != null)
                 {
                     listBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
                 }
                 
-                // Reset grid view button
                 var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
                 if (gridBorder != null)
                 {
@@ -122,14 +108,12 @@ namespace Chat.Client.Polling.Views
             }
             else
             {
-                // Highlight grid view button
                 var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
                 if (gridBorder != null)
                 {
                     gridBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
                 }
                 
-                // Reset list view button
                 var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
                 if (listBorder != null)
                 {
@@ -156,7 +140,6 @@ namespace Chat.Client.Polling.Views
 
         private void NewChannelTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Placeholder visibility is handled by XAML triggers
         }
 
         private void CreateChannelButton_Click(object sender, RoutedEventArgs e)
@@ -174,89 +157,32 @@ namespace Chat.Client.Polling.Views
             SignOutRequested?.Invoke(this, EventArgs.Empty);
         }
 
+        public static readonly DependencyProperty GridColumnsProperty =
+            DependencyProperty.Register("GridColumns", typeof(int), typeof(ChannelListView),
+                new PropertyMetadata(1));
+
+        public int GridColumns
+        {
+            get { return (int)GetValue(GridColumnsProperty); }
+            set { SetValue(GridColumnsProperty, value); }
+        }
+
         private void ChannelsGrid_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateGridColumns();
-            AdjustMarginsForLastItems();
         }
 
         private void ChannelsGrid_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateGridColumns();
-            AdjustMarginsForLastItems();
-        }
-
-        private void AdjustMarginsForLastItems()
-        {
-            var wrapPanel = FindVisualChild<WrapPanel>(ChannelsGrid);
-            if (wrapPanel != null && wrapPanel.ActualWidth > 0)
-            {
-                double currentX = 0;
-                
-                foreach (UIElement child in wrapPanel.Children)
-                {
-                    if (child is ContentPresenter cp)
-                    {
-                        double childWidth = cp.ActualWidth;
-                        double childRight = currentX + childWidth;
-                        
-                        // If this child is at or near the right edge, remove right margin
-                        if (childRight >= wrapPanel.ActualWidth - 10) // 10px tolerance
-                        {
-                            cp.Margin = new Thickness(0, 0, 0, 6);
-                        }
-                        else
-                        {
-                            cp.Margin = new Thickness(0, 0, 6, 6);
-                        }
-                        
-                        currentX += childWidth + 6; // 6px gap
-                        
-                        // If we've wrapped to the next line
-                        if (currentX > wrapPanel.ActualWidth)
-                        {
-                            currentX = 0;
-                        }
-                    }
-                }
-            }
-        }
-
-        private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-        {
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
-                if (child is T result)
-                {
-                    return result;
-                }
-                
-                var childOfChild = FindVisualChild<T>(child);
-                if (childOfChild != null)
-                {
-                    return childOfChild;
-                }
-            }
-            return null;
         }
 
         private void UpdateGridColumns()
         {
             if (ChannelsGrid.ActualWidth > 0)
             {
-                // Calculate number of columns based on available width
-                // Minimum card width of 500px (twice the previous 250px), with 12px gap (6px on right of each item except last in row)
-                double minCardWidth = 500;
-                double gap = 12;
-                int columns = Math.Max(1, (int)((ChannelsGrid.ActualWidth + gap) / (minCardWidth + gap)));
-                
-                // Calculate card width based on columns
-                // Only account for gaps between columns (columns - 1 gaps)
-                double cardWidth = (ChannelsGrid.ActualWidth - ((columns - 1) * gap)) / columns;
-                
-                // Update the CardWidth dependency property
-                CardWidth = cardWidth;
+                double minCardWidth = 250;
+                GridColumns = Math.Max(1, (int)(ChannelsGrid.ActualWidth / minCardWidth));
             }
         }
     }

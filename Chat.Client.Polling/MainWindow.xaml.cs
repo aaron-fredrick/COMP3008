@@ -41,15 +41,9 @@ namespace Chat.Client.Polling
             InitializePollingTimer();
             InitializePingTimer();
             InitializeFooter();
-            
-            // Initialize window resizer
             _windowResizer = new WindowResizer(this);
-            
-            // Create service client and start ping immediately on window load
             _serviceClient = new ChatServiceClient();
             StartPingTimer();
-
-            // Create and set sign-in view with service client
             var signInView = new SignInView();
             signInView.SetServiceClient(_serviceClient);
             signInView.SignInSuccess += SignInView_SignInSuccess;
@@ -81,7 +75,6 @@ namespace Chat.Client.Polling
                 AppFooter.IsLoggedIn = false;
             }
 
-            // Update connection status based on service client state
             if (_serviceClient != null && _serviceClient.IsConnected)
             {
                 AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Connected;
@@ -105,24 +98,20 @@ namespace Chat.Client.Polling
             {
                 if (_currentChannel == null && _channelListView != null)
                 {
-                    // Update channel list when on channel list view
                     var channels = _serviceClient.GetChannels();
                     _channelListView.UpdateChannels(channels);
                 }
                 else if (_currentChannel != null && _conversationView != null)
                 {
-                    // Poll for messages, members, and files when in conversation
                     LoadChannelMembers();
                     LoadChannelFiles();
                     LoadChannels();
                     PollForMessages();
                 }
 
-                // Always poll for private messages
                 var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);
                 foreach (var message in privateMessages)
                 {
-                    // Determine which private message view should receive this
                     string otherUserId = (message.SenderId == _currentUserId) ? message.RecipientId : message.SenderId;
 
                     if (!_privateMessageViews.ContainsKey(otherUserId))
@@ -143,14 +132,14 @@ namespace Chat.Client.Polling
         private void InitializePingTimer()
         {
             _pingTimer = new DispatcherTimer();
-            _pingTimer.Interval = TimeSpan.FromSeconds(5); // Ping every 5 seconds
+            _pingTimer.Interval = TimeSpan.FromSeconds(5);
             _pingTimer.Tick += PingTimer_Tick;
         }
 
         private void StartPingTimer()
         {
             _pingTimer.Start();
-            PerformPing(); // Send immediate ping on start
+            PerformPing();
         }
 
         private void PingTimer_Tick(object sender, EventArgs e)
@@ -165,7 +154,6 @@ namespace Chat.Client.Polling
         {
             try
             {
-                // Generate 6-byte hash for checksum
                 byte[] hash = new byte[6];
                 _random.NextBytes(hash);
                 string hashStr = BitConverter.ToString(hash).Replace("-", "");
@@ -173,8 +161,6 @@ namespace Chat.Client.Polling
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 string pong = _serviceClient.Ping(_currentUserId ?? "", hash);
                 stopwatch.Stop();
-
-                // Verify checksum
                 if (pong == hashStr)
                 {
                     int pingMs = (int)stopwatch.ElapsedMilliseconds;
@@ -238,7 +224,6 @@ namespace Chat.Client.Polling
 
         private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // User clicked X on conversation - leave channel
             ConversationView_LeaveChannelRequested(sender, EventArgs.Empty);
         }
 
@@ -280,8 +265,6 @@ namespace Chat.Client.Polling
             if (!string.IsNullOrEmpty(_currentChannel))
             {
                 _serviceClient.SendMessage(_currentUserId, _currentChannel, message);
-                
-                // Display own message immediately
                 var ownMessage = new Message
                 {
                     SenderId = _currentUserId,
@@ -489,20 +472,16 @@ namespace Chat.Client.Polling
             _pollingTimer.Stop();
             _pingTimer.Stop();
 
-            // Leave channel if in one
             if (!string.IsNullOrEmpty(_currentChannel))
             {
                 _serviceClient?.LeaveChannel(_currentUserId);
             }
 
-            // Sign out from server
             _serviceClient?.SignOut(_currentUserId);
             _serviceClient?.Dispose();
 
             _currentUserId = null;
             _currentChannel = null;
-
-            // Close all private message views
             foreach (var privateMessageView in _privateMessageViews.Values)
             {
                 privateMessageView.Close();
@@ -515,17 +494,13 @@ namespace Chat.Client.Polling
             this.Show();
             UpdateFooterState();
 
-            // Create new service client for next sign-in
             _serviceClient = new ChatServiceClient();
 
-            // Show sign-in view again with new service client
             MainContent.Content = new SignInView();
             var signInView = MainContent.Content as SignInView;
             signInView?.SetServiceClient(_serviceClient);
             signInView.SignInSuccess += SignInView_SignInSuccess;
             signInView.SignInFailed += SignInView_SignInFailed;
-
-            // Restart ping timer for connection status on sign-in view
             StartPingTimer();
 
             _isSigningOut = false;

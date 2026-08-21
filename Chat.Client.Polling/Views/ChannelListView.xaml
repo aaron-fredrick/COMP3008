@@ -132,13 +132,13 @@
         <ItemsControl x:Name="ChannelsGrid" Grid.Row="2" Loaded="ChannelsGrid_Loaded" SizeChanged="ChannelsGrid_SizeChanged">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <WrapPanel x:Name="ChannelsWrapPanel" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,6,0,6"/>
+                    <UniformGrid Columns="{Binding GridColumns, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="-6,0,0,0" VerticalAlignment="Top"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
-                    <Setter Property="Width" Value="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                    <Setter Property="Margin" Value="0,0,6,6"/>
+                    <Setter Property="Margin" Value="6,0,0,12"/>
+                    <Setter Property="HorizontalAlignment" Value="Stretch"/>
                 </Style>
             </ItemsControl.ItemContainerStyle>
             <ItemsControl.ItemTemplate>

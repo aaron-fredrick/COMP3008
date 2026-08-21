@@ -340,7 +340,6 @@ namespace Chat.Client.Duplex
             }
         }
 
-        // Callback handlers
         private void ServiceClient_MessageReceived(object sender, Message message)
         {
             if (message.ChannelName == _currentChannel)
@@ -389,10 +388,7 @@ namespace Chat.Client.Duplex
 
         private void ServiceClient_UserDisconnected(object sender, string disconnectedUserId)
         {
-            // Refresh the member list so the departed user is removed
             LoadChannelMembers();
-
-            // Post a system notice in the active conversation view
             _conversationView?.AddSystemMessage($"{disconnectedUserId} has left the channel.");
         }
 
@@ -428,7 +424,6 @@ namespace Chat.Client.Duplex
             }
             _privateMessageViews.Clear();
 
-            // Only close windows if they're not already closing
             if (!_channelListClosing)
             {
                 _channelListView?.Close();

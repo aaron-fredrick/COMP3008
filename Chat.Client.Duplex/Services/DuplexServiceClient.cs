@@ -271,7 +271,6 @@ namespace Chat.Client.Duplex.Services
             }
         }
 
-        // Internal methods called by ChatCallbackHandler
         internal void OnMessageReceivedInternal(Message message)
         {
             MessageReceived?.Invoke(this, message);

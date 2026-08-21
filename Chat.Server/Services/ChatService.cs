@@ -61,8 +61,6 @@ namespace Chat.Server.Services
                 {
                     _channelManager.LeaveChannel(userId, channelBeforeSignOut);
                     _userManager.SetUserChannel(userId, null);
-
-                    // Notify remaining channel members that this user disconnected
                     _callbackManager.NotifyUserDisconnected(channelBeforeSignOut, userId);
                     _callbackManager.NotifyChannelMembersChanged(channelBeforeSignOut);
                     _callbackManager.NotifyChannelListChanged();
@@ -89,8 +87,6 @@ namespace Chat.Server.Services
             if (result)
             {
                 ServerLogger.Success(clientType, "CHANNEL", $"Created \"{channelName}\"");
-
-                // Push channel list update to all duplex clients
                 _callbackManager.NotifyChannelListChanged();
             }
             else
@@ -109,7 +105,6 @@ namespace Chat.Server.Services
                 return false;
             }
 
-            // Leave current channel first
             string previousChannel = session.CurrentChannel;
             if (previousChannel != null)
             {
@@ -125,8 +120,6 @@ namespace Chat.Server.Services
             {
                 _userManager.SetUserChannel(userId, channelName);
                 ServerLogger.Success(clientType, "JOIN", $"{userId} -> {channelName}");
-
-                // Notify all duplex clients: member list and channel list changed
                 _callbackManager.NotifyChannelMembersChanged(channelName);
                 _callbackManager.NotifyChannelListChanged();
             }
@@ -149,8 +142,6 @@ namespace Chat.Server.Services
                 string channel = session.CurrentChannel;
                 _channelManager.LeaveChannel(userId, channel);
                 _userManager.SetUserChannel(userId, null);
-
-                // Notify remaining members
                 _callbackManager.NotifyUserDisconnected(channel, userId);
                 _callbackManager.NotifyChannelMembersChanged(channel);
                 _callbackManager.NotifyChannelListChanged();
@@ -186,11 +177,7 @@ namespace Chat.Server.Services
             if (result)
             {
                 ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
-
-                // Notify all channel members via callback (storedFile has FileId populated)
                 _callbackManager.NotifyFileShared(channelName, storedFile);
-
-                // Also send a system message to the channel for polling clients
                 var fileMessage = new Message
                 {
                     SenderId = uploaderId,
