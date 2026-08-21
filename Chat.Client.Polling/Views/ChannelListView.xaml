@@ -1,9 +1,10 @@
-<Window x:Class="Chat.Client.Polling.Views.ChannelListView"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Channels" Height="500" Width="700"
-        Background="{StaticResource BackgroundBrush}"
-        WindowStartupLocation="CenterScreen">
+<UserControl x:Class="Chat.Client.Polling.Views.ChannelListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="600">
     <Grid Margin="{StaticResource MarginLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -58,4 +59,4 @@
                     Cursor="Hand" HorizontalAlignment="Right" Click="SignOutButton_Click"/>
         </StackPanel>
     </Grid>
-</Window>
+</UserControl>

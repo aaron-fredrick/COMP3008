@@ -45,10 +45,22 @@
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\ValidationService.cs" />
     <Compile Include="Services\FileHelperService.cs" />
+    <Compile Include="Services\ThemeService.cs" />
     <Compile Include="Models\MessageDisplayModel.cs" />
+    <Compile Include="Controls\CustomTitleBar.xaml.cs">
+      <DependentUpon>CustomTitleBar.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ApplicationFooter.xaml.cs">
+      <DependentUpon>ApplicationFooter.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\WindowResizer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="Styles\Colors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Styles\WindowStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -56,10 +68,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Resources\Converters.xaml">
+    <Page Include="Controls\CustomTitleBar.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\ApplicationFooter.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Resource Include="Resources\Converters.xaml"/>
     <Page Include="Resources\SharedResources.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

@@ -1,0 +1,68 @@
+<UserControl x:Class="Chat.Client.Polling.Views.SignInView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="400">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
+        <TextBlock Text="COMP3008 Chat" FontSize="{StaticResource FontSizeHuge}" FontWeight="Bold"
+                   Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="{StaticResource MarginBottomExtraLarge}"/>
+        <TextBlock Text="Username:" FontSize="{StaticResource FontSizeMedium}" Foreground="{StaticResource ForegroundBrush}" Margin="0,0,0,5"/>
+        <TextBox x:Name="UsernameTextBox" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}" Margin="0,0,0,20"
+                 Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"
+                 KeyDown="UsernameTextBox_KeyDown">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TextBox">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{StaticResource CornerRadiusNormal}"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+        <Button x:Name="SignInButton" Content="Sign In" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingNormal}" Margin="0,0,0,10"
+                Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
+                Cursor="Hand" Click="SignInButton_Click">
+            <Button.Style>
+                <Style TargetType="Button">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderThickness="0"
+                                        CornerRadius="{StaticResource CornerRadiusNormal}"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource AccentDisabledBrush}"/>
+                            <Setter Property="Foreground" Value="#888888"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+        <TextBlock x:Name="LoginStatusText" FontSize="{StaticResource FontSizeNormal}" Foreground="{StaticResource ErrorBrush}"
+                   HorizontalAlignment="Center" TextWrapping="Wrap" Height="40"/>
+    </StackPanel>
+</UserControl>

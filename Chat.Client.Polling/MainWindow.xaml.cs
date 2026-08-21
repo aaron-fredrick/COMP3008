@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Chat.Client.Polling.Services;
 using Chat.Client.Polling.Views;
 using Chat.Client.Shared.Services;
+using Chat.Client.Shared.Controls;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -14,6 +18,7 @@ namespace Chat.Client.Polling
     {
         private ChatServiceClient _serviceClient;
         private DispatcherTimer _pollingTimer;
+        private DispatcherTimer _pingTimer;
         private string _currentUserId;
         private string _currentChannel;
         private int _pollingInterval;
@@ -23,6 +28,8 @@ namespace Chat.Client.Polling
         private bool _isSigningOut = false;
         private ValidationService _validationService;
         private FileHelperService _fileHelperService;
+        private Random _random = new Random();
+        private WindowResizer _windowResizer;
 
         public MainWindow()
         {
@@ -32,6 +39,57 @@ namespace Chat.Client.Polling
             _validationService = new ValidationService();
             _fileHelperService = new FileHelperService();
             InitializePollingTimer();
+            InitializePingTimer();
+            InitializeFooter();
+            
+            // Initialize window resizer
+            _windowResizer = new WindowResizer(this);
+            
+            // Create service client and start ping immediately on window load
+            _serviceClient = new ChatServiceClient();
+            StartPingTimer();
+
+            // Create and set sign-in view with service client
+            var signInView = new SignInView();
+            signInView.SetServiceClient(_serviceClient);
+            signInView.SignInSuccess += SignInView_SignInSuccess;
+            signInView.SignInFailed += SignInView_SignInFailed;
+            MainContent.Content = signInView;
+        }
+
+        private void InitializeFooter()
+        {
+            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            UpdateFooterState();
+        }
+
+        private void AppFooter_SettingsClicked(object sender, EventArgs e)
+        {
+            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void UpdateFooterState()
+        {
+            if (!string.IsNullOrEmpty(_currentUserId))
+            {
+                AppFooter.CurrentUser = _currentUserId;
+                AppFooter.IsLoggedIn = true;
+            }
+            else
+            {
+                AppFooter.CurrentUser = string.Empty;
+                AppFooter.IsLoggedIn = false;
+            }
+
+            // Update connection status based on service client state
+            if (_serviceClient != null && _serviceClient.IsConnected)
+            {
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Connected;
+            }
+            else
+            {
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
+            }
         }
 
         private void InitializePollingTimer()
@@ -41,75 +99,93 @@ namespace Chat.Client.Polling
             _pollingTimer.Tick += PollingTimer_Tick;
         }
 
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        private void InitializePingTimer()
         {
-            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            _pingTimer = new DispatcherTimer();
+            _pingTimer.Interval = TimeSpan.FromSeconds(5); // Ping every 5 seconds
+            _pingTimer.Tick += PingTimer_Tick;
         }
 
-        private void SignInButton_Click(object sender, RoutedEventArgs e)
+        private void StartPingTimer()
         {
-            string username = UsernameTextBox.Text.Trim();
-            
-            var validationResult = _validationService.ValidateUsername(username);
-            if (!validationResult.IsValid)
+            _pingTimer.Start();
+            PerformPing(); // Send immediate ping on start
+        }
+
+        private void PingTimer_Tick(object sender, EventArgs e)
+        {
+            if (_serviceClient != null)
             {
-                LoginStatusText.Text = validationResult.ErrorMessage;
-                return;
+                PerformPing();
             }
+        }
 
-            LoginStatusText.Text = "Connecting to server...";
-            SignInButton.IsEnabled = false;
-
+        private async void PerformPing()
+        {
             try
             {
-                _serviceClient = new ChatServiceClient();
-                bool success = _serviceClient.SignIn(username);
+                // Generate 6-byte hash for checksum
+                byte[] hash = new byte[6];
+                _random.NextBytes(hash);
+                string hashStr = BitConverter.ToString(hash).Replace("-", "");
 
-                if (success)
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                string pong = _serviceClient.Ping(_currentUserId ?? "", hash);
+                stopwatch.Stop();
+
+                // Verify checksum
+                if (pong == hashStr)
                 {
-                    _currentUserId = username;
-                    ShowChannelListView();
-                    _pollingTimer.Start();
+                    int pingMs = (int)stopwatch.ElapsedMilliseconds;
+                    AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Connected;
+                    AppFooter.PingMs = pingMs;
+                    Console.WriteLine($"[PING] Success - Hash: {hashStr}, Round-trip: {pingMs}ms");
                 }
                 else
                 {
-                    LoginStatusText.Text = "Sign in failed. Username may already be in use.";
-                    SignInButton.IsEnabled = true;
+                    AppFooter.PingMs = 0;
+                    AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
+                    Console.WriteLine($"[PING] Checksum mismatch - Sent: {hashStr}, Received: {pong}");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                LoginStatusText.Text = "Server not responding. Please check if the server is running.";
-                SignInButton.IsEnabled = true;
+                AppFooter.PingMs = 0;
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
+                Console.WriteLine($"[PING] Failed - {ex.Message}");
             }
         }
 
-        private void UsernameTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void SignInView_SignInSuccess(object sender, string username)
         {
-            if (e.Key == System.Windows.Input.Key.Enter)
-            {
-                SignInButton_Click(sender, e);
-            }
+            _currentUserId = username;
+            UpdateFooterState();
+            ShowChannelListView();
+            _pollingTimer.Start();
+        }
+
+        private void SignInView_SignInFailed(object sender, string username)
+        {
+            AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
         }
 
         private void ShowChannelListView()
         {
             _channelListView = new ChannelListView();
             _channelListView.SetWelcomeText(_currentUserId);
+            _channelListView.SetServiceClient(_serviceClient);
             _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
             _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
             _channelListView.SignOutRequested += ChannelListView_SignOutRequested;
-            _channelListView.Closing += ChannelListView_Closing;
-            
-            LoadChannels();
-            _channelListView.Show();
-            this.Hide();
+            MainContent.Content = _channelListView;
         }
 
         private void ShowConversationView(string channelName)
         {
+            _currentChannel = channelName;
             _conversationView = new ConversationView();
             _conversationView.SetChannelName(channelName);
+            _conversationView.SetCurrentUserId(_currentUserId);
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
@@ -118,30 +194,13 @@ namespace Chat.Client.Polling
             _conversationView.Closing += ConversationView_Closing;
 
             LoadChannelMembers();
-            _conversationView.Show();
-            _channelListView.Hide();
-        }
-
-        private void ChannelListView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // Prevent re-entrancy during sign out
-            if (_isSigningOut)
-            {
-                return;
-            }
-            // User clicked X on channel list - sign out
-            SignOut();
+            MainContent.Content = _conversationView;
         }
 
         private void ConversationView_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Prevent re-entrancy during sign out
-            if (_isSigningOut)
-            {
-                return;
-            }
-            // User clicked X on conversation - sign out
-            SignOut();
+            // User clicked X on conversation - leave channel
+            ConversationView_LeaveChannelRequested(sender, EventArgs.Empty);
         }
 
         private void ChannelListView_JoinChannelRequested(object sender, string channelName)
@@ -198,11 +257,10 @@ namespace Chat.Client.Polling
 
         private void ConversationView_LeaveChannelRequested(object sender, EventArgs e)
         {
+            _conversationView.Closing -= ConversationView_Closing;
             _serviceClient.LeaveChannel(_currentUserId);
             _currentChannel = null;
-            _conversationView.Close();
-            _channelListView.Show();
-            LoadChannels();
+            ShowChannelListView();
         }
 
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file)
@@ -414,6 +472,7 @@ namespace Chat.Client.Polling
 
             _isSigningOut = true;
             _pollingTimer.Stop();
+            _pingTimer.Stop();
 
             // Leave channel if in one
             if (!string.IsNullOrEmpty(_currentChannel))
@@ -435,12 +494,24 @@ namespace Chat.Client.Polling
             }
             _privateMessageViews.Clear();
 
-            _channelListView?.Close();
-            _conversationView?.Close();
+            _channelListView = null;
+            _conversationView = null;
 
             this.Show();
-            LoginStatusText.Text = "";
-            UsernameTextBox.Text = "";
+            UpdateFooterState();
+
+            // Create new service client for next sign-in
+            _serviceClient = new ChatServiceClient();
+
+            // Show sign-in view again with new service client
+            MainContent.Content = new SignInView();
+            var signInView = MainContent.Content as SignInView;
+            signInView?.SetServiceClient(_serviceClient);
+            signInView.SignInSuccess += SignInView_SignInSuccess;
+            signInView.SignInFailed += SignInView_SignInFailed;
+
+            // Restart ping timer for connection status on sign-in view
+            StartPingTimer();
 
             _isSigningOut = false;
         }
@@ -448,11 +519,10 @@ namespace Chat.Client.Polling
         protected override void OnClosed(EventArgs e)
         {
             _pollingTimer?.Stop();
+            _pingTimer?.Stop();
             _serviceClient?.SignOut(_currentUserId);
             _serviceClient?.Dispose();
-            
-            _channelListView?.Close();
-            _conversationView?.Close();
+            _windowResizer?.Dispose();
             
             Application.Current.Shutdown();
             base.OnClosed(e);
