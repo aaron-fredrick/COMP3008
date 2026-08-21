@@ -15,16 +15,48 @@ namespace Chat.Client.Duplex.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
+        private string _currentUserId;
 
         public ConversationView()
         {
             InitializeComponent();
             _messages = new System.Collections.Generic.SortedSet<Message>();
+            InitializeFooter();
+        }
+
+        private void InitializeFooter()
+        {
+            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+        }
+
+        private void AppFooter_SettingsClicked(object sender, EventArgs e)
+        {
+            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         public void SetChannelName(string channelName)
         {
             ChannelNameText.Text = channelName;
+        }
+
+        public void SetCurrentUserId(string userId)
+        {
+            _currentUserId = userId;
+            UpdateFooter();
+        }
+
+        private void UpdateFooter()
+        {
+            if (!string.IsNullOrEmpty(_currentUserId))
+            {
+                AppFooter.CurrentUser = _currentUserId;
+                AppFooter.IsLoggedIn = true;
+            }
+            else
+            {
+                AppFooter.CurrentUser = string.Empty;
+                AppFooter.IsLoggedIn = false;
+            }
         }
 
         public void UpdateMembers(System.Collections.Generic.List<string> members)
@@ -65,6 +97,20 @@ namespace Chat.Client.Duplex.Views
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
             }
         }
+
+        /// <summary>
+        /// Appends a system-level notice to the conversation list (e.g. "User X has left").
+        /// These are ephemeral UI-only entries, not persisted in the message collection.
+        /// </summary>
+        public void AddSystemMessage(string text)
+        {
+            MessagesListBox.Items.Add($"--- {text} ---");
+            if (MessagesListBox.Items.Count > 0)
+            {
+                MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
+            }
+        }
+
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {

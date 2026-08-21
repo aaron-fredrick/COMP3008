@@ -6,7 +6,7 @@ using Chat.Contracts.SharedTypes;
 
 namespace Chat.Client.Polling.Views
 {
-    public partial class ConversationView : Window
+    public partial class ConversationView : UserControl
     {
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
@@ -15,6 +15,7 @@ namespace Chat.Client.Polling.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
+        private string _currentUserId;
 
         public ConversationView()
         {
@@ -25,6 +26,11 @@ namespace Chat.Client.Polling.Views
         public void SetChannelName(string channelName)
         {
             ChannelNameText.Text = channelName;
+        }
+
+        public void SetCurrentUserId(string userId)
+        {
+            _currentUserId = userId;
         }
 
         public void UpdateMembers(System.Collections.Generic.List<string> members)

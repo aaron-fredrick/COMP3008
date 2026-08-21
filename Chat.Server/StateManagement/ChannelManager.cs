@@ -73,7 +73,8 @@ namespace Chat.Server.StateManagement
                 return _channels.Values.Select(c => new Channel
                 {
                     Name = c.Name,
-                    Members = new List<string>(c.Members)
+                    Members = new List<string>(c.Members),
+                    UserCount = c.Members.Count
                 }).ToList();
             }
             finally

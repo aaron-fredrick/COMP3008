@@ -12,6 +12,9 @@ namespace Chat.Client.Polling.Services
         private ChannelFactory<IChatService> _channelFactory;
         private IChatService _proxy;
         private string _serverUrl;
+        private bool _isConnected;
+
+        public bool IsConnected => _isConnected;
 
         public ChatServiceClient()
         {
@@ -40,6 +43,7 @@ namespace Chat.Client.Polling.Services
             var endpoint = new EndpointAddress(_serverUrl);
             _channelFactory = new ChannelFactory<IChatService>(binding, endpoint);
             _proxy = _channelFactory.CreateChannel();
+            _isConnected = true;
         }
 
         public bool SignIn(string userId)
@@ -227,10 +231,24 @@ namespace Chat.Client.Polling.Services
             }
         }
 
+        public string Ping(string userId, byte[] hash)
+        {
+            try
+            {
+                return _proxy.Ping(userId, hash);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                return null;
+            }
+        }
+
         private void HandleError(Exception ex)
         {
             // Log error or raise event for UI to handle
             System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
+            _isConnected = false;
         }
 
         public void Dispose()

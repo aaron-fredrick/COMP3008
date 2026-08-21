@@ -11,5 +11,8 @@ namespace Chat.Contracts.DataContracts
 
         [DataMember]
         public List<string> Members { get; set; }
+
+        [DataMember]
+        public int UserCount { get; set; }
     }
 }

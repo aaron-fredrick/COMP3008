@@ -237,5 +237,18 @@ namespace Chat.Server.StateManagement
                 _lock.ExitReadLock();
             }
         }
+
+        public List<string> GetAllSignedInUserIds()
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                return new List<string>(_users.Keys);
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
     }
 }

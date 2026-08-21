@@ -55,19 +55,30 @@ namespace Chat.Server.Services
             var session = _userManager.GetUserSession(userId);
             if (session != null)
             {
-                if (session.CurrentChannel != null)
+                string channelBeforeSignOut = session.CurrentChannel;
+
+                if (channelBeforeSignOut != null)
                 {
-                    _channelManager.LeaveChannel(userId, session.CurrentChannel);
+                    _channelManager.LeaveChannel(userId, channelBeforeSignOut);
+                    _userManager.SetUserChannel(userId, null);
+
+                    // Notify remaining channel members that this user disconnected
+                    _callbackManager.NotifyUserDisconnected(channelBeforeSignOut, userId);
+                    _callbackManager.NotifyChannelMembersChanged(channelBeforeSignOut);
+                    _callbackManager.NotifyChannelListChanged();
                 }
+
                 _callbackManager.UnregisterCallback(userId);
             }
+
             _userManager.SignOut(userId);
         }
 
         public List<Channel> GetChannels()
         {
+            string clientType = DetectClientType();
             var channels = _channelManager.GetChannels();
-            // Don't log polling requests to reduce noise
+            ServerLogger.Request(clientType, "CHANNELS", $"Returned {channels.Count} channel(s)");
             return channels;
         }
 
@@ -78,6 +89,9 @@ namespace Chat.Server.Services
             if (result)
             {
                 ServerLogger.Success(clientType, "CHANNEL", $"Created \"{channelName}\"");
+
+                // Push channel list update to all duplex clients
+                _callbackManager.NotifyChannelListChanged();
             }
             else
             {
@@ -95,17 +109,26 @@ namespace Chat.Server.Services
                 return false;
             }
 
+            // Leave current channel first
             string previousChannel = session.CurrentChannel;
             if (previousChannel != null)
             {
                 _channelManager.LeaveChannel(userId, previousChannel);
+                _userManager.SetUserChannel(userId, null);
+
+                _callbackManager.NotifyUserDisconnected(previousChannel, userId);
+                _callbackManager.NotifyChannelMembersChanged(previousChannel);
             }
 
-            bool success = _channelManager.JoinChannel(userId, channelName, out previousChannel);
+            bool success = _channelManager.JoinChannel(userId, channelName, out _);
             if (success)
             {
                 _userManager.SetUserChannel(userId, channelName);
                 ServerLogger.Success(clientType, "JOIN", $"{userId} -> {channelName}");
+
+                // Notify all duplex clients: member list and channel list changed
+                _callbackManager.NotifyChannelMembersChanged(channelName);
+                _callbackManager.NotifyChannelListChanged();
             }
             else
             {
@@ -123,15 +146,22 @@ namespace Chat.Server.Services
             var session = _userManager.GetUserSession(userId);
             if (session != null && session.CurrentChannel != null)
             {
-                _channelManager.LeaveChannel(userId, session.CurrentChannel);
+                string channel = session.CurrentChannel;
+                _channelManager.LeaveChannel(userId, channel);
                 _userManager.SetUserChannel(userId, null);
+
+                // Notify remaining members
+                _callbackManager.NotifyUserDisconnected(channel, userId);
+                _callbackManager.NotifyChannelMembersChanged(channel);
+                _callbackManager.NotifyChannelListChanged();
             }
         }
 
         public List<string> GetChannelMembers(string channelName)
         {
+            string clientType = DetectClientType();
             var members = _channelManager.GetChannelMembers(channelName);
-            // Don't log polling requests to reduce noise
+            ServerLogger.Request(clientType, "MEMBERS", $"Channel \"{channelName}\": {members.Count} member(s)");
             return members;
         }
 
@@ -151,13 +181,16 @@ namespace Chat.Server.Services
 
         public bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData)
         {
-            bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason);
+            bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason, out SharedFile storedFile);
             string clientType = DetectClientType();
             if (result)
             {
                 ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
 
-                // Send file message to channel
+                // Notify all channel members via callback (storedFile has FileId populated)
+                _callbackManager.NotifyFileShared(channelName, storedFile);
+
+                // Also send a system message to the channel for polling clients
                 var fileMessage = new Message
                 {
                     SenderId = uploaderId,
@@ -184,8 +217,9 @@ namespace Chat.Server.Services
 
         public List<SharedFile> GetChannelFiles(string channelName)
         {
+            string clientType = DetectClientType();
             var files = _fileHandler.GetChannelFiles(channelName);
-            // Don't log polling requests to reduce noise
+            ServerLogger.Request(clientType, "FILES", $"Channel \"{channelName}\": {files.Count} file(s)");
             return files;
         }
 
@@ -200,9 +234,9 @@ namespace Chat.Server.Services
 
             var lastPollTime = _userManager.GetLastPollTime(userId);
             var messages = _channelManager.GetMessagesSince(session.CurrentChannel, lastPollTime, userId);
-            
+
             _userManager.UpdateLastPollTime(userId);
-            
+
             if (messages.Count > 0)
             {
                 ServerLogger.Request(clientType, "POLL", $"{userId} <- {messages.Count} message(s)");
@@ -221,6 +255,18 @@ namespace Chat.Server.Services
             return new List<Message>(pendingQueue);
         }
 
+        public string Ping(string userId, byte[] hash)
+        {
+            string clientType = DetectClientType();
+            string clientIp = GetClientIpAddress();
+            string hashStr = BitConverter.ToString(hash).Replace("-", "").Substring(0, Math.Min(12, BitConverter.ToString(hash).Replace("-", "").Length));
+
+            string logMessage = $"Ping from {userId} (IP: {clientIp}, Hash: {hashStr})";
+            ServerLogger.Request(clientType, "PING", logMessage);
+
+            return BitConverter.ToString(hash).Replace("-", "");
+        }
+
         public void RegisterCallback(string userId)
         {
             string clientType = DetectClientType();
@@ -236,6 +282,28 @@ namespace Chat.Server.Services
             _callbackManager.UnregisterCallback(userId);
         }
 
+        private string GetClientIpAddress()
+        {
+            try
+            {
+                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
+                {
+                    var properties = OperationContext.Current.IncomingMessageProperties;
+
+                    if (properties.ContainsKey(System.ServiceModel.Channels.RemoteEndpointMessageProperty.Name))
+                    {
+                        var remoteEndpoint = properties[System.ServiceModel.Channels.RemoteEndpointMessageProperty.Name] as System.ServiceModel.Channels.RemoteEndpointMessageProperty;
+                        if (remoteEndpoint != null)
+                        {
+                            return remoteEndpoint.Address;
+                        }
+                    }
+                }
+            }
+            catch { }
+            return "unknown";
+        }
+
         private string DetectClientType()
         {
             try
@@ -243,8 +311,7 @@ namespace Chat.Server.Services
                 if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
                 {
                     var properties = OperationContext.Current.IncomingMessageProperties;
-                    
-                    // Check for Via property which contains the transport address
+
                     if (properties.ContainsKey("Via"))
                     {
                         var via = properties["Via"] as string;
@@ -261,7 +328,6 @@ namespace Chat.Server.Services
                         }
                     }
 
-                    // Check RemoteAddressMessageProperty
                     if (properties.ContainsKey("RemoteAddressMessageProperty"))
                     {
                         var remoteAddress = properties["RemoteAddressMessageProperty"];
@@ -279,7 +345,6 @@ namespace Chat.Server.Services
                         }
                     }
 
-                    // Fallback: check all properties for transport info
                     foreach (var key in properties.Keys)
                     {
                         var value = properties[key];

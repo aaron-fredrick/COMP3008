@@ -398,6 +398,10 @@ namespace Chat.Server.Tests
             public void OnFileShared(SharedFile file)
             {
             }
+
+            public void OnUserDisconnected(string userId)
+            {
+            }
         }
     }
 }

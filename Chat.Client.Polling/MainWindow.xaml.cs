@@ -99,6 +99,47 @@ namespace Chat.Client.Polling
             _pollingTimer.Tick += PollingTimer_Tick;
         }
 
+        private void PollingTimer_Tick(object sender, EventArgs e)
+        {
+            if (_serviceClient != null && _currentUserId != null)
+            {
+                if (_currentChannel == null && _channelListView != null)
+                {
+                    // Update channel list when on channel list view
+                    var channels = _serviceClient.GetChannels();
+                    _channelListView.UpdateChannels(channels);
+                }
+                else if (_currentChannel != null && _conversationView != null)
+                {
+                    // Poll for messages, members, and files when in conversation
+                    LoadChannelMembers();
+                    LoadChannelFiles();
+                    LoadChannels();
+                    PollForMessages();
+                }
+
+                // Always poll for private messages
+                var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);
+                foreach (var message in privateMessages)
+                {
+                    // Determine which private message view should receive this
+                    string otherUserId = (message.SenderId == _currentUserId) ? message.RecipientId : message.SenderId;
+
+                    if (!_privateMessageViews.ContainsKey(otherUserId))
+                    {
+                        var privateMessageView = new PrivateMessageView(otherUserId);
+                        privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
+                        privateMessageView.Closing += PrivateMessageView_Closing;
+                        privateMessageView.Owner = this;
+                        _privateMessageViews[otherUserId] = privateMessageView;
+                        privateMessageView.Show();
+                    }
+
+                    _privateMessageViews[otherUserId].AddMessage(message);
+                }
+            }
+        }
+
         private void InitializePingTimer()
         {
             _pingTimer = new DispatcherTimer();
@@ -172,7 +213,6 @@ namespace Chat.Client.Polling
         private void ShowChannelListView()
         {
             _channelListView = new ChannelListView();
-            _channelListView.SetWelcomeText(_currentUserId);
             _channelListView.SetServiceClient(_serviceClient);
             _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
             _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
@@ -191,7 +231,6 @@ namespace Chat.Client.Polling
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
             _conversationView.PrivateMessageRequested += ConversationView_PrivateMessageRequested;
             _conversationView.FileShareRequested += ConversationView_FileShareRequested;
-            _conversationView.Closing += ConversationView_Closing;
 
             LoadChannelMembers();
             MainContent.Content = _conversationView;
@@ -257,7 +296,6 @@ namespace Chat.Client.Polling
 
         private void ConversationView_LeaveChannelRequested(object sender, EventArgs e)
         {
-            _conversationView.Closing -= ConversationView_Closing;
             _serviceClient.LeaveChannel(_currentUserId);
             _currentChannel = null;
             ShowChannelListView();
@@ -358,7 +396,7 @@ namespace Chat.Client.Polling
                 var privateMessageView = new PrivateMessageView(recipientId);
                 privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
                 privateMessageView.Closing += PrivateMessageView_Closing;
-                privateMessageView.Owner = _conversationView;
+                privateMessageView.Owner = this;
                 _privateMessageViews[recipientId] = privateMessageView;
                 privateMessageView.Show();
             }
@@ -415,9 +453,9 @@ namespace Chat.Client.Polling
             }
         }
 
-        private void PollingTimer_Tick(object sender, EventArgs e)
+        private void PollForMessages()
         {
-            if (!string.IsNullOrEmpty(_currentUserId))
+            if (!string.IsNullOrEmpty(_currentChannel))
             {
                 var messages = _serviceClient.GetPendingMessages(_currentUserId);
                 LogDebug($"[POLLING] Received {messages.Count} public messages");
@@ -426,29 +464,6 @@ namespace Chat.Client.Polling
                     LogDebug($"[POLLING] Message: Type={message.Type}, Sender={message.SenderId}, Content={message.Content}");
                     _conversationView?.AddMessage(message);
                 }
-
-                var privateMessages = _serviceClient.GetPendingPrivateMessages(_currentUserId);
-                foreach (var message in privateMessages)
-                {
-                    // Determine which private message view should receive this
-                    string otherUserId = (message.SenderId == _currentUserId) ? message.RecipientId : message.SenderId;
-
-                    if (!_privateMessageViews.ContainsKey(otherUserId))
-                    {
-                        var privateMessageView = new PrivateMessageView(otherUserId);
-                        privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
-                        privateMessageView.Closing += PrivateMessageView_Closing;
-                        privateMessageView.Owner = _conversationView;
-                        _privateMessageViews[otherUserId] = privateMessageView;
-                        privateMessageView.Show();
-                    }
-
-                    _privateMessageViews[otherUserId].AddMessage(message);
-                }
-
-                LoadChannelMembers();
-                LoadChannelFiles();
-                LoadChannels();
             }
         }
 

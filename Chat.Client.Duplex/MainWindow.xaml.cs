@@ -19,6 +19,8 @@ namespace Chat.Client.Duplex
         private ConversationView _conversationView;
         private System.Collections.Generic.Dictionary<string, PrivateMessageView> _privateMessageViews;
         private bool _isSigningOut = false;
+        private bool _channelListClosing = false;
+        private bool _conversationClosing = false;
         private ValidationService _validationService;
         private FileHelperService _fileHelperService;
 
@@ -28,11 +30,41 @@ namespace Chat.Client.Duplex
             _privateMessageViews = new System.Collections.Generic.Dictionary<string, PrivateMessageView>();
             _validationService = new ValidationService();
             _fileHelperService = new FileHelperService();
+            InitializeFooter();
         }
 
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        private void InitializeFooter()
+        {
+            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            UpdateFooterState();
+        }
+
+        private void AppFooter_SettingsClicked(object sender, EventArgs e)
         {
             MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void UpdateFooterState()
+        {
+            if (!string.IsNullOrEmpty(_currentUserId))
+            {
+                AppFooter.CurrentUser = _currentUserId;
+                AppFooter.IsLoggedIn = true;
+            }
+            else
+            {
+                AppFooter.CurrentUser = string.Empty;
+                AppFooter.IsLoggedIn = false;
+            }
+
+            if (_serviceClient != null && _serviceClient.IsConnected)
+            {
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Connected;
+            }
+            else
+            {
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
+            }
         }
 
         private void SignInButton_Click(object sender, RoutedEventArgs e)
@@ -47,6 +79,7 @@ namespace Chat.Client.Duplex
             }
 
             LoginStatusText.Text = "Connecting to server...";
+            AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Connecting;
             SignInButton.IsEnabled = false;
 
             try
@@ -57,23 +90,28 @@ namespace Chat.Client.Duplex
                 _serviceClient.FileShared += ServiceClient_FileShared;
                 _serviceClient.ChannelListChanged += ServiceClient_ChannelListChanged;
                 _serviceClient.ChannelMembersChanged += ServiceClient_ChannelMembersChanged;
+                _serviceClient.UserDisconnected += ServiceClient_UserDisconnected;
+                _serviceClient.ConnectionLost += ServiceClient_ConnectionLost;
 
                 bool success = _serviceClient.SignIn(username);
 
                 if (success)
                 {
                     _currentUserId = username;
+                    UpdateFooterState();
                     ShowChannelListView();
                 }
                 else
                 {
                     LoginStatusText.Text = "Sign in failed. Username may already be in use.";
+                    AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
                     SignInButton.IsEnabled = true;
                 }
             }
             catch (Exception)
             {
                 LoginStatusText.Text = "Server not responding. Please check if the server is running.";
+                AppFooter.ConnectionStatus = Chat.Client.Shared.Controls.ConnectionState.Disconnected;
                 SignInButton.IsEnabled = true;
             }
         }
@@ -90,6 +128,7 @@ namespace Chat.Client.Duplex
         {
             _channelListView = new ChannelListView();
             _channelListView.SetWelcomeText(_currentUserId);
+            _channelListView.SetConnectionStatus(_serviceClient.IsConnected);
             _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
             _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
             _channelListView.SignOutRequested += ChannelListView_SignOutRequested;
@@ -104,6 +143,7 @@ namespace Chat.Client.Duplex
         {
             _conversationView = new ConversationView();
             _conversationView.SetChannelName(channelName);
+            _conversationView.SetCurrentUserId(_currentUserId);
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
@@ -123,6 +163,7 @@ namespace Chat.Client.Duplex
             {
                 return;
             }
+            _channelListClosing = true;
             SignOut();
         }
 
@@ -132,6 +173,7 @@ namespace Chat.Client.Duplex
             {
                 return;
             }
+            _conversationClosing = true;
             SignOut();
         }
 
@@ -268,8 +310,7 @@ namespace Chat.Client.Duplex
         {
             if (sender is PrivateMessageView privateMessageView)
             {
-                string recipientId = privateMessageView.Title.Replace("Private Conversation with: ", "");
-                _serviceClient.SendPrivateMessage(_currentUserId, recipientId, message);
+                _serviceClient.SendPrivateMessage(_currentUserId, privateMessageView.RecipientId, message);
             }
         }
 
@@ -277,8 +318,7 @@ namespace Chat.Client.Duplex
         {
             if (sender is PrivateMessageView privateMessageView)
             {
-                string recipientId = privateMessageView.Title.Replace("Private Conversation with: ", "");
-                _privateMessageViews.Remove(recipientId);
+                _privateMessageViews.Remove(privateMessageView.RecipientId);
             }
         }
 
@@ -347,6 +387,21 @@ namespace Chat.Client.Duplex
             }
         }
 
+        private void ServiceClient_UserDisconnected(object sender, string disconnectedUserId)
+        {
+            // Refresh the member list so the departed user is removed
+            LoadChannelMembers();
+
+            // Post a system notice in the active conversation view
+            _conversationView?.AddSystemMessage($"{disconnectedUserId} has left the channel.");
+        }
+
+        private void ServiceClient_ConnectionLost(object sender, EventArgs e)
+        {
+            MessageBox.Show("Connection to the server was lost. You have been signed out.", "Connection Lost", MessageBoxButton.OK, MessageBoxImage.Error);
+            SignOut();
+        }
+
         private void SignOut()
         {
             if (_isSigningOut)
@@ -373,14 +428,24 @@ namespace Chat.Client.Duplex
             }
             _privateMessageViews.Clear();
 
-            _channelListView?.Close();
-            _conversationView?.Close();
+            // Only close windows if they're not already closing
+            if (!_channelListClosing)
+            {
+                _channelListView?.Close();
+            }
+            if (!_conversationClosing)
+            {
+                _conversationView?.Close();
+            }
 
             this.Show();
             LoginStatusText.Text = "";
             UsernameTextBox.Text = "";
+            UpdateFooterState();
             SignInButton.IsEnabled = true;
 
+            _channelListClosing = false;
+            _conversationClosing = false;
             _isSigningOut = false;
         }
 

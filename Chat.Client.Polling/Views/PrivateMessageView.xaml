@@ -1,43 +1,70 @@
 <Window x:Class="Chat.Client.Polling.Views.PrivateMessageView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Private Message" Height="400" Width="500"
-        Background="{StaticResource BackgroundBrush}" WindowStartupLocation="CenterOwner">
-    <Grid Margin="{StaticResource MarginNormal}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
+        Title="Private Message" Height="432" Width="500"
+        Background="Transparent" WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize">
+    <Border Background="{StaticResource BackgroundBrush}"
+            BorderBrush="{StaticResource WindowBorderBrush}"
+            BorderThickness="{StaticResource WindowBorderThickness}"
+            CornerRadius="{StaticResource WindowCornerRadius}">
+        <Border.Effect>
+            <DropShadowEffect Color="{StaticResource WindowShadowColor}"
+                              BlurRadius="{StaticResource WindowShadowDepth}"
+                              ShadowDepth="{StaticResource WindowShadowDepth}"
+                              Direction="270"
+                              Opacity="0.5"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" x:Name="RecipientText"
-                   Text="Private Conversation with: User"
-                   Foreground="{StaticResource ForegroundBrush}" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
-                   Margin="{StaticResource MarginBottomNormal}"/>
+            <!-- Custom Title Bar -->
+            <controls:CustomTitleBar Grid.Row="0"/>
 
-        <!-- Messages -->
-        <ListBox Grid.Row="1" x:Name="MessagesListBox"
-                 Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
-                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                 Margin="{StaticResource MarginBottomNormal}"/>
+            <!-- Main Content -->
+            <Grid Grid.Row="1" Margin="{StaticResource MarginNormal}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- Input -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <!-- Header -->
+            <TextBlock Grid.Row="0" x:Name="RecipientText"
+                       Text="Private Conversation with: User"
+                       Foreground="{StaticResource ForegroundBrush}" FontSize="{StaticResource FontSizeLarge}" FontWeight="Bold"
+                       Margin="{StaticResource MarginBottomNormal}"/>
 
-            <TextBox Grid.Column="0" x:Name="MessageTextBox"
+            <!-- Messages -->
+            <ListBox Grid.Row="1" x:Name="MessagesListBox"
                      Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                     Padding="{StaticResource PaddingNormal}" Margin="{StaticResource MarginRightNormal}"/>
+                     Margin="{StaticResource MarginBottomNormal}"/>
 
-            <Button Grid.Column="1" x:Name="SendButton" Content="Send"
-                    Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
-                    BorderThickness="0" Padding="{StaticResource ButtonPaddingLarge}"
-                    Click="SendButton_Click"/>
+            <!-- Input -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" x:Name="MessageTextBox"
+                         Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}"
+                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                         Padding="{StaticResource PaddingNormal}" Margin="{StaticResource MarginRightNormal}"/>
+
+                <Button Grid.Column="1" x:Name="SendButton" Content="Send"
+                        Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}"
+                        BorderThickness="0" Padding="{StaticResource ButtonPaddingLarge}"
+                        Click="SendButton_Click"/>
+            </Grid>
         </Grid>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>

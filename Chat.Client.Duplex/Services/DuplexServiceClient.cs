@@ -17,12 +17,17 @@ namespace Chat.Client.Duplex.Services
         private InstanceContext _instanceContext;
         private string _serverUrl;
         private Dispatcher _dispatcher;
+        private bool _isConnected;
+
+        public bool IsConnected => _isConnected;
 
         public event EventHandler<Message> MessageReceived;
         public event EventHandler<Message> PrivateMessageReceived;
         public event EventHandler<SharedFile> FileShared;
         public event EventHandler ChannelListChanged;
         public event EventHandler<string> ChannelMembersChanged;
+        public event EventHandler<string> UserDisconnected;
+        public event EventHandler ConnectionLost;
 
         public DuplexServiceClient(Dispatcher dispatcher)
         {
@@ -57,6 +62,7 @@ namespace Chat.Client.Duplex.Services
             var endpoint = new EndpointAddress(_serverUrl);
             _channelFactory = new DuplexChannelFactory<IDuplexChatService>(_instanceContext, binding, endpoint);
             _proxy = _channelFactory.CreateChannel();
+            _isConnected = true;
         }
 
         public bool SignIn(string userId)
@@ -217,9 +223,30 @@ namespace Chat.Client.Duplex.Services
             }
         }
 
+        public string Ping(string userId, byte[] hash)
+        {
+            try
+            {
+                return _proxy.Ping(userId, hash);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                return null;
+            }
+        }
+
         private void HandleError(Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
+            if (_isConnected)
+            {
+                _isConnected = false;
+                _dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ConnectionLost?.Invoke(this, EventArgs.Empty);
+                }));
+            }
         }
 
         public void Dispose()
@@ -268,6 +295,11 @@ namespace Chat.Client.Duplex.Services
         internal void OnChannelMembersChangedInternal(string channelName)
         {
             ChannelMembersChanged?.Invoke(this, channelName);
+        }
+
+        internal void OnUserDisconnectedInternal(string userId)
+        {
+            UserDisconnected?.Invoke(this, userId);
         }
     }
 }

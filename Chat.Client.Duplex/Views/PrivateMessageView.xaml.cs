@@ -8,11 +8,14 @@ namespace Chat.Client.Duplex.Views
     {
         public event EventHandler<string> SendMessageRequested;
 
+        public string RecipientId { get; }
+
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
 
         public PrivateMessageView(string recipientId)
         {
             InitializeComponent();
+            RecipientId = recipientId;
             Title = $"Private Conversation with: {recipientId}";
             RecipientText.Text = $"Private Conversation with: {recipientId}";
             _messages = new System.Collections.Generic.SortedSet<Message>();

@@ -16,6 +16,7 @@ namespace Chat.Server.Hosting
 
         public string PollingEndpoint { get; private set; }
         public string DuplexEndpoint { get; private set; }
+        public bool IsRunning => _serviceHost != null && _serviceHost.State == CommunicationState.Opened;
 
         public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null, bool enablePolling = true)
         {

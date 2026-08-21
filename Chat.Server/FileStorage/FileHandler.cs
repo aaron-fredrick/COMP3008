@@ -64,12 +64,13 @@ namespace Chat.Server.FileStorage
             return true;
         }
 
-        public bool StoreFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData, out string reason)
+        public bool StoreFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData, out string reason, out SharedFile storedFile)
         {
             _lock.EnterWriteLock();
             try
             {
                 reason = null;
+                storedFile = null;
 
                 if (!ValidateFile(fileName, fileData.Length, fileType, out string validationReason))
                 {
@@ -81,7 +82,7 @@ namespace Chat.Server.FileStorage
                 var filePath = Path.Combine(_storageDirectory, fileId.ToString());
                 File.WriteAllBytes(filePath, fileData);
 
-                var sharedFile = new SharedFile
+                storedFile = new SharedFile
                 {
                     FileId = fileId,
                     FileName = fileName,
@@ -93,11 +94,12 @@ namespace Chat.Server.FileStorage
                     FileData = fileData
                 };
 
-                _files[fileId] = sharedFile;
+                _files[fileId] = storedFile;
                 return true;
             }
             catch (Exception ex)
             {
+                storedFile = null;
                 reason = $"Exception during file storage: {ex.Message}";
                 return false;
             }
@@ -133,13 +135,14 @@ namespace Chat.Server.FileStorage
                     .Where(f => f.ChannelName == channelName)
                     .Select(f => new SharedFile
                     {
+                        FileId = f.FileId,
                         FileName = f.FileName,
                         FileType = f.FileType,
                         FileSize = f.FileSize,
                         UploaderId = f.UploaderId,
                         UploadedAt = f.UploadedAt,
                         ChannelName = f.ChannelName,
-                        FileData = null
+                        FileData = null  // contents served only via GetFile(fileId)
                     })
                     .ToList();
             }

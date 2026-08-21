@@ -50,5 +50,8 @@ namespace Chat.Contracts.ServiceContracts
 
         [OperationContract]
         List<Message> GetPendingPrivateMessages(string userId);
+
+        [OperationContract]
+        string Ping(string userId, byte[] hash);
     }
 }
