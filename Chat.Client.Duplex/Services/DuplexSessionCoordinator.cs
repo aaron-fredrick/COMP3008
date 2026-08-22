@@ -1,0 +1,321 @@
+using System;
+using System.Collections.Generic;
+using System.Windows.Threading;
+using Chat.Client.Shared.Services;
+using Chat.Contracts.DataContracts;
+using Chat.Contracts.SharedTypes;
+using Chat.Client.Shared.Controls;
+
+namespace Chat.Client.Duplex.Services
+{
+    /// <summary>
+    /// A global singleton that owns all session state and the WCF duplex service client.
+    /// Exposes events that views can subscribe to, enabling a single central WCF connection.
+    /// </summary>
+    public sealed class DuplexSessionCoordinator : IDisposable
+    {
+        private static readonly Lazy<DuplexSessionCoordinator> _instance = 
+            new Lazy<DuplexSessionCoordinator>(() => new DuplexSessionCoordinator());
+
+        public static DuplexSessionCoordinator Instance => _instance.Value;
+
+        public event EventHandler<List<Channel>> ChannelsUpdated;
+        public event EventHandler<List<string>> ChannelMembersUpdated;
+        public event EventHandler<List<SharedFile>> ChannelFilesUpdated;
+        public event EventHandler<Message> PublicMessageReceived;
+        public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived;
+        public event EventHandler<ConnectionState> ConnectionStateChanged;
+        public event EventHandler<string> UserDisconnected;
+        public event EventHandler<string> SystemMessageReceived;
+
+        private DuplexServiceClient _serviceClient;
+        private readonly ValidationService _validationService;
+        private readonly FileHelperService _fileHelperService;
+        private DispatcherTimer _pingTimer;
+        private readonly Random _random = new Random();
+
+        private string _currentUserId;
+        private string _currentChannel;
+        private bool _isDisposed;
+
+        public string CurrentUserId => _currentUserId;
+        public string CurrentChannel => _currentChannel;
+        public bool IsSignedIn => !string.IsNullOrEmpty(_currentUserId);
+        public bool IsConnected => _serviceClient?.IsConnected ?? false;
+
+        private DuplexSessionCoordinator()
+        {
+            _validationService = new ValidationService();
+            _fileHelperService = new FileHelperService();
+
+            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _pingTimer.Tick += OnPingTick;
+        }
+
+        // ── Session lifecycle ────────────────────────────────────────────────
+
+        public void StartSession(Dispatcher dispatcher)
+        {
+            if (_serviceClient != null)
+            {
+                UnsubscribeEvents();
+                _serviceClient.Dispose();
+            }
+
+            _serviceClient = new DuplexServiceClient(dispatcher);
+            SubscribeEvents();
+        }
+
+        private void SubscribeEvents()
+        {
+            _serviceClient.MessageReceived += OnMessageReceived;
+            _serviceClient.PrivateMessageReceived += OnPrivateMessageReceived;
+            _serviceClient.FileShared += OnFileShared;
+            _serviceClient.ChannelListChanged += OnChannelListChanged;
+            _serviceClient.ChannelMembersChanged += OnChannelMembersChanged;
+            _serviceClient.UserDisconnected += OnUserDisconnected;
+            _serviceClient.ConnectionLost += OnConnectionLost;
+        }
+
+        private void UnsubscribeEvents()
+        {
+            if (_serviceClient != null)
+            {
+                _serviceClient.MessageReceived -= OnMessageReceived;
+                _serviceClient.PrivateMessageReceived -= OnPrivateMessageReceived;
+                _serviceClient.FileShared -= OnFileShared;
+                _serviceClient.ChannelListChanged -= OnChannelListChanged;
+                _serviceClient.ChannelMembersChanged -= OnChannelMembersChanged;
+                _serviceClient.UserDisconnected -= OnUserDisconnected;
+                _serviceClient.ConnectionLost -= OnConnectionLost;
+            }
+        }
+
+        public bool SignIn(string username)
+        {
+            var result = _validationService.ValidateUsername(username);
+            if (!result.IsValid)
+                return false;
+
+            bool success = _serviceClient.SignIn(username);
+            if (success)
+            {
+                _currentUserId = username;
+                _pingTimer.Start();
+                PerformPing();
+            }
+            return success;
+        }
+
+        public void SignOut()
+        {
+            _pingTimer.Stop();
+
+            if (!string.IsNullOrEmpty(_currentChannel))
+                _serviceClient?.LeaveChannel(_currentUserId);
+
+            _serviceClient?.SignOut(_currentUserId);
+            
+            _currentUserId = null;
+            _currentChannel = null;
+            
+            ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+        }
+
+        // ── Channel operations ───────────────────────────────────────────────
+
+        public bool JoinChannel(string channelName)
+        {
+            if (!string.IsNullOrEmpty(_currentChannel))
+                _serviceClient.LeaveChannel(_currentUserId);
+
+            bool success = _serviceClient.JoinChannel(_currentUserId, channelName);
+            if (success)
+                _currentChannel = channelName;
+
+            return success;
+        }
+
+        public void LeaveChannel()
+        {
+            _serviceClient.LeaveChannel(_currentUserId);
+            _currentChannel = null;
+        }
+
+        public bool CreateChannel(string channelName) =>
+            _serviceClient.CreateChannel(channelName);
+
+        public void RefreshChannels()
+        {
+            var channels = _serviceClient.GetChannels();
+            ChannelsUpdated?.Invoke(this, channels);
+        }
+
+        public void RefreshChannelMembers()
+        {
+            if (string.IsNullOrEmpty(_currentChannel))
+                return;
+
+            var members = _serviceClient.GetChannelMembers(_currentChannel);
+            ChannelMembersUpdated?.Invoke(this, members);
+        }
+
+        public void RefreshChannelFiles()
+        {
+            if (string.IsNullOrEmpty(_currentChannel))
+                return;
+
+            var files = _serviceClient.GetChannelFiles(_currentChannel);
+            ChannelFilesUpdated?.Invoke(this, files);
+        }
+
+        // ── Messaging ────────────────────────────────────────────────────────
+
+        public void SendPublicMessage(string content)
+        {
+            if (string.IsNullOrEmpty(_currentChannel))
+                return;
+
+            _serviceClient.SendMessage(_currentUserId, _currentChannel, content);
+        }
+
+        public void SendPrivateMessage(string recipientId, string content) =>
+            _serviceClient.SendPrivateMessage(_currentUserId, recipientId, content);
+
+        // ── File operations ──────────────────────────────────────────────────
+
+        public ValidationResult ValidateFile(string filePath) =>
+            _validationService.ValidateFile(filePath);
+
+        public FileType DetermineFileType(string fileName) =>
+            _validationService.DetermineFileType(fileName);
+
+        public string GetFileName(string filePath) =>
+            _fileHelperService.GetFileName(filePath);
+
+        public byte[] ReadFile(string filePath) =>
+            _fileHelperService.ReadFile(filePath);
+
+        public bool ShareFile(string fileName, FileType fileType, byte[] fileData) =>
+            _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
+
+        public bool DownloadAndOpenFile(SharedFile file)
+        {
+            var downloadedFile = _serviceClient.GetFile(file.FileId);
+            if (downloadedFile?.FileData == null)
+                return false;
+
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            bool saved = _fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath);
+            if (!saved)
+                return false;
+
+            string filePath = System.IO.Path.Combine(downloadsPath, file.FileName);
+            _fileHelperService.OpenFile(filePath);
+            return true;
+        }
+
+        // ── Duplex Callbacks ──────────────────────────────────────────────────
+
+        private void OnMessageReceived(object sender, Message message)
+        {
+            if (message.ChannelName == _currentChannel)
+            {
+                message.IsCurrentUser = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase);
+                PublicMessageReceived?.Invoke(this, message);
+            }
+        }
+
+        private void OnPrivateMessageReceived(object sender, Message message)
+        {
+            string otherUserId = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase)
+                ? message.RecipientId
+                : message.SenderId;
+
+            message.IsCurrentUser = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase);
+            PrivateMessageReceived?.Invoke(this, (otherUserId, message));
+        }
+
+        private void OnFileShared(object sender, SharedFile file)
+        {
+            if (file.ChannelName == _currentChannel)
+            {
+                RefreshChannelFiles();
+            }
+        }
+
+        private void OnChannelListChanged(object sender, EventArgs e)
+        {
+            RefreshChannels();
+        }
+
+        private void OnChannelMembersChanged(object sender, string channelName)
+        {
+            if (channelName == _currentChannel)
+            {
+                RefreshChannelMembers();
+            }
+        }
+
+        private void OnUserDisconnected(object sender, string disconnectedUserId)
+        {
+            RefreshChannelMembers();
+            UserDisconnected?.Invoke(this, disconnectedUserId);
+            SystemMessageReceived?.Invoke(this, $"{disconnectedUserId} has left the channel.");
+        }
+
+        private void OnConnectionLost(object sender, EventArgs e)
+        {
+            _pingTimer.Stop();
+            ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+            
+            // Clean up state on disconnect
+            _currentUserId = null;
+            _currentChannel = null;
+        }
+
+        // ── Ping ─────────────────────────────────────────────────────────────
+
+        private void OnPingTick(object sender, EventArgs e) => PerformPing();
+
+        private void PerformPing()
+        {
+            if (!IsSignedIn) return;
+
+            try
+            {
+                byte[] hash = new byte[6];
+                _random.NextBytes(hash);
+                string expectedPong = BitConverter.ToString(hash).Replace("-", "");
+
+                string pong = _serviceClient.Ping(_currentUserId ?? string.Empty, hash);
+                
+                if (pong == expectedPong)
+                {
+                    ConnectionStateChanged?.Invoke(this, ConnectionState.Connected);
+                }
+                else
+                {
+                    ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+                }
+            }
+            catch
+            {
+                ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+            }
+        }
+
+        // ── IDisposable ──────────────────────────────────────────────────────
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _pingTimer.Stop();
+            UnsubscribeEvents();
+            _serviceClient?.Dispose();
+            _isDisposed = true;
+        }
+    }
+}

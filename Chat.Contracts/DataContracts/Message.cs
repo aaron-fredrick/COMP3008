@@ -25,6 +25,8 @@ namespace Chat.Contracts.DataContracts
         [DataMember]
         public string RecipientId { get; set; }
 
+        public bool IsCurrentUser { get; set; }
+
         public int CompareTo(Message other)
         {
             if (other == null) return 1;

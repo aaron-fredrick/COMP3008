@@ -83,6 +83,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Services\ChatServiceClient.cs" />
+    <Compile Include="Services\PollingSessionCoordinator.cs" />
     <Compile Include="Views\ChannelListView.xaml.cs">
       <DependentUpon>ChannelListView.xaml</DependentUpon>
       <SubType>Code</SubType>

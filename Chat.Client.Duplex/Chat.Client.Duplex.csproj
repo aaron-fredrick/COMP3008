@@ -92,6 +92,7 @@
     </Compile>
     <Compile Include="Services\DuplexServiceClient.cs" />
     <Compile Include="Services\ChatCallbackHandler.cs" />
+    <Compile Include="Services\DuplexSessionCoordinator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
