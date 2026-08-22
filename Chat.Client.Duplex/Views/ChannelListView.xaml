@@ -79,7 +79,7 @@
                                         Cursor="Hand" Padding="0" Click="GridViewButton_Click" ToolTip="Grid View">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border x:Name="ButtonBorder" Background="Transparent" CornerRadius="7">
+                                            <Border x:Name="ButtonBorder" Background="{StaticResource BorderBrush}" CornerRadius="7">
                                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                             <ControlTemplate.Triggers>

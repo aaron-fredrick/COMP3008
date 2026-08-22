@@ -28,6 +28,7 @@
 - [x] Global SessionCoordinator pattern implemented in both clients
 - [x] Global button hover effects implementation (ControlHelper CornerRadius, Overlay-based styling)
 - [x] Project run scripts cleanup and directory organization
+- [x] Final UI layout polish (Header alignments, active view toggle default selection)
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
@@ -3250,9 +3251,9 @@ Database would add unnecessary complexity and violate assignment constraints.
 
 ### Duplex Client Tests
 
-**Status:** Functional — UI polish in progress
+**Status:** Functional — UI parity complete
 
-The duplex client is implemented and functionally correct (callbacks fire, UI updates via Dispatcher). Formal UI parity tests will be performed after the ConversationView XAML upgrade.
+The duplex client is implemented and functionally correct (callbacks fire, UI updates via Dispatcher). Formal UI parity tests have been completed, matching the visual structure of the polling client completely.
 
 ### Integration Tests
 
