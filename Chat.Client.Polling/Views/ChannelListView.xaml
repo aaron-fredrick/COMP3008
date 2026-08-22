@@ -46,7 +46,7 @@
                 <TextBlock Text="Choose a channel to join the conversation." FontSize="12" Foreground="#747982" Margin="0,6,0,0"/>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
                 <!-- View Toggle -->
                 <Border Background="{StaticResource SecondaryBackgroundBrush}" Padding="3" CornerRadius="9">
                     <StackPanel Orientation="Horizontal">
