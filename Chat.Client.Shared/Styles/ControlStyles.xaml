@@ -63,8 +63,28 @@
                             <Setter Property="Cursor" Value="Arrow"/>
                         </Trigger>
                         
-                        <!-- Accent buttons use TemplateBinding Background, so hover/press
-                             is handled by the overlay layers above — no extra triggers needed. -->
+                        <!-- Accent Button Styling (If explicitly set to AccentBrush) -->
+                        <DataTrigger Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentBrush}"/>
+                        </DataTrigger>
+                        <!-- Accent Button Hover -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                <Condition Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="0"/>
+                        </MultiDataTrigger>
+                        <!-- Accent Button Pressed -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                <Condition Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            <Setter TargetName="PressedOverlay" Property="Opacity" Value="0"/>
+                        </MultiDataTrigger>
                         
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -26,6 +26,8 @@
 - [x] Duplex ConversationView XAML UI upgrade — full parity with polling client's 3-column layout
 - [x] Duplex PrivateMessageView UI polish
 - [x] Global SessionCoordinator pattern implemented in both clients
+- [x] Global button hover effects implementation (ControlHelper CornerRadius, Overlay-based styling)
+- [x] Project run scripts cleanup and directory organization
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
@@ -821,7 +823,7 @@ A `Task` should not be treated as simply another name for a thread. A thread rep
 
 Exceptions from an awaited asynchronous operation are propagated through the `await` expression. Therefore remote communication should be handled using normal exception handling:
 
-```csharp
+```text
 try
 {
     await SendMessageAsync(message);
@@ -840,7 +842,7 @@ catch (TimeoutException)
 
 WCF supports one-way operations using `[OperationContract(IsOneWay = true)]`. A one-way operation does not return a result or `out` parameter to the caller.
 
-```csharp
+```text
 [OperationContract(IsOneWay = true)]
 void ProcessData(string data);
 ```
@@ -892,7 +894,7 @@ WPF Dispatcher
 
 WCF callbacks may execute on a thread other than the WPF UI thread. Therefore callback handlers must marshal UI changes through the WPF Dispatcher.
 
-```csharp
+```text
 Application.Current.Dispatcher.Invoke(() =>
 {
     // Update UI
@@ -938,7 +940,7 @@ The system should distinguish between synchronous request/response operations, a
 
 The C# implementation uses the modern Task-based asynchronous programming model where appropriate. Core concepts: `async` identifies an asynchronous method, `await` asynchronously waits for a `Task`, `Task` represents an asynchronous operation, `Task<T>` represents an asynchronous operation that produces a result.
 
-```csharp
+```text
 public async Task<Student> GetStudentAsync(int id)
 {
     return await dataAccess.GetStudentAsync(id);
@@ -1067,7 +1069,7 @@ GUI/Event Thread
 GUI Control
 ```
 
-```csharp
+```text
 Application.Current.Dispatcher.Invoke(() =>
 {
     progressBar.Value = progress;
@@ -1084,7 +1086,7 @@ For the WPF GUI, responsiveness is explicitly documented as a requirement. Long-
 
 Asynchronous operations explicitly consider failure. Potential failures include network timeout, server unavailable, database failure, remote exception, cancellation, connection loss, and invalid response. Use appropriate exception handling around awaited operations.
 
-```csharp
+```text
 try
 {
     var result = await service.ProcessAsync();

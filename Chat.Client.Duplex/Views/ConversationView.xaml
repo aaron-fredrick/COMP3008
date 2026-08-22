@@ -288,15 +288,15 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- File share button (+) -->
-                            <Button x:Name="ShareFileButton" Grid.Column="0" Width="40" Height="40" Content="+" FontSize="18"
+                            <Button x:Name="ShareFileButton" Grid.Column="0" Width="36" Height="36" Content="+" FontSize="18"
                                     Foreground="{StaticResource ForegroundBrush}" Cursor="Hand" Click="ShareFileButton_Click"
                                     Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
-                                    helpers:ControlHelper.CornerRadius="9" Margin="0,0,9,0"/>
+                                    helpers:ControlHelper.CornerRadius="9" Margin="0,0,9,0" VerticalAlignment="Center"/>
 
                             <!-- Message text box -->
                             <Border Grid.Column="1" Background="{StaticResource BackgroundBrush}"
-                                    BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="10">
-                                <TextBox x:Name="MessageTextBox" FontSize="13" Padding="11,13"
+                                    BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="10" VerticalAlignment="Center">
+                                <TextBox x:Name="MessageTextBox" FontSize="13" Padding="11,9"
                                          Background="Transparent" Foreground="{StaticResource ForegroundBrush}"
                                          BorderThickness="0" CaretBrush="{StaticResource ForegroundBrush}"
                                          KeyDown="MessageTextBox_KeyDown"/>
@@ -305,8 +305,8 @@
                             <!-- Send button -->
                             <Button x:Name="SendButton" Grid.Column="2" Content="Send" FontSize="13" FontWeight="650"
                                     Foreground="{StaticResource MessageTextOwnBrush}" Cursor="Hand" Click="SendButton_Click"
-                                    Background="{StaticResource MessageBubbleOwnBrush}" BorderThickness="0" Padding="16,12"
-                                    helpers:ControlHelper.CornerRadius="9" Margin="9,0,0,0"/>
+                                    Background="{StaticResource MessageBubbleOwnBrush}" BorderThickness="0" Padding="16,9"
+                                    helpers:ControlHelper.CornerRadius="9" Margin="9,0,0,0" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
                 </Grid>
