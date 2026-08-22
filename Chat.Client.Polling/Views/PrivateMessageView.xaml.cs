@@ -34,15 +34,7 @@ namespace Chat.Client.Polling.Views
             RecipientId = recipientId;
             Title = $"DM — {recipientId}";
             RecipientText.Text = $"{recipientId}";
-            RecipientInitials.Text = ExtractInitials(recipientId);
             _messages = new System.Collections.Generic.SortedSet<Message>();
-        }
-
-        private static string ExtractInitials(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return "?";
-            return name.Length >= 2 ? name.Substring(0, 2).ToUpper() : name.ToUpper();
         }
 
         public void AddMessage(Message message)
