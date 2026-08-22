@@ -83,8 +83,17 @@ namespace Chat.Client.Shared.Controls
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed && _isResizing)
+            if (_isResizing)
             {
+                if (e.LeftButton == MouseButtonState.Released)
+                {
+                    _isResizing = false;
+                    _resizeDirection = ResizeDirection.None;
+                    UpdateCursor(ResizeDirection.None);
+                    _window.ReleaseMouseCapture();
+                    return;
+                }
+                
                 ResizeWindow(e.GetPosition(_window));
             }
             else

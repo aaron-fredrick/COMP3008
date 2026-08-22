@@ -1,0 +1,112 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers">
+
+    <!-- Implicit Button Style for Modern Hover/Click Effects -->
+    <Style TargetType="Button">
+        <!-- Default properties -->
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{Binding (helpers:ControlHelper.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"/>
+                        
+                        <Border x:Name="HoverOverlay"
+                                Background="{StaticResource ButtonHoverOverlayBrush}"
+                                CornerRadius="{Binding (helpers:ControlHelper.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+                                
+                        <Border x:Name="PressedOverlay"
+                                Background="{StaticResource ButtonPressedOverlayBrush}"
+                                CornerRadius="{Binding (helpers:ControlHelper.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                    </Grid>
+                    
+                    <ControlTemplate.Triggers>
+                        <!-- Hover State -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        
+                        <!-- Pressed State -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="PressedOverlay" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        
+                        <!-- Disabled State -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.5"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                        
+                        <!-- Accent Button Styling (If explicitly set to AccentBrush) -->
+                        <DataTrigger Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentBrush}"/>
+                        </DataTrigger>
+                        <!-- Accent Button Hover -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                <Condition Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            <Setter TargetName="HoverOverlay" Property="Opacity" Value="0"/>
+                        </MultiDataTrigger>
+                        <!-- Accent Button Pressed -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                <Condition Binding="{Binding Background, RelativeSource={RelativeSource Self}}" Value="{StaticResource AccentBrush}"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            <Setter TargetName="PressedOverlay" Property="Opacity" Value="0"/>
+                        </MultiDataTrigger>
+                        
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Implicit TextBox Style to remove the ugly white default border on hover/focus -->
+    <Style TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

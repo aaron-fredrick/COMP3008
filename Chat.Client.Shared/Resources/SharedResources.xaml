@@ -4,6 +4,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml" />
         <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Sizing.xaml" />
+        <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/ControlStyles.xaml" />
         <ResourceDictionary Source="/Chat.Client.Shared;component/Resources/Converters.xaml" />
     </ResourceDictionary.MergedDictionaries>
 

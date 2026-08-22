@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers;assembly=Chat.Client.Shared"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
     <Grid Margin="28">
@@ -194,11 +195,10 @@
                                 </TextBlock>
                             </StackPanel>
 
-                            <Border Grid.Column="2" Background="#FF4A4A4A" CornerRadius="6" Margin="16,0,0,0">
-                                <Button Content="Join" Foreground="{StaticResource ForegroundBrush}" 
-                                        BorderThickness="0" Padding="14,6" FontSize="12" FontWeight="SemiBold"
-                                        Cursor="Hand" Click="JoinButton_Click" Tag="{Binding Name}" Background="Transparent"/>
-                            </Border>
+                            <Button Grid.Column="2" Content="Join" Foreground="{StaticResource ForegroundBrush}" 
+                                    BorderThickness="0" Padding="14,6" FontSize="12" FontWeight="SemiBold"
+                                    Cursor="Hand" Click="JoinButton_Click" Tag="{Binding Name}" 
+                                    Background="#FF4A4A4A" helpers:ControlHelper.CornerRadius="6" Margin="16,0,0,0"/>
                         </Grid>
                     </Border>
                 </DataTemplate>
@@ -264,11 +264,10 @@
                                 </TextBlock>
                             </StackPanel>
 
-                            <Border Grid.Column="2" Background="#FF4A4A4A" CornerRadius="6" Margin="16,0,0,0">
-                                <Button Content="Join" Foreground="{StaticResource ForegroundBrush}" 
-                                        BorderThickness="0" Padding="14,6" FontSize="12" FontWeight="SemiBold"
-                                        Cursor="Hand" Click="JoinButton_Click" Tag="{Binding Name}" Background="Transparent"/>
-                            </Border>
+                            <Button Grid.Column="2" Content="Join" Foreground="{StaticResource ForegroundBrush}" 
+                                    BorderThickness="0" Padding="14,6" FontSize="12" FontWeight="SemiBold"
+                                    Cursor="Hand" Click="JoinButton_Click" Tag="{Binding Name}" 
+                                    Background="#FF4A4A4A" helpers:ControlHelper.CornerRadius="6" Margin="16,0,0,0"/>
                         </Grid>
                     </Border>
                 </DataTemplate>
@@ -315,11 +314,10 @@
                         </Grid>
                     </Border>
                     
-                    <Border Grid.Column="2" Background="{StaticResource AccentBrush}" CornerRadius="6">
-                        <Button x:Name="CreateChannelButton" Content="Create" Foreground="{StaticResource ForegroundBrush}" 
-                                BorderThickness="0" Padding="16,10" FontSize="13" FontWeight="SemiBold"
-                                Cursor="Hand" Click="CreateChannelButton_Click" Background="Transparent"/>
-                    </Border>
+                    <Button x:Name="CreateChannelButton" Grid.Column="2" Content="Create" Foreground="{StaticResource ForegroundBrush}" 
+                            BorderThickness="0" Padding="16,10" FontSize="13" FontWeight="SemiBold"
+                            Cursor="Hand" Click="CreateChannelButton_Click" Background="{StaticResource AccentBrush}"
+                            helpers:ControlHelper.CornerRadius="6"/>
                 </Grid>
             </StackPanel>
         </Border>

@@ -1,5 +1,5 @@
 param(
-    [string]$Project = "Chat.Server",
+    [string]$Target = "COMP3008.sln",
     [string]$Configuration = "Debug"
 )
 
@@ -10,15 +10,20 @@ if (-not $msbuildPath) {
     exit 1
 }
 
-$projectPath = "$Project\$Project.csproj"
+# Accept either a .sln, a project name (Chat.Server -> Chat.Server\Chat.Server.csproj), or a direct path.
+if ($Target -match '\.(sln|csproj)$') {
+    $targetPath = $Target
+} else {
+    $targetPath = "$Target\$Target.csproj"
+}
 
-if (-not (Test-Path $projectPath)) {
-    Write-Error "Project file not found: $projectPath"
+if (-not (Test-Path $targetPath)) {
+    Write-Error "Build target not found: $targetPath"
     exit 1
 }
 
-Write-Host "Building $Project ($Configuration)..." -ForegroundColor Cyan
-& $msbuildPath $projectPath /p:Configuration=$Configuration /verbosity:minimal
+Write-Host "Building $targetPath ($Configuration)..." -ForegroundColor Cyan
+& $msbuildPath $targetPath /p:Configuration=$Configuration /verbosity:minimal /m
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Build succeeded!" -ForegroundColor Green

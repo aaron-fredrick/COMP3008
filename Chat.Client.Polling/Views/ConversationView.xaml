@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
+             xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers;assembly=Chat.Client.Shared"
              mc:Ignorable="d" 
              d:DesignHeight="664" d:DesignWidth="1000">
     <Grid>
@@ -259,29 +260,28 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" Width="40" Height="40" Background="{StaticResource BackgroundBrush}" 
-                            BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="9" Margin="0,0,9,0">
-                        <Button x:Name="ShareFileButton" Content="+" FontSize="18" 
-                                Foreground="{StaticResource ForegroundBrush}" Cursor="Hand" Click="ShareFileButton_Click"
-                                Background="Transparent" BorderThickness="0"/>
-                    </Border>
+                    <Button x:Name="ShareFileButton" Grid.Column="0" Width="40" Height="40" Content="+" FontSize="18" 
+                            Foreground="{StaticResource ForegroundBrush}" Cursor="Hand" Click="ShareFileButton_Click"
+                            Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                            helpers:ControlHelper.CornerRadius="9" Margin="0,0,9,0"/>
+                            
                     <Border Grid.Column="1" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="10">
                         <TextBox x:Name="MessageTextBox" FontSize="13" Padding="11,13"
                               Background="Transparent" Foreground="{StaticResource PlaceholderTextBrush}" BorderThickness="0"
                               CaretBrush="{StaticResource ForegroundBrush}"
                               KeyDown="MessageTextBox_KeyDown"/>
                     </Border>
-                    <Border Grid.Column="2" Background="{StaticResource MessageBubbleOwnBrush}" CornerRadius="9" Margin="9,0,0,0">
-                        <Button x:Name="SendButton" Content="Send" FontSize="13" FontWeight="650"
-                                Foreground="{StaticResource MessageTextOwnBrush}" Cursor="Hand" Click="SendButton_Click"
-                                Background="Transparent" BorderThickness="0" Padding="16,12"/>
-                    </Border>
+                    
+                    <Button x:Name="SendButton" Grid.Column="2" Content="Send" FontSize="13" FontWeight="650"
+                            Foreground="{StaticResource MessageTextOwnBrush}" Cursor="Hand" Click="SendButton_Click"
+                            Background="{StaticResource MessageBubbleOwnBrush}" BorderThickness="0" Padding="16,12"
+                            helpers:ControlHelper.CornerRadius="9" Margin="9,0,0,0"/>
                 </Grid>
             </Border>
         </Grid>
 
         <!-- Right Sidebar - Shared Files -->
-        <Border x:Name="RightSidebar" Grid.Column="2" Background="{StaticResource SidebarBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+        <Border Grid.Column="2" Background="{StaticResource SidebarBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
             <StackPanel Margin="20,14">
                 <TextBlock Text="Shared Files" FontSize="14" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,18"/>
                 <ListBox x:Name="FilesListBox" Background="{StaticResource SidebarBackgroundBrush}"
@@ -292,7 +292,7 @@
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
                                 <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource FileIconBackgroundBrush}" Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding FileType, Converter={StaticResource FileTypeConverter}}" FontSize="12" FontWeight="Bold" 
+                                    <TextBlock Text="{Binding FileType, Converter={StaticResource FileTypeConverter}}" FontSize="12" FontWeight="Bold"
                                                Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
@@ -303,26 +303,6 @@
                                         <Run Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"/>
                                     </TextBlock>
                                 </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <TextBlock Text="Online" FontSize="11" 
-                           Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
-                <ListBox x:Name="OnlineMembersListBox" Background="{StaticResource SidebarBackgroundBrush}"
-                         Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
-                                <Border Width="28" Height="28" CornerRadius="14" Background="{StaticResource AvatarBackgroundBrush}" Margin="0,0,9,0">
-                                    <TextBlock Text="{Binding}" FontSize="11" FontWeight="Bold" 
-                                               Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <Ellipse Width="7" Height="7" Fill="{StaticResource OnlineIndicatorBrush}" Stroke="{StaticResource OnlineIndicatorStrokeBrush}" StrokeThickness="1" 
-                                         Margin="-14,18,0,0" VerticalAlignment="Top"/>
-                                <TextBlock Text="{Binding}" FontSize="13" Margin="9,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

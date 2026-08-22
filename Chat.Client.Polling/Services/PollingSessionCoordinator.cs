@@ -270,6 +270,9 @@ namespace Chat.Client.Polling.Services
             if (_isDisposed)
                 return;
 
+            if (IsSignedIn)
+                SignOut();
+
             _pollingTimer.Stop();
             _pingTimer.Stop();
             _serviceClient?.Dispose();

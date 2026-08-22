@@ -13,7 +13,8 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#005ea6"/>
     <SolidColorBrush x:Key="AccentDisabledBrush" Color="#555555"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="#ff5252"/>
-
+    <SolidColorBrush x:Key="ButtonHoverOverlayBrush" Color="#1AFFFFFF"/>
+    <SolidColorBrush x:Key="ButtonPressedOverlayBrush" Color="#2AFFFFFF"/>
     <!-- Chat UI Colors -->
     <SolidColorBrush x:Key="HashSymbolBrush" Color="#8b9098"/>
     <SolidColorBrush x:Key="AvatarBackgroundBrush" Color="#e1e3e7"/>

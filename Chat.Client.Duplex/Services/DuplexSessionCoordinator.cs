@@ -312,6 +312,9 @@ namespace Chat.Client.Duplex.Services
             if (_isDisposed)
                 return;
 
+            if (IsSignedIn)
+                SignOut();
+
             _pingTimer.Stop();
             UnsubscribeEvents();
             _serviceClient?.Dispose();

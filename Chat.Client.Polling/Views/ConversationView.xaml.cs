@@ -49,7 +49,6 @@ namespace Chat.Client.Polling.Views
         public void UpdateMembers(System.Collections.Generic.List<string> members)
         {
             MembersListBox.ItemsSource = members;
-            OnlineMembersListBox.ItemsSource = members;
             MembersSectionText.Text = $"MEMBERS — {members.Count}";
             MemberCountText.Text = $"{members.Count} members · {members.Count} online";
         }
