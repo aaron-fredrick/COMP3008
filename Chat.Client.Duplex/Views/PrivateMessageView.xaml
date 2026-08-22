@@ -96,6 +96,22 @@
                                     </Style>
                                 </StackPanel.Style>
                                 <TextBlock FontSize="10" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,0,0,3">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                            <Binding Path="SenderId"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
                                     <Run Text="{Binding SenderId}"/>
                                     <Run Text=" · "/>
                                     <Run Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}"/>
