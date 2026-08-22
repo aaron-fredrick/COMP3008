@@ -288,14 +288,15 @@
                         <ColumnDefinition Width="1*"/>
                     </Grid.ColumnDefinitions>
                     
-                    <Border Grid.Column="0" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" VerticalAlignment="Center">
+                    <Border Grid.Column="0" Height="36" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                         <Grid>
-                            <TextBox x:Name="NewChannelTextBox" FontSize="13" Padding="12,8"
+                            <TextBox x:Name="NewChannelTextBox" FontSize="13" Padding="12,0"
                                      Background="Transparent" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
-                                     CaretBrush="{StaticResource ForegroundBrush}"
+                                     CaretBrush="{StaticResource ForegroundBrush}" VerticalContentAlignment="Center"
                                      TextChanged="NewChannelTextBox_TextChanged"/>
-                            <TextBlock Text="Enter channel name..." FontSize="13" Padding="12,10"
-                                       Foreground="{StaticResource ForegroundBrush}" Opacity="0.5" IsHitTestVisible="False">
+                            <TextBlock Text="Enter channel name..." FontSize="13" Padding="12,0"
+                                       Foreground="{StaticResource ForegroundBrush}" Opacity="0.5" IsHitTestVisible="False"
+                                       VerticalAlignment="Center">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -314,10 +315,10 @@
                         </Grid>
                     </Border>
                     
-                    <Button x:Name="CreateChannelButton" Grid.Column="2" Content="Create" Foreground="{StaticResource ForegroundBrush}" 
-                            BorderThickness="0" Padding="16,8" FontSize="13" FontWeight="SemiBold"
+                    <Button x:Name="CreateChannelButton" Grid.Column="2" Height="36" Content="Create" Foreground="{StaticResource ForegroundBrush}" 
+                            BorderThickness="0" Padding="16,0" FontSize="13" FontWeight="SemiBold"
                             Cursor="Hand" Click="CreateChannelButton_Click" Background="{StaticResource AccentBrush}"
-                            helpers:ControlHelper.CornerRadius="6" VerticalAlignment="Center"/>
+                            helpers:ControlHelper.CornerRadius="6"/>
                 </Grid>
             </StackPanel>
         </Border>
