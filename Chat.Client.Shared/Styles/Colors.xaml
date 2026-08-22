@@ -5,11 +5,12 @@
     <!-- Dark Theme Colors -->
     <SolidColorBrush x:Key="BackgroundBrush" Color="#1e1e1e"/>
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="#2d2d2d"/>
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#202123"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
     <SolidColorBrush x:Key="ForegroundBrush" Color="#ffffff"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#00bcd4"/>
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#00acc1"/>
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#0097a7"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#0078d4"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#006cbe"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#005ea6"/>
     <SolidColorBrush x:Key="AccentDisabledBrush" Color="#555555"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="#ff5252"/>
 
@@ -20,7 +21,7 @@
     <SolidColorBrush x:Key="OnlineIndicatorBrush" Color="#35a853"/>
     <SolidColorBrush x:Key="OnlineIndicatorStrokeBrush" Color="#f8f9fa"/>
     <SolidColorBrush x:Key="MessageBubbleOtherBrush" Color="#2d2d2d"/>
-    <SolidColorBrush x:Key="MessageBubbleOwnBrush" Color="#005c4b"/>
+    <SolidColorBrush x:Key="MessageBubbleOwnBrush" Color="#0078d4"/>
     <SolidColorBrush x:Key="MessageTextOtherBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="MessageTextOwnBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="MessageMetadataBrush" Color="#8a8f98"/>

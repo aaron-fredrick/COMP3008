@@ -1,4 +1,4 @@
-<UserControl x:Class="Chat.Client.Polling.Views.ConversationView"
+<UserControl x:Name="Root" x:Class="Chat.Client.Polling.Views.ConversationView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -14,14 +14,14 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left Sidebar - Members -->
-        <Border Grid.Column="0" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
             <StackPanel Margin="20,14">
                 <TextBlock Text="#" FontSize="22" Foreground="{StaticResource HashSymbolBrush}" Margin="0,8,0,20"/>
                 <TextBlock x:Name="ChannelNameSidebar" FontSize="15" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,20"/>
                 
                 <TextBlock x:Name="MembersSectionText" Text="MEMBERS — 0" FontSize="11" 
                            Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
-                <ListBox x:Name="MembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                <ListBox x:Name="MembersListBox" Background="{StaticResource SidebarBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          MouseDoubleClick="MembersListBox_MouseDoubleClick">
@@ -284,10 +284,10 @@
         </Grid>
 
         <!-- Right Sidebar - Shared Files -->
-        <Border x:Name="RightSidebar" Grid.Column="2" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+        <Border x:Name="RightSidebar" Grid.Column="2" Background="{StaticResource SidebarBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
             <StackPanel Margin="20,14">
                 <TextBlock Text="Shared Files" FontSize="14" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,18"/>
-                <ListBox x:Name="FilesListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                <ListBox x:Name="FilesListBox" Background="{StaticResource SidebarBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          MouseDoubleClick="FilesListBox_MouseDoubleClick">
@@ -313,7 +313,7 @@
 
                 <TextBlock Text="Online" FontSize="11" 
                            Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
-                <ListBox x:Name="OnlineMembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                <ListBox x:Name="OnlineMembersListBox" Background="{StaticResource SidebarBackgroundBrush}"
                          Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                          ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>

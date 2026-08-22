@@ -1,4 +1,4 @@
-<Window x:Class="Chat.Client.Duplex.Views.PrivateMessageView"
+<Window x:Name="Root" x:Class="Chat.Client.Duplex.Views.PrivateMessageView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
