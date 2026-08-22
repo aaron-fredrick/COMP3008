@@ -294,6 +294,7 @@ namespace Chat.Client.Duplex
             if (!_privateMessageViews.ContainsKey(recipientId))
             {
                 var privateMessageView = new PrivateMessageView(recipientId);
+                privateMessageView.CurrentUserId = _currentUserId;
                 privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
                 privateMessageView.Closing += PrivateMessageView_Closing;
                 privateMessageView.Owner = _conversationView;
@@ -355,6 +356,7 @@ namespace Chat.Client.Duplex
             if (!_privateMessageViews.ContainsKey(otherUserId))
             {
                 var privateMessageView = new PrivateMessageView(otherUserId);
+                privateMessageView.CurrentUserId = _currentUserId;
                 privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
                 privateMessageView.Closing += PrivateMessageView_Closing;
                 privateMessageView.Owner = _conversationView;

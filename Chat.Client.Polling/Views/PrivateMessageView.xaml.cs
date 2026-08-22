@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using Chat.Contracts.DataContracts;
 
 namespace Chat.Client.Polling.Views
@@ -8,16 +10,35 @@ namespace Chat.Client.Polling.Views
     {
         public event EventHandler<string> SendMessageRequested;
 
+        public string RecipientId { get; }
+
+        public static readonly DependencyProperty CurrentUserIdProperty =
+            DependencyProperty.Register("CurrentUserId", typeof(string), typeof(PrivateMessageView),
+                new PropertyMetadata(string.Empty));
+
+        public string CurrentUserId
+        {
+            get { return (string)GetValue(CurrentUserIdProperty); }
+            set { SetValue(CurrentUserIdProperty, value); }
+        }
+
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private readonly string _recipientId;
 
         public PrivateMessageView(string recipientId)
         {
             InitializeComponent();
-            _recipientId = recipientId;
+            RecipientId = recipientId;
+            Title = $"DM — {recipientId}";
+            RecipientText.Text = $"{recipientId}";
+            RecipientInitials.Text = ExtractInitials(recipientId);
             _messages = new System.Collections.Generic.SortedSet<Message>();
-            
-            RecipientText.Text = $"Private Conversation with: {recipientId}";
+        }
+
+        private static string ExtractInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "?";
+            return name.Length >= 2 ? name.Substring(0, 2).ToUpper() : name.ToUpper();
         }
 
         public void AddMessage(Message message)
@@ -28,19 +49,26 @@ namespace Chat.Client.Polling.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.Items.Clear();
-            foreach (var message in _messages)
-            {
-                string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-                MessagesListBox.Items.Add(displayText);
-            }
+            MessagesListBox.ItemsSource = _messages.ToList();
             if (MessagesListBox.Items.Count > 0)
-            {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
-            }
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendCurrentMessage();
+        }
+
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && !e.IsRepeat)
+            {
+                e.Handled = true;
+                SendCurrentMessage();
+            }
+        }
+
+        private void SendCurrentMessage()
         {
             string message = MessageTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(message))

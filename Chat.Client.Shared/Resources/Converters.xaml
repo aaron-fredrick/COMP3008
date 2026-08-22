@@ -3,5 +3,11 @@
                     xmlns:converters="clr-namespace:Chat.Client.Shared.Converters;assembly=Chat.Client.Shared">
 
     <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+    <converters:InitialsConverter x:Key="InitialsConverter"/>
+    <converters:FileTypeConverter x:Key="FileTypeConverter"/>
+    <converters:FileTypeVisibilityConverter x:Key="FileTypeVisibilityConverter"/>
+    <converters:MessageTypeToFileTypeConverter x:Key="MessageTypeToFileTypeConverter"/>
+    <converters:FileNameExtractorConverter x:Key="FileNameExtractorConverter"/>
+    <converters:IsCurrentUserConverter x:Key="IsCurrentUserConverter"/>
 
 </ResourceDictionary>

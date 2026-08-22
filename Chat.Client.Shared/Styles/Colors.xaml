@@ -13,6 +13,25 @@
     <SolidColorBrush x:Key="AccentDisabledBrush" Color="#555555"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="#ff5252"/>
 
+    <!-- Chat UI Colors -->
+    <SolidColorBrush x:Key="HashSymbolBrush" Color="#8b9098"/>
+    <SolidColorBrush x:Key="AvatarBackgroundBrush" Color="#e1e3e7"/>
+    <SolidColorBrush x:Key="AvatarTextBrush" Color="#555b64"/>
+    <SolidColorBrush x:Key="OnlineIndicatorBrush" Color="#35a853"/>
+    <SolidColorBrush x:Key="OnlineIndicatorStrokeBrush" Color="#f8f9fa"/>
+    <SolidColorBrush x:Key="MessageBubbleOtherBrush" Color="#2d2d2d"/>
+    <SolidColorBrush x:Key="MessageBubbleOwnBrush" Color="#005c4b"/>
+    <SolidColorBrush x:Key="MessageTextOtherBrush" Color="#ffffff"/>
+    <SolidColorBrush x:Key="MessageTextOwnBrush" Color="#ffffff"/>
+    <SolidColorBrush x:Key="MessageMetadataBrush" Color="#8a8f98"/>
+    <SolidColorBrush x:Key="InputAreaBackgroundBrush" Color="#2d2d2d"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#404040"/>
+    <SolidColorBrush x:Key="PlaceholderTextBrush" Color="#888888"/>
+    <SolidColorBrush x:Key="FileIconBackgroundBrush" Color="#eceef1"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#888888"/>
+    <SolidColorBrush x:Key="SecondaryTextDarkBrush" Color="#c0c3c8"/>
+    <SolidColorBrush x:Key="LightBorderBrush" Color="#dedfe3"/>
+
     <!-- Window Chrome Resources -->
     <CornerRadius x:Key="WindowCornerRadius">8</CornerRadius>
     <Thickness x:Key="WindowBorderThickness">1</Thickness>

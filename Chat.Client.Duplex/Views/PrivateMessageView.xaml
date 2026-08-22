@@ -79,6 +79,22 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Margin="0,4">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Value="True">
+                                                <DataTrigger.Binding>
+                                                    <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                        <Binding Path="SenderId"/>
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                    </MultiBinding>
+                                                </DataTrigger.Binding>
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
                                 <TextBlock FontSize="10" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,0,0,3">
                                     <Run Text="{Binding SenderId}"/>
                                     <Run Text=" · "/>
@@ -86,9 +102,40 @@
                                 </TextBlock>
                                 <Border Padding="10,10" CornerRadius="12"
                                         Background="{StaticResource MessageBubbleOtherBrush}"
-                                        HorizontalAlignment="Left" MaxWidth="380">
+                                        MaxWidth="380">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                            <Binding Path="SenderId"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="{StaticResource MessageBubbleOwnBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <TextBlock Text="{Binding Content}" FontSize="13" TextWrapping="Wrap"
-                                               Foreground="{StaticResource MessageTextOtherBrush}"/>
+                                               Foreground="{StaticResource MessageTextOtherBrush}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                <Binding Path="SenderId"/>
+                                                                <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Border>
                             </StackPanel>
                         </DataTemplate>

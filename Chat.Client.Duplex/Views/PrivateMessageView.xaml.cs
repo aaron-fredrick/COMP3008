@@ -12,6 +12,16 @@ namespace Chat.Client.Duplex.Views
 
         public string RecipientId { get; }
 
+        public static readonly DependencyProperty CurrentUserIdProperty =
+            DependencyProperty.Register("CurrentUserId", typeof(string), typeof(PrivateMessageView),
+                new PropertyMetadata(string.Empty));
+
+        public string CurrentUserId
+        {
+            get { return (string)GetValue(CurrentUserIdProperty); }
+            set { SetValue(CurrentUserIdProperty, value); }
+        }
+
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
 
         public PrivateMessageView(string recipientId)

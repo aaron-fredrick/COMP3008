@@ -2,11 +2,11 @@
 
 ## Current Status
 
-**Phase:** All implementations complete; Final Verification
+**Phase:** Sprint 4 — Duplex Client UI Polish & Integration Testing
 
-**Overall Status:** Complete
+**Overall Status:** Duplex client functional; UI polish in progress
 
-**Last Updated:** 2026-08-21
+**Last Updated:** 2026-08-22
 
 ### Completed
 - [x] Service contracts defined (IChatService, IDuplexChatService, IChatCallback)
@@ -17,21 +17,24 @@
 - [x] Configuration service (host/port configuration)
 - [x] Validation service (user ID, channel name, file validation)
 - [x] File helper service (file type/size validation)
-
 - [x] Duplex client WCF integration with DuplexChannelFactory
 - [x] Duplex callback handler (IChatCallback)
 - [x] WPF Dispatcher marshaling for callbacks
 - [x] Duplex client connection loss detection
-- [x] Duplex client UI and behavior matching polling client
+- [x] Duplex ChannelListView UI (matching polling client: grid/list view toggle, search, create channel)
+- [x] Duplex ConversationView code-behind (events, message/member/file update methods all work)
 
 ### In Progress
-- None
+- [/] Duplex ConversationView XAML UI upgrade — bringing to parity with the polling client's 3-column layout (Members sidebar · Chat · Files sidebar), rich message bubbles with avatar/own-other differentiation, channel header bar, and styled input area
 
 ### Blocked
 - None
 
-1. Final end-to-end testing of both clients against the server
-2. Prepare for demonstration scenario
+### Next Priorities
+1. Complete duplex ConversationView XAML UI polish (3-column layout, rich message template)
+2. Duplex PrivateMessageView UI polish
+3. End-to-end integration testing (both clients against same server)
+4. Demo preparation (3+ concurrent clients)
 
 > **Implementation Rule**
 >
@@ -3235,13 +3238,19 @@ Database would add unnecessary complexity and violate assignment constraints.
 
 ### Duplex Client Tests
 
-**Status:** Not Yet Implemented
+**Status:** Functional — UI polish in progress
 
-The duplex client has not yet been implemented. Tests will be performed after implementation.
+The duplex client is implemented and functionally correct (callbacks fire, UI updates via Dispatcher). Formal UI parity tests will be performed after the ConversationView XAML upgrade.
 
 ### Integration Tests
 
-**Status:** Not Yet Performed
+**Status:** Pending
 
-Integration testing with both polling and duplex clients will be performed after duplex client implementation.
+Integration testing with both polling and duplex clients simultaneously is planned after duplex UI polish is complete. Scenarios to cover:
+- Sign in from both clients, same channel
+- Message sent by polling client → received by duplex client via callback
+- Message sent by duplex client → received by polling client via next poll
+- Private messages between polling and duplex users
+- File share visible on both clients
+- Kill duplex client with X → server cleanup observed by polling client
 

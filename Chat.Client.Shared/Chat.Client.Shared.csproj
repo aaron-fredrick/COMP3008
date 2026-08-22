@@ -42,6 +42,12 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Converters\FileSizeConverter.cs" />
+    <Compile Include="Converters\InitialsConverter.cs" />
+    <Compile Include="Converters\FileTypeConverter.cs" />
+    <Compile Include="Converters\FileTypeVisibilityConverter.cs" />
+    <Compile Include="Converters\MessageTypeToFileTypeConverter.cs" />
+    <Compile Include="Converters\FileNameExtractorConverter.cs" />
+    <Compile Include="Converters\IsCurrentUserConverter.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\ValidationService.cs" />
     <Compile Include="Services\FileHelperService.cs" />

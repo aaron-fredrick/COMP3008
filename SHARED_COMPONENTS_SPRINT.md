@@ -390,7 +390,9 @@ These remain in the polling client.
 
 This is now the primary development task.
 
-## Step 1 — Duplex ChannelFactory ⏳ PENDING
+## Step 1 — Duplex ChannelFactory ✅ COMPLETED
+
+Duplex WCF connection implemented in `DuplexServiceClient.cs` using `DuplexChannelFactory<IDuplexChatService>`.
 
 Create a duplex WCF connection using the existing contracts.
 
@@ -419,7 +421,16 @@ Do not create duplicate contracts.
 
 ---
 
-# Step 2 — Callback Handler ⏳ PENDING
+# Step 2 — Callback Handler ✅ COMPLETED
+
+`ChatCallbackHandler.cs` and `DuplexServiceClient.cs` implemented:
+
+- WCF callback received
+- Converted to C# events
+- Marshaled onto WPF Dispatcher
+- UI updated
+
+All six callbacks functional: `MessageReceived`, `PrivateMessageReceived`, `FileShared`, `ChannelListChanged`, `ChannelMembersChanged`, `UserDisconnected`.
 
 Create something similar to:
 
@@ -455,7 +466,16 @@ WPF UI
 
 ---
 
-# Step 3 — Reuse Shared UI-independent functionality ⏳ PENDING
+# Step 3 — Reuse Shared UI-independent functionality ✅ COMPLETED
+
+Duplex client uses:
+
+* `ValidationService` ✅ Used in MainWindow sign-in
+* `FileHelperService` ✅ Used in file share/download
+* `ConfigurationService` ✅ Used for endpoint configuration
+* Shared models ✅ MessageDisplayModel available
+* Shared styles ✅ Colors, Sizing, Converters, Controls
+* Shared converters ✅ FileSizeConverter, etc.
 
 The duplex client should reuse:
 
@@ -468,7 +488,25 @@ The duplex client should reuse:
 
 ---
 
-# Step 4 — Build Duplex UI ⏳ PENDING
+# Step 4 — Build Duplex UI 🔄 IN PROGRESS
+
+Progress:
+
+```text
+MainWindow (sign-in)         ✅ Functional
+ChannelListView              ✅ Matches polling client visual quality
+ConversationView code-behind ✅ All events/methods work
+ConversationView XAML        🔄 In progress — upgrading to 3-column rich layout
+PrivateMessageView           ⏳ Pending UI polish
+```
+
+The ChannelListView has full parity with the polling client:
+- Grid/list toggle view
+- Search filter
+- Member count indicators
+- Create channel panel
+
+The ConversationView code-behind correctly handles all callbacks but the XAML is a 2-column basic layout. Next step is to upgrade the XAML to match the polling client's rich 3-column design (member sidebar, chat area with message bubbles, files sidebar).
 
 Reuse the same conceptual UI structure as polling:
 
