@@ -180,14 +180,14 @@ Chat.Server/
 ```text
 Chat.Client.Polling/
 ├── App.xaml
+├── MainWindow.xaml
 ├── Views/
-│   ├── SignInWindow.xaml
-│   ├── ChannelListWindow.xaml
-│   ├── ChannelWindow.xaml
-│   └── PrivateChatWindow.xaml
-├── Services/
-│   └── PollingClientService.cs
-└── ViewModels/
+│   ├── SignInView.xaml
+│   ├── ChannelListView.xaml
+│   ├── ConversationView.xaml
+│   └── PrivateMessageView.xaml
+└── Services/
+    └── PollingSessionCoordinator.cs
 ```
 
 ### 5.3 Duplex Client
@@ -195,15 +195,15 @@ Chat.Client.Polling/
 ```text
 Chat.Client.Duplex/
 ├── App.xaml
+├── MainWindow.xaml
 ├── Views/
-│   ├── SignInWindow.xaml
-│   ├── ChannelListWindow.xaml
-│   ├── ChannelWindow.xaml
-│   └── PrivateChatWindow.xaml
-├── Services/
-│   ├── DuplexClientService.cs
-│   └── ChatCallbackHandler.cs
-└── ViewModels/
+│   ├── ChannelListView.xaml
+│   ├── ConversationView.xaml
+│   └── PrivateMessageView.xaml
+└── Services/
+    ├── DuplexServiceClient.cs
+    ├── ChatCallbackHandler.cs
+    └── DuplexSessionCoordinator.cs
 ```
 
 ### 5.4 Shared Contracts

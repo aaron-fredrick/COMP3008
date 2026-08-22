@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** Sprint 4 — Duplex Client UI Polish & Integration Testing
+**Phase:** Phase 6 — Integration Testing & Final Polish
 
-**Overall Status:** Duplex client functional; UI polish in progress
+**Overall Status:** Both Polling and Duplex clients are fully functional and use identical global session state architectures.
 
 **Last Updated:** 2026-08-22
 
@@ -23,18 +23,20 @@
 - [x] Duplex client connection loss detection
 - [x] Duplex ChannelListView UI (matching polling client: grid/list view toggle, search, create channel)
 - [x] Duplex ConversationView code-behind (events, message/member/file update methods all work)
+- [x] Duplex ConversationView XAML UI upgrade — full parity with polling client's 3-column layout
+- [x] Duplex PrivateMessageView UI polish
+- [x] Global SessionCoordinator pattern implemented in both clients
 
 ### In Progress
-- [/] Duplex ConversationView XAML UI upgrade — bringing to parity with the polling client's 3-column layout (Members sidebar · Chat · Files sidebar), rich message bubbles with avatar/own-other differentiation, channel header bar, and styled input area
+- [/] End-to-end integration testing (both clients against same server)
+- [/] Final verification of all assignment requirements
 
 ### Blocked
 - None
 
 ### Next Priorities
-1. Complete duplex ConversationView XAML UI polish (3-column layout, rich message template)
-2. Duplex PrivateMessageView UI polish
-3. End-to-end integration testing (both clients against same server)
-4. Demo preparation (3+ concurrent clients)
+1. End-to-end integration testing (both clients against same server)
+2. Demo preparation (3+ concurrent clients)
 
 > **Implementation Rule**
 >
@@ -136,6 +138,14 @@ The implementation must directly satisfy the three assessed sections of Assignme
 - Added button styling with proper control templates and state colors
 - Added corner radius to button and input controls
 - Added settings icon button to sign-in view
+
+### Phase 5: Duplex Client & Architecture Refinement
+- Implemented DuplexServiceClient with WCF duplex callbacks
+- Implemented ChatCallbackHandler to safely route callbacks to the WPF Dispatcher
+- Built the Duplex client UI to match the visual parity of the Polling client (3-column layouts, rich message bubbles)
+- Implemented `DuplexSessionCoordinator` as a global singleton to manage WCF state, abstracting logic out of the `MainWindow`
+- Refactored `PollingSessionCoordinator` in the Polling client to match the same global singleton pattern
+- Ensured both clients' MainWindows are now purely UI event routers without embedded WCF logic
 
 ## Architecture & Logic Distribution
 
