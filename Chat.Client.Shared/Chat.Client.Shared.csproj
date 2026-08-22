@@ -53,6 +53,7 @@
     <Compile Include="Services\FileHelperService.cs" />
     <Compile Include="Services\ThemeService.cs" />
     <Compile Include="Models\MessageDisplayModel.cs" />
+    <Compile Include="ViewModels\MessageViewModel.cs" />
     <Compile Include="Controls\CustomTitleBar.xaml.cs">
       <DependentUpon>CustomTitleBar.xaml</DependentUpon>
     </Compile>

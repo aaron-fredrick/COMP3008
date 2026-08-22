@@ -17,6 +17,7 @@ namespace Chat.Client.Duplex.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
+        private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
 
         public static readonly DependencyProperty CurrentUserIdProperty =
             DependencyProperty.Register("CurrentUserId", typeof(string), typeof(ConversationView),
@@ -32,6 +33,7 @@ namespace Chat.Client.Duplex.Views
         {
             InitializeComponent();
             _messages = new System.Collections.Generic.SortedSet<Message>();
+            _messageViewModels = new System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel>();
             InitializeFooter();
         }
 
@@ -54,7 +56,6 @@ namespace Chat.Client.Duplex.Views
         public void SetCurrentUserId(string userId)
         {
             CurrentUserId = userId;
-            MessagesListBox.Tag = userId;
             UpdateFooter();
         }
 
@@ -93,7 +94,27 @@ namespace Chat.Client.Duplex.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.ItemsSource = _messages.ToList();
+            _messageViewModels.Clear();
+            Chat.Client.Shared.ViewModels.MessageViewModel previousVm = null;
+
+            foreach (var message in _messages)
+            {
+                bool showMetadata = true;
+                if (previousVm != null)
+                {
+                    if (previousVm.SenderId == message.SenderId && 
+                        previousVm.Timestamp.ToString("yyyyMMddHHmm") == message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm"))
+                    {
+                        showMetadata = false;
+                    }
+                }
+                
+                var vm = new Chat.Client.Shared.ViewModels.MessageViewModel(message, showMetadata);
+                _messageViewModels.Add(vm);
+                previousVm = vm;
+            }
+
+            MessagesListBox.ItemsSource = _messageViewModels.ToList();
             if (MessagesListBox.Items.Count > 0)
             {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
@@ -103,11 +124,11 @@ namespace Chat.Client.Duplex.Views
         public void AddSystemMessage(string text)
         {
             // System messages are shown as plain string items appended at the end of the list.
-            // We cast to a dynamic to allow mixed-type items alongside Message objects.
+            // We clear ItemsSource to manually add items.
             MessagesListBox.ItemsSource = null;
             MessagesListBox.Items.Clear();
-            foreach (var message in _messages)
-                MessagesListBox.Items.Add(message);
+            foreach (var vm in _messageViewModels)
+                MessagesListBox.Items.Add(vm);
             MessagesListBox.Items.Add($"— {text} —");
             if (MessagesListBox.Items.Count > 0)
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);

@@ -16,6 +16,7 @@ namespace Chat.Client.Polling.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
+        private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
 
         public static readonly DependencyProperty CurrentUserIdProperty =
             DependencyProperty.Register("CurrentUserId", typeof(string), typeof(ConversationView),
@@ -31,6 +32,7 @@ namespace Chat.Client.Polling.Views
         {
             InitializeComponent();
             _messages = new System.Collections.Generic.SortedSet<Message>();
+            _messageViewModels = new System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel>();
         }
 
         public void SetChannelName(string channelName)
@@ -42,7 +44,6 @@ namespace Chat.Client.Polling.Views
         public void SetCurrentUserId(string userId)
         {
             CurrentUserId = userId;
-            MessagesListBox.Tag = userId;
         }
 
         public void UpdateMembers(System.Collections.Generic.List<string> members)
@@ -66,7 +67,27 @@ namespace Chat.Client.Polling.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.ItemsSource = _messages.ToList();
+            _messageViewModels.Clear();
+            Chat.Client.Shared.ViewModels.MessageViewModel previousVm = null;
+
+            foreach (var message in _messages)
+            {
+                bool showMetadata = true;
+                if (previousVm != null)
+                {
+                    if (previousVm.SenderId == message.SenderId && 
+                        previousVm.Timestamp.ToString("yyyyMMddHHmm") == message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm"))
+                    {
+                        showMetadata = false;
+                    }
+                }
+                
+                var vm = new Chat.Client.Shared.ViewModels.MessageViewModel(message, showMetadata);
+                _messageViewModels.Add(vm);
+                previousVm = vm;
+            }
+
+            MessagesListBox.ItemsSource = _messageViewModels.ToList();
             if (MessagesListBox.Items.Count > 0)
             {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);

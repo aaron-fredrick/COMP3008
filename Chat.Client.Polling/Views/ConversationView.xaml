@@ -114,14 +114,12 @@
                             <Grid.Style>
                                 <Style TargetType="Grid">
                                     <Setter Property="HorizontalAlignment" Value="Left"/>
+                                    <Setter Property="Margin" Value="0,16,0,0"/>
                                     <Style.Triggers>
-                                        <DataTrigger Value="True">
-                                            <DataTrigger.Binding>
-                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                    <Binding Path="SenderId"/>
-                                                    <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                </MultiBinding>
-                                            </DataTrigger.Binding>
+                                        <DataTrigger Binding="{Binding ShowMetadata}" Value="False">
+                                            <Setter Property="Margin" Value="0,4,0,0"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                             <Setter Property="HorizontalAlignment" Value="Right"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -137,14 +135,11 @@
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Style.Triggers>
-                                            <DataTrigger Value="True">
-                                                <DataTrigger.Binding>
-                                                    <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                        <Binding Path="SenderId"/>
-                                                        <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                    </MultiBinding>
-                                                </DataTrigger.Binding>
+                                            <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ShowMetadata}" Value="False">
+                                                <Setter Property="Visibility" Value="Hidden"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -154,26 +149,17 @@
                             </Border>
                             
                             <StackPanel Grid.Column="1">
-                                <TextBlock FontSize="11" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,0,0,4">
+                                <TextBlock Text="{Binding HeaderText}" FontSize="11" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,0,0,4">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Value="True">
-                                                    <DataTrigger.Binding>
-                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                            <Binding Path="SenderId"/>
-                                                            <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                        </MultiBinding>
-                                                    </DataTrigger.Binding>
+                                                <DataTrigger Binding="{Binding ShowMetadata}" Value="False">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
-                                    <Run Text="{Binding SenderId}"/>
-                                    <Run Text=" · "/>
-                                    <Run Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}"/>
                                 </TextBlock>
                                 <Border Padding="10,13" CornerRadius="13" Background="{StaticResource MessageBubbleOtherBrush}" MaxWidth="400">
                                     <Border.Style>
@@ -181,13 +167,7 @@
                                             <Setter Property="BorderBrush" Value="{StaticResource MessageBubbleOtherBrush}"/>
                                             <Setter Property="BorderThickness" Value="0"/>
                                             <Style.Triggers>
-                                                <DataTrigger Value="True">
-                                                    <DataTrigger.Binding>
-                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                            <Binding Path="SenderId"/>
-                                                            <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                        </MultiBinding>
-                                                    </DataTrigger.Binding>
+                                                <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                     <Setter Property="Background" Value="{StaticResource MessageBubbleOwnBrush}"/>
                                                     <Setter Property="BorderBrush" Value="{StaticResource MessageBubbleOwnBrush}"/>
                                                     <Setter Property="CornerRadius" Value="13,13,4,13"/>
@@ -201,13 +181,7 @@
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{StaticResource MessageTextOtherBrush}"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Value="True">
-                                                            <DataTrigger.Binding>
-                                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                                    <Binding Path="SenderId"/>
-                                                                    <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                                </MultiBinding>
-                                                            </DataTrigger.Binding>
+                                                        <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                             <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -220,13 +194,7 @@
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Style.Triggers>
-                                                        <DataTrigger Value="True">
-                                                            <DataTrigger.Binding>
-                                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                                    <Binding Path="SenderId"/>
-                                                                    <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                                </MultiBinding>
-                                                            </DataTrigger.Binding>
+                                                        <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                             <Setter Property="Background" Value="#34373d"/>
                                                             <Setter Property="BorderBrush" Value="#454950"/>
                                                         </DataTrigger>
@@ -238,13 +206,7 @@
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Style.Triggers>
-                                                                <DataTrigger Value="True">
-                                                                    <DataTrigger.Binding>
-                                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                                            <Binding Path="SenderId"/>
-                                                                            <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                                        </MultiBinding>
-                                                                    </DataTrigger.Binding>
+                                                                <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                                     <Setter Property="Background" Value="#4a4d53"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -255,13 +217,7 @@
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Value="True">
-                                                                        <DataTrigger.Binding>
-                                                                            <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                                                <Binding Path="SenderId"/>
-                                                                                <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                                            </MultiBinding>
-                                                                        </DataTrigger.Binding>
+                                                                    <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                                         <Setter Property="Foreground" Value="#fff"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
@@ -275,13 +231,7 @@
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Value="True">
-                                                                        <DataTrigger.Binding>
-                                                                            <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
-                                                                                <Binding Path="SenderId"/>
-                                                                                <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
-                                                                            </MultiBinding>
-                                                                        </DataTrigger.Binding>
+                                                                    <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
                                                                         <Setter Property="Foreground" Value="{StaticResource SecondaryTextDarkBrush}"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
