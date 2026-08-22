@@ -29,6 +29,7 @@
 - [x] Global button hover effects implementation (ControlHelper CornerRadius, Overlay-based styling)
 - [x] Project run scripts cleanup and directory organization
 - [x] Final UI layout polish (Header alignments, active view toggle default selection)
+- [x] Procedural SVG ribbon avatars (client-side generated, deterministic paths based on username)
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
