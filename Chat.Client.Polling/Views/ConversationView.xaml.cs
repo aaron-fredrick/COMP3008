@@ -42,6 +42,7 @@ namespace Chat.Client.Polling.Views
         public void SetCurrentUserId(string userId)
         {
             CurrentUserId = userId;
+            MessagesListBox.Tag = userId;
         }
 
         public void UpdateMembers(System.Collections.Generic.List<string> members)

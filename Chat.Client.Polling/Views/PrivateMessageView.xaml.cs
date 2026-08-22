@@ -19,7 +19,11 @@ namespace Chat.Client.Polling.Views
         public string CurrentUserId
         {
             get { return (string)GetValue(CurrentUserIdProperty); }
-            set { SetValue(CurrentUserIdProperty, value); }
+            set 
+            { 
+                SetValue(CurrentUserIdProperty, value); 
+                MessagesListBox.Tag = value;
+            }
         }
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;

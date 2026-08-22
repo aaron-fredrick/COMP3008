@@ -87,7 +87,7 @@
                                                 <DataTrigger.Binding>
                                                     <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
                                                         <Binding Path="SenderId"/>
-                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
                                                     </MultiBinding>
                                                 </DataTrigger.Binding>
                                                 <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -104,7 +104,7 @@
                                                     <DataTrigger.Binding>
                                                         <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
                                                             <Binding Path="SenderId"/>
-                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
                                                         </MultiBinding>
                                                     </DataTrigger.Binding>
                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -126,7 +126,7 @@
                                                     <DataTrigger.Binding>
                                                         <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
                                                             <Binding Path="SenderId"/>
-                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
                                                         </MultiBinding>
                                                     </DataTrigger.Binding>
                                                     <Setter Property="Background" Value="{StaticResource MessageBubbleOwnBrush}"/>
@@ -143,7 +143,7 @@
                                                         <DataTrigger.Binding>
                                                             <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
                                                                 <Binding Path="SenderId"/>
-                                                                <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="CurrentUserId"/>
+                                                                <Binding RelativeSource="{RelativeSource AncestorType=ListBox}" Path="Tag"/>
                                                             </MultiBinding>
                                                         </DataTrigger.Binding>
                                                         <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}"/>

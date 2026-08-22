@@ -54,6 +54,7 @@ namespace Chat.Client.Duplex.Views
         public void SetCurrentUserId(string userId)
         {
             CurrentUserId = userId;
+            MessagesListBox.Tag = userId;
             UpdateFooter();
         }
 
