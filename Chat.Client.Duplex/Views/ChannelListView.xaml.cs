@@ -127,21 +127,18 @@ namespace Chat.Client.Duplex.Views
 
         private void UpdateViewToggleButtons(bool isListView)
         {
+            var activeBrush = (Brush)FindResource("BorderBrush");
+            var inactiveBrush = System.Windows.Media.Brushes.Transparent;
+
             if (isListView)
             {
-                var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
-                if (listBorder != null) listBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
-                
-                var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
-                if (gridBorder != null) gridBorder.Background = System.Windows.Media.Brushes.Transparent;
+                if (((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) is Border listBorder) listBorder.Background = activeBrush;
+                if (((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) is Border gridBorder) gridBorder.Background = inactiveBrush;
             }
             else
             {
-                var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
-                if (gridBorder != null) gridBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
-                
-                var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
-                if (listBorder != null) listBorder.Background = System.Windows.Media.Brushes.Transparent;
+                if (((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) is Border gridBorder) gridBorder.Background = activeBrush;
+                if (((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) is Border listBorder) listBorder.Background = inactiveBrush;
             }
         }
 

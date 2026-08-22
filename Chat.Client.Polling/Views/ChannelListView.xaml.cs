@@ -92,32 +92,31 @@ namespace Chat.Client.Polling.Views
 
         private void UpdateViewToggleButtons(bool isListView)
         {
+            var activeBrush = (Brush)FindResource("BorderBrush");
+            var inactiveBrush = System.Windows.Media.Brushes.Transparent;
+
             if (isListView)
             {
-                var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
-                if (listBorder != null)
+                if (((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) is Border listBorder)
                 {
-                    listBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+                    listBorder.Background = activeBrush;
                 }
                 
-                var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
-                if (gridBorder != null)
+                if (((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) is Border gridBorder)
                 {
-                    gridBorder.Background = System.Windows.Media.Brushes.Transparent;
+                    gridBorder.Background = inactiveBrush;
                 }
             }
             else
             {
-                var gridBorder = ((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) as Border;
-                if (gridBorder != null)
+                if (((Button)GridViewButton).Template.FindName("ButtonBorder", GridViewButton) is Border gridBorder)
                 {
-                    gridBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+                    gridBorder.Background = activeBrush;
                 }
                 
-                var listBorder = ((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) as Border;
-                if (listBorder != null)
+                if (((Button)ListViewButton).Template.FindName("ButtonBorder", ListViewButton) is Border listBorder)
                 {
-                    listBorder.Background = System.Windows.Media.Brushes.Transparent;
+                    listBorder.Background = inactiveBrush;
                 }
             }
         }
