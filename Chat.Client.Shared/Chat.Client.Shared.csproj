@@ -48,6 +48,8 @@
     <Compile Include="Converters\MessageTypeToFileTypeConverter.cs" />
     <Compile Include="Converters\FileNameExtractorConverter.cs" />
     <Compile Include="Converters\IsCurrentUserConverter.cs" />
+    <Compile Include="Converters\StringToRibbonPathConverter.cs" />
+    <Compile Include="Converters\StringToBrushConverter.cs" />
     <Compile Include="Helpers\ControlHelper.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\ValidationService.cs" />
