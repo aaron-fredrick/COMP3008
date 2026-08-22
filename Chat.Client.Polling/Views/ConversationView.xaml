@@ -6,112 +6,331 @@
              xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
              mc:Ignorable="d" 
              d:DesignHeight="664" d:DesignWidth="1000">
-    <Grid Margin="{StaticResource MarginLarge}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="220"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Header -->
-        <Grid Grid.Row="0" Margin="{StaticResource MarginBottomLarge}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <Button x:Name="LeaveButton" Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0"
-                    Cursor="Hand" Padding="6" Click="LeaveButton_Click" ToolTip="Leave Channel" Margin="0,0,20,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" Background="Transparent" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource ErrorBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-                <Path Fill="{StaticResource ForegroundBrush}" Stretch="Uniform" Width="20" Height="20"
-                      Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </Button>
-
-            <TextBlock x:Name="ChannelNameText" Grid.Column="1" FontSize="{StaticResource FontSizeExtraLarge}" FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
-        </Grid>
-
-        <!-- Main Content -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Sidebar -->
-            <Border Grid.Column="0" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-                <StackPanel Margin="{StaticResource MarginNormal}">
-                    <TextBlock Text="Members" FontSize="{StaticResource FontSizeMedium}" FontWeight="Bold"
-                               Foreground="{StaticResource ForegroundBrush}" Margin="{StaticResource MarginBottomNormal}"/>
-                    <ListBox x:Name="MembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
-                             Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="200"
-                             MouseDoubleClick="MembersListBox_MouseDoubleClick"/>
-
-                    <TextBlock Text="Shared Files" FontSize="{StaticResource FontSizeMedium}" FontWeight="Bold"
-                               Foreground="{StaticResource ForegroundBrush}" Margin="{StaticResource MarginTopLarge}"/>
-                    <ListBox x:Name="FilesListBox" Background="{StaticResource SecondaryBackgroundBrush}"
-                             Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Height="120"
-                             MouseDoubleClick="FilesListBox_MouseDoubleClick">
+        <!-- Left Sidebar - Members -->
+        <Border Grid.Column="0" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <StackPanel Margin="20,14">
+                <TextBlock Text="#" FontSize="22" Foreground="{StaticResource HashSymbolBrush}" Margin="0,8,0,20"/>
+                <TextBlock x:Name="ChannelNameSidebar" FontSize="15" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,20"/>
+                
+                <TextBlock x:Name="MembersSectionText" Text="MEMBERS — 0" FontSize="11" 
+                           Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
+                <ListBox x:Name="MembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                         Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         MouseDoubleClick="MembersListBox_MouseDoubleClick">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="{StaticResource PaddingSmall}">
-                                <TextBlock Text="{Binding FileName}" Foreground="{StaticResource ForegroundBrush}" FontWeight="Bold" FontSize="{StaticResource FontSizeNormal}"/>
-                                <TextBlock Foreground="#aaaaaa" FontSize="{StaticResource FontSizeSmall}">
-                                    <Run Text="{Binding UploaderId}"/>
-                                    <Run Text=" • "/>
-                                    <Run Text="{Binding UploadedAt, StringFormat='{}{0:HH:mm}'}"/>
-                                    <Run Text=" • "/>
-                                    <Run Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"/>
-                                </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
+                                <Border Width="28" Height="28" CornerRadius="14" Background="{StaticResource AvatarBackgroundBrush}" Margin="0,0,9,0">
+                                    <TextBlock Text="{Binding}" FontSize="11" FontWeight="Bold" 
+                                               Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <Ellipse Width="7" Height="7" Fill="{StaticResource OnlineIndicatorBrush}" Stroke="{StaticResource OnlineIndicatorStrokeBrush}" StrokeThickness="1" 
+                                         Margin="-14,18,0,0" VerticalAlignment="Top"/>
+                                <TextBlock Text="{Binding}" FontSize="13" Margin="9,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
-                    </ListBox>
+                </ListBox>
 
-                    <Button x:Name="ShareFileButton" Content="Share File" FontSize="{StaticResource FontSizeNormal}" Padding="{StaticResource ButtonPaddingSmall}" Margin="{StaticResource MarginTopNormal}"
-                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
-                            Cursor="Hand" Click="ShareFileButton_Click"/>
-                </StackPanel>
+                <TextBlock Text="CHANNEL" FontSize="11" 
+                           Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
+                <Button Content="⚙ Channel settings" Background="Transparent" BorderThickness="0" 
+                        Foreground="{StaticResource ForegroundBrush}" HorizontalAlignment="Left" Padding="8" Margin="0,0,0,8"/>
+                <Button x:Name="LeaveChannelSidebarButton" Content="↩ Leave channel" Background="Transparent" BorderThickness="0" 
+                        Foreground="{StaticResource ForegroundBrush}" HorizontalAlignment="Left" Padding="8" Click="LeaveButton_Click"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Center Chat Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Height="64" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
+                    Background="{StaticResource BackgroundBrush}" Padding="20,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="LeaveButton" Grid.Column="0" Width="40" Height="40" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" Padding="6" Click="LeaveButton_Click" ToolTip="Leave Channel" Margin="0,0,12,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="ButtonBorder" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource ErrorBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Path Fill="{StaticResource ForegroundBrush}" Stretch="Uniform" Width="20" Height="20"
+                              Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </Button>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="ChannelNameText" FontSize="15" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}"/>
+                        <TextBlock x:Name="MemberCountText" FontSize="11" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- Main Chat Area -->
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <!-- Messages -->
+            <ListBox x:Name="MessagesListBox" Grid.Row="1" Background="{StaticResource BackgroundBrush}"
+                     Foreground="{StaticResource ForegroundBrush}" BorderThickness="0" Padding="22,24"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid MaxWidth="400">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="HorizontalAlignment" Value="Left"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                    <Binding Path="SenderId"/>
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" Background="{StaticResource AvatarBackgroundBrush}" Margin="0,0,9,0" VerticalAlignment="Top">
+                                <TextBlock Text="{Binding SenderId, Converter={StaticResource InitialsConverter}}" FontSize="11" FontWeight="Bold" 
+                                           Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock FontSize="11" Foreground="{StaticResource MessageMetadataBrush}" Margin="0,0,0,4">
+                                    <Run Text="{Binding SenderId}"/>
+                                    <Run Text=" · "/>
+                                    <Run Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}"/>
+                                </TextBlock>
+                                <Border Padding="10,13" CornerRadius="13" Background="{StaticResource MessageBubbleOtherBrush}" MaxWidth="400">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{StaticResource MessageBubbleOtherBrush}"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                            <Binding Path="SenderId"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="{StaticResource MessageBubbleOwnBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource MessageBubbleOwnBrush}"/>
+                                                    <Setter Property="CornerRadius" Value="13,13,4,13"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Content}" FontSize="13" TextWrapping="Wrap" TextBlock.LineHeight="18">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource MessageTextOtherBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                    <Binding Path="SenderId"/>
+                                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Border Visibility="{Binding Type, Converter={StaticResource FileTypeVisibilityConverter}}" 
+                                                Margin="0,8,0,0" Padding="10,12" CornerRadius="10" BorderBrush="{StaticResource LightBorderBrush}" BorderThickness="1" Background="{StaticResource BackgroundBrush}" 
+                                                MinWidth="220">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                    <Binding Path="SenderId"/>
+                                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Background" Value="#34373d"/>
+                                                            <Setter Property="BorderBrush" Value="#454950"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource FileIconBackgroundBrush}" Margin="0,0,10,0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Value="True">
+                                                                    <DataTrigger.Binding>
+                                                                        <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                            <Binding Path="SenderId"/>
+                                                                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                                        </MultiBinding>
+                                                                    </DataTrigger.Binding>
+                                                                    <Setter Property="Background" Value="#4a4d53"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Type, Converter={StaticResource MessageTypeToFileTypeConverter}}" FontSize="12" FontWeight="Bold" 
+                                                               Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Value="True">
+                                                                        <DataTrigger.Binding>
+                                                                            <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                                <Binding Path="SenderId"/>
+                                                                                <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                                            </MultiBinding>
+                                                                        </DataTrigger.Binding>
+                                                                        <Setter Property="Foreground" Value="#fff"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Content, Converter={StaticResource FileNameExtractorConverter}}" FontWeight="650" FontSize="12" Foreground="{StaticResource ForegroundBrush}"/>
+                                                    <TextBlock FontSize="10" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Value="True">
+                                                                        <DataTrigger.Binding>
+                                                                            <MultiBinding Converter="{StaticResource IsCurrentUserConverter}">
+                                                                                <Binding Path="SenderId"/>
+                                                                                <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="CurrentUserId"/>
+                                                                            </MultiBinding>
+                                                                        </DataTrigger.Binding>
+                                                                        <Setter Property="Foreground" Value="{StaticResource SecondaryTextDarkBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                        <Run Text="Shared file"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
-                <!-- Messages -->
-                <ListBox x:Name="MessagesListBox" Grid.Row="0" Background="{StaticResource BackgroundBrush}"
-                         Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}" Padding="{StaticResource MarginNormal}"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-
-                <!-- Input Area -->
-                <Border Grid.Row="1" Background="{StaticResource SecondaryBackgroundBrush}" Padding="{StaticResource PaddingMedium}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="MessageTextBox" Grid.Column="0" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource PaddingNormal}"
-                                 Background="{StaticResource SecondaryBackgroundBrush}" Foreground="{StaticResource ForegroundBrush}" BorderBrush="{StaticResource BorderBrush}"/>
-                        <Button x:Name="SendButton" Grid.Column="1" Content="Send" FontSize="{StaticResource FontSizeMedium}" Padding="{StaticResource ButtonPaddingLarge}"
-                                Background="{StaticResource AccentBrush}" Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
-                                Cursor="Hand" Margin="10,0,0,0" Click="SendButton_Click"/>
-                    </Grid>
-                </Border>
-            </Grid>
+            <!-- Input Area -->
+            <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" 
+                    Background="{StaticResource InputAreaBackgroundBrush}" Padding="12,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Width="40" Height="40" Background="{StaticResource BackgroundBrush}" 
+                            BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="9" Margin="0,0,9,0">
+                        <Button x:Name="ShareFileButton" Content="+" FontSize="18" 
+                                Foreground="{StaticResource ForegroundBrush}" Cursor="Hand" Click="ShareFileButton_Click"
+                                Background="Transparent" BorderThickness="0"/>
+                    </Border>
+                    <Border Grid.Column="1" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="10">
+                        <TextBox x:Name="MessageTextBox" FontSize="13" Padding="11,13"
+                              Background="Transparent" Foreground="{StaticResource PlaceholderTextBrush}" BorderThickness="0"
+                              CaretBrush="{StaticResource ForegroundBrush}"
+                              KeyDown="MessageTextBox_KeyDown"/>
+                    </Border>
+                    <Border Grid.Column="2" Background="{StaticResource MessageBubbleOwnBrush}" CornerRadius="9" Margin="9,0,0,0">
+                        <Button x:Name="SendButton" Content="Send" FontSize="13" FontWeight="650"
+                                Foreground="{StaticResource MessageTextOwnBrush}" Cursor="Hand" Click="SendButton_Click"
+                                Background="Transparent" BorderThickness="0" Padding="16,12"/>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
+
+        <!-- Right Sidebar - Shared Files -->
+        <Border x:Name="RightSidebar" Grid.Column="2" Background="{StaticResource SecondaryBackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+            <StackPanel Margin="20,14">
+                <TextBlock Text="Shared Files" FontSize="14" FontWeight="Bold" Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,18"/>
+                <ListBox x:Name="FilesListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                         Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         MouseDoubleClick="FilesListBox_MouseDoubleClick">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
+                                <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource FileIconBackgroundBrush}" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding FileType, Converter={StaticResource FileTypeConverter}}" FontSize="12" FontWeight="Bold" 
+                                               Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontWeight="650" FontSize="12" Foreground="{StaticResource ForegroundBrush}"/>
+                                    <TextBlock FontSize="10" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0">
+                                        <Run Text="{Binding UploaderId}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Text="Online" FontSize="11" 
+                           Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
+                <ListBox x:Name="OnlineMembersListBox" Background="{StaticResource SecondaryBackgroundBrush}"
+                         Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
+                                <Border Width="28" Height="28" CornerRadius="14" Background="{StaticResource AvatarBackgroundBrush}" Margin="0,0,9,0">
+                                    <TextBlock Text="{Binding}" FontSize="11" FontWeight="Bold" 
+                                               Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <Ellipse Width="7" Height="7" Fill="{StaticResource OnlineIndicatorBrush}" Stroke="{StaticResource OnlineIndicatorStrokeBrush}" StrokeThickness="1" 
+                                         Margin="-14,18,0,0" VerticalAlignment="Top"/>
+                                <TextBlock Text="{Binding}" FontSize="13" Margin="9,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

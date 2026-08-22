@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using Chat.Contracts.DataContracts;
 
 namespace Chat.Client.Duplex.Views
@@ -16,9 +18,17 @@ namespace Chat.Client.Duplex.Views
         {
             InitializeComponent();
             RecipientId = recipientId;
-            Title = $"Private Conversation with: {recipientId}";
-            RecipientText.Text = $"Private Conversation with: {recipientId}";
+            Title = $"DM — {recipientId}";
+            RecipientText.Text = $"{recipientId}";
+            RecipientInitials.Text = ExtractInitials(recipientId);
             _messages = new System.Collections.Generic.SortedSet<Message>();
+        }
+
+        private static string ExtractInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "?";
+            return name.Length >= 2 ? name.Substring(0, 2).ToUpper() : name.ToUpper();
         }
 
         public void AddMessage(Message message)
@@ -29,19 +39,26 @@ namespace Chat.Client.Duplex.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.Items.Clear();
-            foreach (var message in _messages)
-            {
-                string displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-                MessagesListBox.Items.Add(displayText);
-            }
+            MessagesListBox.ItemsSource = _messages.ToList();
             if (MessagesListBox.Items.Count > 0)
-            {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
-            }
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendCurrentMessage();
+        }
+
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && !e.IsRepeat)
+            {
+                e.Handled = true;
+                SendCurrentMessage();
+            }
+        }
+
+        private void SendCurrentMessage()
         {
             string message = MessageTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(message))

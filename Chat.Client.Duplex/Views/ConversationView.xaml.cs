@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -15,7 +17,16 @@ namespace Chat.Client.Duplex.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private string _currentUserId;
+
+        public static readonly DependencyProperty CurrentUserIdProperty =
+            DependencyProperty.Register("CurrentUserId", typeof(string), typeof(ConversationView),
+                new PropertyMetadata(string.Empty));
+
+        public string CurrentUserId
+        {
+            get { return (string)GetValue(CurrentUserIdProperty); }
+            set { SetValue(CurrentUserIdProperty, value); }
+        }
 
         public ConversationView()
         {
@@ -37,19 +48,20 @@ namespace Chat.Client.Duplex.Views
         public void SetChannelName(string channelName)
         {
             ChannelNameText.Text = channelName;
+            ChannelNameSidebar.Text = channelName;
         }
 
         public void SetCurrentUserId(string userId)
         {
-            _currentUserId = userId;
+            CurrentUserId = userId;
             UpdateFooter();
         }
 
         private void UpdateFooter()
         {
-            if (!string.IsNullOrEmpty(_currentUserId))
+            if (!string.IsNullOrEmpty(CurrentUserId))
             {
-                AppFooter.CurrentUser = _currentUserId;
+                AppFooter.CurrentUser = CurrentUserId;
                 AppFooter.IsLoggedIn = true;
             }
             else
@@ -62,6 +74,9 @@ namespace Chat.Client.Duplex.Views
         public void UpdateMembers(System.Collections.Generic.List<string> members)
         {
             MembersListBox.ItemsSource = members;
+            OnlineMembersListBox.ItemsSource = members;
+            MembersSectionText.Text = $"MEMBERS — {members.Count}";
+            MemberCountText.Text = $"{members.Count} members · {members.Count} online";
         }
 
         public void UpdateFiles(System.Collections.Generic.List<SharedFile> files)
@@ -77,21 +92,7 @@ namespace Chat.Client.Duplex.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.Items.Clear();
-            foreach (var message in _messages)
-            {
-                string displayText;
-                if (message.Type == MessageType.File)
-                {
-                    string fileName = message.Content.Replace("Shared file: ", "");
-                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId} shared file: {fileName}";
-                }
-                else
-                {
-                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-                }
-                MessagesListBox.Items.Add(displayText);
-            }
+            MessagesListBox.ItemsSource = _messages.ToList();
             if (MessagesListBox.Items.Count > 0)
             {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
@@ -100,15 +101,32 @@ namespace Chat.Client.Duplex.Views
 
         public void AddSystemMessage(string text)
         {
-            MessagesListBox.Items.Add($"--- {text} ---");
+            // System messages are shown as plain string items appended at the end of the list.
+            // We cast to a dynamic to allow mixed-type items alongside Message objects.
+            MessagesListBox.ItemsSource = null;
+            MessagesListBox.Items.Clear();
+            foreach (var message in _messages)
+                MessagesListBox.Items.Add(message);
+            MessagesListBox.Items.Add($"— {text} —");
             if (MessagesListBox.Items.Count > 0)
-            {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
+        }
+
+        private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendCurrentMessage();
+        }
+
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && !e.IsRepeat)
+            {
+                e.Handled = true;
+                SendCurrentMessage();
             }
         }
 
-
-        private void SendButton_Click(object sender, RoutedEventArgs e)
+        private void SendCurrentMessage()
         {
             string message = MessageTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(message))
@@ -123,7 +141,7 @@ namespace Chat.Client.Duplex.Views
             LeaveChannelRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void FilesListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void FilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (FilesListBox.SelectedItem is SharedFile selectedFile)
             {
@@ -131,7 +149,7 @@ namespace Chat.Client.Duplex.Views
             }
         }
 
-        private void MembersListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void MembersListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (MembersListBox.SelectedItem is string selectedMember)
             {

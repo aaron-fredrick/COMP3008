@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Chat.Contracts.DataContracts;
@@ -15,7 +16,16 @@ namespace Chat.Client.Polling.Views
         public event EventHandler FileShareRequested;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private string _currentUserId;
+
+        public static readonly DependencyProperty CurrentUserIdProperty =
+            DependencyProperty.Register("CurrentUserId", typeof(string), typeof(ConversationView),
+                new PropertyMetadata(string.Empty));
+
+        public string CurrentUserId
+        {
+            get { return (string)GetValue(CurrentUserIdProperty); }
+            set { SetValue(CurrentUserIdProperty, value); }
+        }
 
         public ConversationView()
         {
@@ -26,16 +36,20 @@ namespace Chat.Client.Polling.Views
         public void SetChannelName(string channelName)
         {
             ChannelNameText.Text = channelName;
+            ChannelNameSidebar.Text = channelName;
         }
 
         public void SetCurrentUserId(string userId)
         {
-            _currentUserId = userId;
+            CurrentUserId = userId;
         }
 
         public void UpdateMembers(System.Collections.Generic.List<string> members)
         {
             MembersListBox.ItemsSource = members;
+            OnlineMembersListBox.ItemsSource = members;
+            MembersSectionText.Text = $"MEMBERS — {members.Count}";
+            MemberCountText.Text = $"{members.Count} members · {members.Count} online";
         }
 
         public void UpdateFiles(System.Collections.Generic.List<SharedFile> files)
@@ -51,21 +65,7 @@ namespace Chat.Client.Polling.Views
 
         private void RefreshMessages()
         {
-            MessagesListBox.Items.Clear();
-            foreach (var message in _messages)
-            {
-                string displayText;
-                if (message.Type == MessageType.File)
-                {
-                    string fileName = message.Content.Replace("Shared file: ", "");
-                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId} shared file: {fileName}";
-                }
-                else
-                {
-                    displayText = $"[{message.Timestamp:HH:mm:ss}] {message.SenderId}: {message.Content}";
-                }
-                MessagesListBox.Items.Add(displayText);
-            }
+            MessagesListBox.ItemsSource = _messages.ToList();
             if (MessagesListBox.Items.Count > 0)
             {
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
@@ -73,6 +73,20 @@ namespace Chat.Client.Polling.Views
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            SendCurrentMessage();
+        }
+
+        private void MessageTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter && !e.IsRepeat)
+            {
+                e.Handled = true;
+                SendCurrentMessage();
+            }
+        }
+
+        private void SendCurrentMessage()
         {
             string message = MessageTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(message))
