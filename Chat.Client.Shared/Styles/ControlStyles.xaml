@@ -2,6 +2,16 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers">
 
+    <!--
+        Self-merge Colors.xaml so that StaticResource lookups inside ControlTemplate
+        bodies resolve from this dictionary's own scope. WPF cannot reliably resolve
+        sibling merged-dictionary resources from within ControlTemplate content at
+        template-load time, so this file must own a local copy of the color resources.
+    -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Chat.Client.Shared;component/Styles/Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
     <!-- Implicit Button Style for Modern Hover/Click Effects -->
     <Style TargetType="Button">
         <!-- Default properties -->
