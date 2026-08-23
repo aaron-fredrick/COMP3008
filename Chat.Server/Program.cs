@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using Chat.Server.Hosting;
 using Chat.Server.Logging;
 
@@ -14,13 +15,20 @@ namespace Chat.Server
 
             try
             {
+                int? maxMessagesOverride = ParseMaxMessages(args);
+
                 ServerLogger.Initialize();
-                var host = new ChatServiceHost(enablePolling: true);
+                var host = new ChatServiceHost(enablePolling: true, maxMessages: maxMessagesOverride);
                 host.Start();
+
+                int resolvedMax = maxMessagesOverride
+                    ?? int.Parse(ConfigurationManager.AppSettings["MaxChannelMessages"] ?? "50");
 
                 Console.WriteLine("  [+] SERVER ONLINE");
                 Console.WriteLine($"  Polling : {host.PollingEndpoint}");
                 Console.WriteLine($"  Duplex  : {host.DuplexEndpoint}");
+                Console.WriteLine($"  Msg cap : {resolvedMax} per channel" +
+                                  (maxMessagesOverride.HasValue ? " (CLI override)" : " (config)"));
                 Console.WriteLine("══════════════════════════════════════════════════════════════════════");
                 Console.WriteLine("Press Ctrl+C to exit...");
 
@@ -42,6 +50,16 @@ namespace Chat.Server
                 Console.WriteLine("══════════════════════════════════════════════════════════════════════");
                 Console.ReadKey();
             }
+        }
+
+        private static int? ParseMaxMessages(string[] args)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "--max-messages" && int.TryParse(args[i + 1], out int value) && value > 0)
+                    return value;
+            }
+            return null;
         }
     }
 }

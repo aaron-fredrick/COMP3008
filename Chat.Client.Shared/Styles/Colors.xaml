@@ -17,8 +17,8 @@
     <SolidColorBrush x:Key="ButtonPressedOverlayBrush" Color="#2AFFFFFF"/>
     <!-- Chat UI Colors -->
     <SolidColorBrush x:Key="HashSymbolBrush" Color="#8b9098"/>
-    <SolidColorBrush x:Key="AvatarBackgroundBrush" Color="#e1e3e7"/>
-    <SolidColorBrush x:Key="AvatarTextBrush" Color="#555b64"/>
+    <SolidColorBrush x:Key="AvatarBackgroundBrush" Color="#3d3d3d"/>
+    <SolidColorBrush x:Key="AvatarTextBrush" Color="#a0a0a0"/>
     <SolidColorBrush x:Key="OnlineIndicatorBrush" Color="#35a853"/>
     <SolidColorBrush x:Key="OnlineIndicatorStrokeBrush" Color="#f8f9fa"/>
     <SolidColorBrush x:Key="MessageBubbleOtherBrush" Color="#2d2d2d"/>

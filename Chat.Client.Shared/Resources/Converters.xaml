@@ -10,6 +10,5 @@
     <converters:FileNameExtractorConverter x:Key="FileNameExtractorConverter"/>
     <converters:IsCurrentUserConverter x:Key="IsCurrentUserConverter"/>
     <converters:StringToRibbonPathConverter x:Key="StringToRibbonPathConverter"/>
-    <converters:StringToBrushConverter x:Key="StringToBrushConverter"/>
 
 </ResourceDictionary>

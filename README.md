@@ -1,6 +1,29 @@
-# COMP3008 Chat Application
+# Distributed Chat Application
 
-A real-time chat application built with .NET Framework 4.8, WCF, and WPF for COMP3008 Assignment 1A.
+> An independent educational project exploring distributed computing,
+> WCF, WPF, polling, duplex communication, and client-server architecture.
+
+## About
+
+This project was developed independently as a self-directed learning
+exercise to explore concepts covered in the COMP3008 Distributed
+Computing module.
+
+I was not enrolled in this module and this project was not developed
+for, submitted to, or assessed as part of a Curtin University
+assignment.
+
+The project was created as an additional technical challenge to
+develop a practical understanding of distributed computing concepts.
+
+## Educational Reference
+
+The project was developed with reference to educational material
+provided by a friend, including module documentation, lecture
+material, laboratory documentation, and assignment specifications.
+
+Those materials are **not included in this repository** and remain
+the property of their respective copyright holders.
 
 ## Overview
 
@@ -192,4 +215,10 @@ Server → Push Event → Client (via callback)
 
 ## License
 
-This project is for educational purposes (COMP3008 Assignment).
+This project is licensed under the
+**Personal Educational Project License**.
+See [LICENSE](LICENSE) for the full terms.
+
+The source is available for educational inspection and learning.
+It is not intended to be an open-source project or a codebase for
+direct reuse or submission as another person's work.

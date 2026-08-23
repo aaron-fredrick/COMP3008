@@ -23,10 +23,12 @@ namespace Chat.Server.Services
         private readonly CallbackManager _callbackManager;
         private readonly FileHandler _fileHandler;
 
-        public ChatService()
+        public ChatService() : this(50) { }
+
+        public ChatService(int maxMessages)
         {
             _userManager = new UserManager();
-            _channelManager = new ChannelManager();
+            _channelManager = new ChannelManager(maxMessages);
             _callbackManager = new CallbackManager(_userManager, _channelManager);
             _messageRouter = new MessageRouter(_userManager, _channelManager, _callbackManager);
             _fileHandler = new FileHandler();

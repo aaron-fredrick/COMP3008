@@ -46,6 +46,7 @@ namespace Chat.Client.Duplex
         private void InitializeFooter()
         {
             AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            AppFooter.SignOutClicked += (s, e) => SignOut();
             UpdateFooterState();
         }
 
@@ -143,6 +144,7 @@ namespace Chat.Client.Duplex
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
             _conversationView.PrivateMessageRequested += ConversationView_PrivateMessageRequested;
             _conversationView.FileShareRequested += ConversationView_FileShareRequested;
+            _conversationView.SignOutRequested += (s, e) => SignOut();
             _conversationView.Closing += ConversationView_Closing;
 
             coordinator.RefreshChannelMembers();

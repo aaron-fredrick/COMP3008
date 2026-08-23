@@ -39,6 +39,7 @@ namespace Chat.Client.Duplex.Views
         private void InitializeFooter()
         {
             AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            AppFooter.SignOutClicked += (s, e) => SignOutRequested?.Invoke(this, EventArgs.Empty);
             UpdateFooter();
         }
 

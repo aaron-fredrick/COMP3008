@@ -200,7 +200,6 @@ namespace Chat.Client.Polling.Services
 
             RefreshChannelMembers();
             RefreshChannelFiles();
-            RefreshChannels();
             PollPublicMessages();
             PollPrivateMessages();
         }

@@ -13,24 +13,29 @@ namespace Chat.Server.Hosting
         private readonly int _pollingPort;
         private readonly int _duplexPort;
         private readonly bool _enablePolling;
+        private readonly int _maxMessages;
 
         public string PollingEndpoint { get; private set; }
         public string DuplexEndpoint { get; private set; }
         public bool IsRunning => _serviceHost != null && _serviceHost.State == CommunicationState.Opened;
 
-        public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null, bool enablePolling = true)
+        public ChatServiceHost(string host = null, int? pollingPort = null, int? duplexPort = null,
+                               bool enablePolling = true, int? maxMessages = null)
         {
             _host = host ?? ConfigurationManager.AppSettings["Host"] ?? "localhost";
             _pollingPort = pollingPort ?? int.Parse(ConfigurationManager.AppSettings["PollingPort"] ?? "9000");
             _duplexPort = duplexPort ?? int.Parse(ConfigurationManager.AppSettings["DuplexPort"] ?? "8081");
             _enablePolling = enablePolling;
+            _maxMessages = maxMessages
+                ?? int.Parse(ConfigurationManager.AppSettings["MaxChannelMessages"] ?? "50");
         }
 
         public void Start()
         {
             try
             {
-                _serviceHost = new ServiceHost(typeof(ChatService));
+                var service = new ChatService(_maxMessages);
+                _serviceHost = new ServiceHost(service);
 
                 if (_enablePolling)
                 {

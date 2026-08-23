@@ -12,6 +12,7 @@ namespace Chat.Client.Duplex.Views
     {
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
+        public event EventHandler SignOutRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
         public event EventHandler<string> PrivateMessageRequested;
         public event EventHandler FileShareRequested;
@@ -40,6 +41,7 @@ namespace Chat.Client.Duplex.Views
         private void InitializeFooter()
         {
             AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            AppFooter.SignOutClicked += (s, e) => SignOutRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void AppFooter_SettingsClicked(object sender, EventArgs e)
@@ -77,12 +79,13 @@ namespace Chat.Client.Duplex.Views
         {
             MembersListBox.ItemsSource = members;
             MembersSectionText.Text = $"MEMBERS — {members.Count}";
-            MemberCountText.Text = $"{members.Count} members · {members.Count} online";
+
         }
 
         public void UpdateFiles(System.Collections.Generic.List<SharedFile> files)
         {
             FilesListBox.ItemsSource = files;
+            NoFilesText.Visibility = files.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public void AddMessage(Message message)

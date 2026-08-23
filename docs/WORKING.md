@@ -3268,3 +3268,10 @@ Integration testing with both polling and duplex clients simultaneously is plann
 - File share visible on both clients
 - Kill duplex client with X → server cleanup observed by polling client
 
+
+### Sign Out Flow & Empty States
+
+**Sign Out:** The global footer now features a clickable username which reveals a 'Sign Out' popup. Clicking this button redirects the user back to the login screen and cleans up session state.
+
+**Empty States:** Channel views now feature an 'empty state' message ('No shared files yet') in the Shared Files sidebar when no files have been uploaded.
+

@@ -47,6 +47,7 @@ namespace Chat.Client.Polling
         private void InitializeFooter()
         {
             AppFooter.SettingsClicked += AppFooter_SettingsClicked;
+            AppFooter.SignOutClicked += (s, e) => SignOut();
             AppFooter.IsLoggedIn = false;
             AppFooter.ConnectionStatus = ConnectionState.Disconnected;
         }

@@ -15,10 +15,38 @@
 
         <!-- Left: User Information -->
         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-            <TextBlock x:Name="UserStatusText"
-                       Text="Not logged in"
-                       FontSize="{StaticResource FontSizeNormal}"
-                       Foreground="#ff9800"/>
+            <ToggleButton x:Name="UserMenuButton" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4">
+                <ToggleButton.Template>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </ToggleButton.Template>
+                <TextBlock x:Name="UserStatusText"
+                           Text="Not logged in"
+                           FontSize="{StaticResource FontSizeNormal}"
+                           Foreground="#ff9800"/>
+            </ToggleButton>
+            
+            <Popup IsOpen="{Binding IsChecked, ElementName=UserMenuButton}" PlacementTarget="{Binding ElementName=UserMenuButton}" Placement="Top" StaysOpen="False">
+                <Border Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="4" Margin="0,0,0,4">
+                    <Button x:Name="SignOutButton" Content="Sign Out" Background="Transparent" BorderThickness="0" Foreground="{StaticResource ForegroundBrush}" Cursor="Hand" Padding="12,6" Click="SignOutButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="BgBorder" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="2">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="BgBorder" Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Border>
+            </Popup>
         </StackPanel>
 
         <!-- Center: Connection Information -->

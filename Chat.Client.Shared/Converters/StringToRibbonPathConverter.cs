@@ -20,31 +20,30 @@ namespace Chat.Client.Shared.Converters
 
             double cx = 14;
             double cy = 14;
-            double r = 12; // Leave a 2px margin
+            double r = 13; // Entry/exit near the edge
 
-            // Entry angle
-            double angle1 = rand.NextDouble() * 2 * Math.PI;
-            // Exit angle: at least 45 degrees (0.78 rad) apart, up to 315 degrees
-            double angle2 = angle1 + 0.8 + (rand.NextDouble() * 4.6);
+            // Base angle for the entire shape
+            double baseAngle = rand.NextDouble() * 2 * Math.PI;
+            
+            // Randomize the loop's spread and size slightly
+            double spread = 0.5 + rand.NextDouble() * 0.4; // 0.5 to 0.9 radians
+            double cpSpread = 2.0 + rand.NextDouble() * 0.8; // 2.0 to 2.8 radians
+            double cpDist = 18 + rand.NextDouble() * 6; // 18 to 24
 
-            // Entry and exit points on the circle
-            double px1 = cx + r * Math.Cos(angle1);
-            double py1 = cy + r * Math.Sin(angle1);
-            double px2 = cx + r * Math.Cos(angle2);
-            double py2 = cy + r * Math.Sin(angle2);
+            double a1 = baseAngle - spread;
+            double a2 = baseAngle + spread;
+            double a3 = baseAngle + cpSpread; // CP1 crosses to the opposite side
+            double a4 = baseAngle - cpSpread; // CP2 crosses to the opposite side
 
-            // To create a loop, control points shoot across the center
-            double cp1Angle = angle1 + Math.PI + (rand.NextDouble() - 0.5);
-            double cp2Angle = angle2 + Math.PI + (rand.NextDouble() - 0.5);
+            double px1 = cx + r * Math.Cos(a1);
+            double py1 = cy + r * Math.Sin(a1);
+            double px2 = cx + r * Math.Cos(a2);
+            double py2 = cy + r * Math.Sin(a2);
 
-            // Length of control vectors (long enough to cross and loop)
-            double cp1Len = rand.NextDouble() * 12 + 16;
-            double cp2Len = rand.NextDouble() * 12 + 16;
-
-            double cp1x = px1 + cp1Len * Math.Cos(cp1Angle);
-            double cp1y = py1 + cp1Len * Math.Sin(cp1Angle);
-            double cp2x = px2 + cp2Len * Math.Cos(cp2Angle);
-            double cp2y = py2 + cp2Len * Math.Sin(cp2Angle);
+            double cp1x = cx + cpDist * Math.Cos(a3);
+            double cp1y = cy + cpDist * Math.Sin(a3);
+            double cp2x = cx + cpDist * Math.Cos(a4);
+            double cp2y = cy + cpDist * Math.Sin(a4);
 
             string path = FormattableString.Invariant($"M {px1:F1},{py1:F1} C {cp1x:F1},{cp1y:F1} {cp2x:F1},{cp2y:F1} {px2:F1},{py2:F1}");
             
