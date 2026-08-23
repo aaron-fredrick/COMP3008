@@ -5,6 +5,7 @@
     <!-- Dark Theme Colors -->
     <SolidColorBrush x:Key="BackgroundBrush" Color="#1e1e1e"/>
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="#2d2d2d"/>
+    <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#3a3d43"/>
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#202123"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
     <SolidColorBrush x:Key="ForegroundBrush" Color="#ffffff"/>
