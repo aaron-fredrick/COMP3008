@@ -231,9 +231,17 @@ Server → Push Event → Client (via callback)
 | Real-time messaging/files | C | 2m | ✅ Complete | Duplex callbacks for messages and file shares |
 | **Additional / Bonus Features (Beyond Part A)** | | | | |
 | Configurable bounded message history queue | - | - | ✅ Complete | `ChannelManager.cs`, maxMessages parameter, eviction logging |
-| Dark mode visual theme | - | - | ✅ Complete | `Colors.xaml`, `CustomTitleBar.xaml`, theme resources |
-| User account popup menu in footer | - | - | ✅ Complete | `ApplicationFooter.xaml`, user menu |
+| Theme switching service | - | - | ✅ Complete | `ThemeService.cs`, dark/light mode toggle with force light theme option |
+| Custom window chrome (title bar) | - | - | ✅ Complete | `CustomTitleBar.xaml`, custom minimize/maximize/close buttons with hover effects |
+| Custom window resizing | - | - | ✅ Complete | `WindowResizer.cs`, 8-direction resize with cursor changes |
+| User account popup menu | - | - | ✅ Complete | `ApplicationFooter.xaml`, user status display with sign-out popup |
+| Connection status & ping display | - | - | ✅ Complete | `ApplicationFooter.xaml`, real-time connection status and ping latency display |
+| Settings button in footer | - | - | ✅ Complete | `ApplicationFooter.xaml`, settings icon button with hover effects |
+| Procedural SVG ribbon avatars | - | - | ✅ Complete | `StringToRibbonPathConverter.cs`, deterministic avatar paths based on username |
+| Message grouping logic | - | - | ✅ Complete | `MessageViewModel.cs`, consecutive message grouping with metadata hiding |
+| Custom CornerRadius attached property | - | - | ✅ Complete | `ControlHelper.cs`, reusable corner radius for controls |
 | Shared files empty state placeholder | - | - | ✅ Complete | ConversationView "No shared files yet" UI |
+| Value converters for UI data | - | - | ✅ Complete | FileSizeConverter, InitialsConverter, FileTypeConverter, etc. |
 | Unit test suite | - | - | ✅ Complete | `Chat.Server.Tests` project |
 
 **Total Part A Marks: 32/32 (100%)**
