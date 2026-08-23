@@ -122,3 +122,10 @@ Thumbs.db
 # Educational materials
 docs/lecs/
 docs/labs/
+
+# Agentic tool configs & rules
+.agents/
+.devin/
+.gemini/
+.claude/
+.cursor/
