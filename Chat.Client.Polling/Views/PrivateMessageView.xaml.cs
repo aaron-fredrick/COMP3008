@@ -42,6 +42,17 @@ namespace Chat.Client.Polling.Views
             RecipientText.Text = $"{recipientId}";
             _messages = new System.Collections.Generic.SortedSet<Message>();
             _messageViewModels = new System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel>();
+            ConfigureMessageAlignment();
+        }
+
+        private void ConfigureMessageAlignment()
+        {
+            var style = new System.Windows.Style(typeof(System.Windows.Controls.ListBoxItem));
+            style.Setters.Add(new System.Windows.Setter(System.Windows.Controls.Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Left));
+            var ownMessageTrigger = new System.Windows.DataTrigger { Binding = new System.Windows.Data.Binding("IsCurrentUser"), Value = true };
+            ownMessageTrigger.Setters.Add(new System.Windows.Setter(System.Windows.Controls.Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Right));
+            style.Triggers.Add(ownMessageTrigger);
+            MessagesListBox.ItemContainerStyle = style;
         }
 
         public void AddMessage(Message message)

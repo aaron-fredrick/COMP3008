@@ -3312,3 +3312,4 @@ Manual verification remains pending and will be performed through the WPF client
 - Channel file-message cards now carry the server file ID and can be clicked to download/open the file through the existing authorized file path.
 - Polling and duplex PM windows use grouped message metadata: consecutive messages from the same sender in the same local minute hide repeated sender/time metadata, including the current user.
 - PM windows include a right-side shared-files panel and local file-selection preview. The UI intentionally labels these entries as pending server support; a private-file WCF operation and routing are not implemented yet.
+- PM self-authored message groups align to the right, matching the channel conversation layout; other participants remain on the left.
