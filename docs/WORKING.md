@@ -39,6 +39,10 @@
   - Verified resource definitions in Colors.xaml
 - [x] Updated README.md with Feature & Marks Alignment Matrix (32/32 marks)
 - [x] Updated .gitignore to exclude agentic config directories
+- [x] Private messaging enhancements:
+  - Added local PM history storage in both Polling and Duplex clients
+  - Implemented PM history restoration when reopening conversation windows
+  - PM windows now close automatically when leaving a channel (channel membership requirement)
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
