@@ -3313,3 +3313,7 @@ Manual verification remains pending and will be performed through the WPF client
 - Polling and duplex PM windows use grouped message metadata: consecutive messages from the same sender in the same local minute hide repeated sender/time metadata, including the current user.
 - PM windows include a right-side shared-files panel and local file-selection preview. The UI intentionally labels these entries as pending server support; a private-file WCF operation and routing are not implemented yet.
 - PM self-authored message groups align to the right, matching the channel conversation layout; other participants remain on the left.
+
+### Private File Sharing Status
+
+The PM right-side file panel currently supports local validation and a pending preview only. It does not claim server delivery yet. The full implementation plan covers private-file WCF operations, sender/recipient authorization, polling queues, duplex callbacks, secure download, lifecycle cleanup, and verification for both clients.
