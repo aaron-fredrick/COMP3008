@@ -51,13 +51,13 @@ Acceptance criteria for this enhancement:
 
 ## Private File Sharing Implementation Plan
 
-The current PM file panel is intentionally a local preview only. The following work is required to make private file sharing a real polling and duplex feature without weakening channel-file authorization.
+The PM file panel is backed by the private-file WCF flow below; manual client verification remains outstanding.
 
 ### 1. Contract and data model
 
 - Extend `SharedFile` with a private-recipient field, or introduce a focused `PrivateSharedFile` data contract, so a private file has an explicit sender and recipient scope rather than a channel scope.
 - Add request/response operations to `IChatService`:
-  - `bool SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)`
+  - `SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)`
   - `SharedFile GetPrivateFile(string userId, Guid fileId)`
   - `List<SharedFile> GetPendingPrivateFiles(string userId)` for polling delivery and recovery when a window was closed.
 - Add `OnPrivateFileShared(SharedFile file)` to `IChatCallback` for duplex delivery. Keep `OnFileShared` for channel files so the two scopes cannot be confused.
@@ -69,7 +69,7 @@ The current PM file panel is intentionally a local preview only. The following w
 - In `ChatService.SharePrivateFile`, require both users to be signed in and currently in the same channel. Reject empty/self IDs, invalid content, invalid type/size, and a recipient who leaves before the request is accepted.
 - In `ChatService.GetPrivateFile`, allow access only to the original sender or recipient and only while both remain eligible under the private-message same-channel rule. Return no file data for unauthorized callers.
 - Add a private-file pending queue to `UserSession` or a dedicated manager. Enqueue only for the recipient; do not expose private files through channel file lists or public callbacks.
-- On successful storage, create a private file notification containing the file metadata and ID. Do not put private file bytes in callbacks or polling notifications.
+- On successful storage, return metadata to the sender and create a private file notification containing the metadata and ID for the recipient. Do not put private file bytes in callbacks or polling notifications.
 - On sign-out/disconnect, retain server files according to the project’s in-memory lifetime policy, but remove pending delivery state and callback registration safely.
 
 ### 3. Polling client flow

@@ -121,6 +121,13 @@ namespace Chat.Server.StateManagement
             }
         }
 
+        public void NotifyPrivateFileShared(string recipientId, SharedFile file)
+        {
+            var callback = _userManager.GetCallback(recipientId);
+            if (callback == null) return;
+            SafeInvoke(recipientId, () => callback.OnPrivateFileShared(file));
+        }
+
         /// <summary>
         /// Notifies remaining members of <paramref name="channelName"/> that
         /// <paramref name="disconnectedUserId"/> has left or disconnected.

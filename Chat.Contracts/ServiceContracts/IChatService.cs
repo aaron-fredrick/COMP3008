@@ -40,7 +40,13 @@ namespace Chat.Contracts.ServiceContracts
         bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData);
 
         [OperationContract]
+        SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData);
+
+        [OperationContract]
         SharedFile GetFile(string userId, Guid fileId);
+
+        [OperationContract]
+        SharedFile GetPrivateFile(string userId, Guid fileId);
 
         [OperationContract]
         List<SharedFile> GetChannelFiles(string channelName);
@@ -50,6 +56,9 @@ namespace Chat.Contracts.ServiceContracts
 
         [OperationContract]
         List<Message> GetPendingPrivateMessages(string userId);
+
+        [OperationContract]
+        List<SharedFile> GetPendingPrivateFiles(string userId);
 
         [OperationContract]
         string Ping(string userId, byte[] hash);

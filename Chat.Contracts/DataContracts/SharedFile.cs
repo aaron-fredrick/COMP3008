@@ -28,6 +28,10 @@ namespace Chat.Contracts.DataContracts
         [DataMember]
         public string ChannelName { get; set; }
 
+        // Null for channel files; populated for a private file share.
+        [DataMember]
+        public string RecipientId { get; set; }
+
         [DataMember]
         public byte[] FileData { get; set; }
     }

@@ -24,6 +24,7 @@ namespace Chat.Client.Polling.Services
         public event EventHandler<List<SharedFile>> ChannelFilesUpdated;
         public event EventHandler<Message> PublicMessageReceived;
         public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived;
+        public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived;
         public event EventHandler<ConnectionState> ConnectionStateChanged;
         public event EventHandler<int> PingMsUpdated;
 
@@ -169,6 +170,19 @@ namespace Chat.Client.Polling.Services
         public bool ShareFile(string fileName, FileType fileType, byte[] fileData) =>
             _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
 
+        public SharedFile SharePrivateFile(string recipientId, string fileName, FileType fileType, byte[] fileData) =>
+            _serviceClient.SharePrivateFile(_currentUserId, recipientId, fileName, fileType, fileData);
+
+        public bool DownloadAndOpenPrivateFile(SharedFile file)
+        {
+            var downloadedFile = _serviceClient.GetPrivateFile(_currentUserId, file.FileId);
+            if (downloadedFile?.FileData == null) return false;
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            if (!_fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath)) return false;
+            _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName));
+            return true;
+        }
+
         public bool DownloadAndOpenFile(SharedFile file)
         {
             var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId);
@@ -202,6 +216,7 @@ namespace Chat.Client.Polling.Services
             RefreshChannelFiles();
             PollPublicMessages();
             PollPrivateMessages();
+            PollPrivateFiles();
         }
 
         private void PollPublicMessages()
@@ -225,6 +240,17 @@ namespace Chat.Client.Polling.Services
 
                 message.IsCurrentUser = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase);
                 PrivateMessageReceived?.Invoke(this, (otherUserId, message));
+            }
+        }
+
+        private void PollPrivateFiles()
+        {
+            var files = _serviceClient.GetPendingPrivateFiles(_currentUserId);
+            foreach (var file in files)
+            {
+                string otherUserId = string.Equals(file.UploaderId, _currentUserId, StringComparison.OrdinalIgnoreCase)
+                    ? file.RecipientId : file.UploaderId;
+                PrivateFileReceived?.Invoke(this, (otherUserId, file));
             }
         }
 

@@ -3311,9 +3311,9 @@ Manual verification remains pending and will be performed through the WPF client
 
 - Channel file-message cards now carry the server file ID and can be clicked to download/open the file through the existing authorized file path.
 - Polling and duplex PM windows use grouped message metadata: consecutive messages from the same sender in the same local minute hide repeated sender/time metadata, including the current user.
-- PM windows include a right-side shared-files panel and local file-selection preview. The UI intentionally labels these entries as pending server support; a private-file WCF operation and routing are not implemented yet.
+- PM windows include a right-side shared-files panel with server-backed private upload notifications and double-click download/open behavior.
 - PM self-authored message groups align to the right, matching the channel conversation layout; other participants remain on the left.
 
 ### Private File Sharing Status
 
-The PM right-side file panel currently supports local validation and a pending preview only. It does not claim server delivery yet. The full implementation plan covers private-file WCF operations, sender/recipient authorization, polling queues, duplex callbacks, secure download, lifecycle cleanup, and verification for both clients.
+Private-file transfer is now implemented through the WCF contract in both clients. The server stores sender/recipient metadata, queues recipient notifications for polling, and sends duplex callbacks without exposing private files to channel broadcasts. Uploads are locally validated and only appear after server acceptance; double-clicking a file downloads through the authorized `GetPrivateFile` operation. Manual WPF verification remains pending.

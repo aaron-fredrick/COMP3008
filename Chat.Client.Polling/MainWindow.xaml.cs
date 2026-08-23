@@ -17,6 +17,7 @@ namespace Chat.Client.Polling
         private ConversationView _conversationView;
         private readonly Dictionary<string, PrivateMessageView> _privateMessageViews;
         private readonly Dictionary<string, List<Message>> _privateMessageHistory;
+        private readonly Dictionary<string, List<SharedFile>> _privateFileHistory = new Dictionary<string, List<SharedFile>>();
         private WindowResizer _windowResizer;
 
         public MainWindow()
@@ -42,6 +43,7 @@ namespace Chat.Client.Polling
             coordinator.ChannelFilesUpdated += OnChannelFilesUpdated;
             coordinator.PublicMessageReceived += OnPublicMessageReceived;
             coordinator.PrivateMessageReceived += OnPrivateMessageReceived;
+            coordinator.PrivateFileReceived += OnPrivateFileReceived;
             coordinator.ConnectionStateChanged += OnConnectionStateChanged;
             coordinator.PingMsUpdated += OnPingMsUpdated;
         }
@@ -97,6 +99,14 @@ namespace Chat.Client.Polling
                 OpenPrivateMessageView(args.OtherUserId);
 
             _privateMessageViews[args.OtherUserId].AddMessage(args.Message);
+        }
+
+        private void OnPrivateFileReceived(object sender, (string OtherUserId, SharedFile File) args)
+        {
+            if (!_privateFileHistory.ContainsKey(args.OtherUserId)) _privateFileHistory[args.OtherUserId] = new List<SharedFile>();
+            if (!_privateFileHistory[args.OtherUserId].Exists(file => file.FileId == args.File.FileId)) _privateFileHistory[args.OtherUserId].Add(args.File);
+            if (!_privateMessageViews.ContainsKey(args.OtherUserId)) OpenPrivateMessageView(args.OtherUserId);
+            _privateMessageViews[args.OtherUserId].AddPendingFile(args.File);
         }
 
         private void OnConnectionStateChanged(object sender, ConnectionState state) =>
@@ -291,6 +301,7 @@ namespace Chat.Client.Polling
             view.CurrentUserId = PollingSessionCoordinator.Instance.CurrentUserId;
             view.SendMessageRequested += OnPrivateMessageSendRequested;
             view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
+            view.FileDownloadRequested += OnPrivateMessageFileDownloadRequested;
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipient_id] = view;
@@ -303,6 +314,8 @@ namespace Chat.Client.Polling
                     view.AddMessage(message);
                 }
             }
+            if (_privateFileHistory.ContainsKey(recipient_id))
+                foreach (var file in _privateFileHistory[recipient_id]) view.AddPendingFile(file);
 
             view.Show();
         }
@@ -342,7 +355,6 @@ namespace Chat.Client.Polling
 
         private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
-            // TODO: Add a server operation for private-file transfer and replace this local-only preview.
             if (!(sender is PrivateMessageView view))
                 return;
 
@@ -358,14 +370,21 @@ namespace Chat.Client.Polling
                 return;
             }
 
-            view.AddPendingFile(new SharedFile
+            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            if (sharedFile == null)
             {
-                FileName = coordinator.GetFileName(dialog.FileName),
-                FileType = coordinator.DetermineFileType(dialog.FileName),
-                FileSize = new System.IO.FileInfo(dialog.FileName).Length,
-                UploaderId = coordinator.CurrentUserId
-            });
-            MessageBox.Show("The file is shown in this conversation, but private-file server transfer is not implemented yet.", "Private file", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            view.AddPendingFile(sharedFile);
+            if (!_privateFileHistory.ContainsKey(view.RecipientId)) _privateFileHistory[view.RecipientId] = new List<SharedFile>();
+            _privateFileHistory[view.RecipientId].Add(sharedFile);
+        }
+
+        private void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        {
+            if (!PollingSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
+                MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void OnPrivateMessageViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -406,6 +425,7 @@ namespace Chat.Client.Polling
         {
             CloseAllPrivateMessageViews();
             _privateMessageHistory.Clear();
+            _privateFileHistory.Clear();
         }
 
         // ── Footer ────────────────────────────────────────────────────────────

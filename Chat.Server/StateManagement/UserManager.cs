@@ -163,6 +163,19 @@ namespace Chat.Server.StateManagement
             }
         }
 
+        public void AddPendingPrivateFile(string userId, SharedFile file)
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                if (_users.ContainsKey(userId))
+                {
+                    _users[userId].PendingPrivateFiles.Enqueue(file);
+                }
+            }
+            finally { _lock.ExitWriteLock(); }
+        }
+
         public DateTime UpdateLastPollTime(string userId)
         {
             _lock.EnterWriteLock();
@@ -215,6 +228,22 @@ namespace Chat.Server.StateManagement
             {
                 _lock.ExitWriteLock();
             }
+        }
+
+        public Queue<SharedFile> ConsumePendingPrivateFiles(string userId)
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                if (_users.ContainsKey(userId))
+                {
+                    var files = _users[userId].PendingPrivateFiles;
+                    _users[userId].PendingPrivateFiles = new Queue<SharedFile>();
+                    return files;
+                }
+                return new Queue<SharedFile>();
+            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public List<string> GetChannelMembers(string channelName)

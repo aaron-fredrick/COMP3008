@@ -57,6 +57,14 @@ namespace Chat.Client.Duplex.Services
             }));
         }
 
+        public void OnPrivateFileShared(SharedFile file)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _serviceClient.OnPrivateFileSharedInternal(file);
+            }));
+        }
+
         public void OnUserDisconnected(string userId)
         {
             _dispatcher.BeginInvoke(new Action(() =>

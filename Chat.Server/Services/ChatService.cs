@@ -231,6 +231,48 @@ namespace Chat.Server.Services
             return file;
         }
 
+        public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
+        {
+            string clientType = DetectClientType();
+            var sender = _userManager.GetUserSession(senderId);
+            var recipient = _userManager.GetUserSession(recipientId);
+            if (sender == null || recipient == null || string.Equals(senderId, recipientId, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(sender.CurrentChannel) || !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal))
+            {
+                ServerLogger.Warning(clientType, "PRIVATE FILE", $"{senderId} -> {recipientId} rejected: users are not sharing a channel.");
+                return null;
+            }
+
+            if (!_fileHandler.StorePrivateFile(senderId, recipientId, fileName, fileType, fileData, out string reason, out SharedFile storedFile))
+            {
+                ServerLogger.Warning(clientType, "PRIVATE FILE", $"Share failed: {reason}");
+                return null;
+            }
+
+            var metadata = ToFileMetadata(storedFile);
+            _userManager.AddPendingPrivateFile(recipientId, metadata);
+            _callbackManager.NotifyPrivateFileShared(recipientId, metadata);
+            ServerLogger.Success(clientType, "PRIVATE FILE", $"{senderId} shared {fileName} with {recipientId}");
+            return metadata;
+        }
+
+        public SharedFile GetPrivateFile(string userId, Guid fileId)
+        {
+            var file = _fileHandler.GetFile(fileId);
+            if (file == null || string.IsNullOrWhiteSpace(file.RecipientId) ||
+                (!string.Equals(userId, file.UploaderId, StringComparison.Ordinal) && !string.Equals(userId, file.RecipientId, StringComparison.Ordinal)))
+                return null;
+
+            var sender = _userManager.GetUserSession(file.UploaderId);
+            var recipient = _userManager.GetUserSession(file.RecipientId);
+            var requester = _userManager.GetUserSession(userId);
+            if (sender == null || recipient == null || requester == null || string.IsNullOrWhiteSpace(sender.CurrentChannel) ||
+                !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal) ||
+                !string.Equals(requester.CurrentChannel, sender.CurrentChannel, StringComparison.Ordinal))
+                return null;
+            return file;
+        }
+
         public List<SharedFile> GetChannelFiles(string channelName)
         {
             string clientType = DetectClientType();
@@ -269,6 +311,22 @@ namespace Chat.Server.Services
                 ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} private message(s)");
             }
             return new List<Message>(pendingQueue);
+        }
+
+        public List<SharedFile> GetPendingPrivateFiles(string userId)
+        {
+            var pendingQueue = _userManager.ConsumePendingPrivateFiles(userId);
+            return new List<SharedFile>(pendingQueue);
+        }
+
+        private static SharedFile ToFileMetadata(SharedFile file)
+        {
+            return new SharedFile
+            {
+                FileId = file.FileId, FileName = file.FileName, FileType = file.FileType,
+                FileSize = file.FileSize, UploaderId = file.UploaderId, RecipientId = file.RecipientId,
+                UploadedAt = file.UploadedAt, ChannelName = file.ChannelName, FileData = null
+            };
         }
 
         public string Ping(string userId, byte[] hash)

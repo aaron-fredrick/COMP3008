@@ -23,6 +23,9 @@ namespace Chat.Contracts.CallbackContracts
         void OnFileShared(SharedFile file);
 
         [OperationContract(IsOneWay = true)]
+        void OnPrivateFileShared(SharedFile file);
+
+        [OperationContract(IsOneWay = true)]
         void OnUserDisconnected(string userId);
     }
 }

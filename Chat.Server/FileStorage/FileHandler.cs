@@ -109,6 +109,42 @@ namespace Chat.Server.FileStorage
             }
         }
 
+        public bool StorePrivateFile(string uploaderId, string recipientId, string fileName, FileType fileType, byte[] fileData, out string reason, out SharedFile storedFile)
+        {
+            _lock.EnterWriteLock();
+            try
+            {
+                reason = null;
+                storedFile = null;
+                string validationReason = null;
+                if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out validationReason))
+                {
+                    reason = validationReason;
+                    return false;
+                }
+
+                var fileId = Guid.NewGuid();
+                var filePath = Path.Combine(_storageDirectory, fileId.ToString());
+                File.WriteAllBytes(filePath, fileData);
+                storedFile = new SharedFile
+                {
+                    FileId = fileId, FileName = fileName, FileType = fileType,
+                    FileSize = fileData.Length, UploaderId = uploaderId,
+                    RecipientId = recipientId, UploadedAt = DateTime.UtcNow,
+                    ChannelName = null, FileData = fileData
+                };
+                _files[fileId] = storedFile;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                storedFile = null;
+                reason = $"Exception during file storage: {ex.Message}";
+                return false;
+            }
+            finally { _lock.ExitWriteLock(); }
+        }
+
         public SharedFile GetFile(Guid fileId)
         {
             _lock.EnterReadLock();
@@ -142,6 +178,7 @@ namespace Chat.Server.FileStorage
                         UploaderId = f.UploaderId,
                         UploadedAt = f.UploadedAt,
                         ChannelName = f.ChannelName,
+                        RecipientId = f.RecipientId,
                         FileData = null  // contents served only via GetFile(fileId)
                     })
                     .ToList();

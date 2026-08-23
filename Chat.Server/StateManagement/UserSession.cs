@@ -11,6 +11,7 @@ namespace Chat.Server.StateManagement
         public string CurrentChannel { get; set; }
         public DateTime LastPollTime { get; set; }
         public Queue<Message> PendingPrivateMessages { get; set; }
+        public Queue<SharedFile> PendingPrivateFiles { get; set; }
         public IChatCallback Callback { get; set; }
 
         public UserSession(string userId)
@@ -19,6 +20,7 @@ namespace Chat.Server.StateManagement
             CurrentChannel = null;
             LastPollTime = DateTime.UtcNow;
             PendingPrivateMessages = new Queue<Message>();
+            PendingPrivateFiles = new Queue<SharedFile>();
             Callback = null;
         }
     }

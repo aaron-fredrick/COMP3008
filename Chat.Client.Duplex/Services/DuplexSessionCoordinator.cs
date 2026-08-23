@@ -24,6 +24,7 @@ namespace Chat.Client.Duplex.Services
         public event EventHandler<List<SharedFile>> ChannelFilesUpdated;
         public event EventHandler<Message> PublicMessageReceived;
         public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived;
+        public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived;
         public event EventHandler<ConnectionState> ConnectionStateChanged;
         public event EventHandler<string> UserDisconnected;
         public event EventHandler<string> SystemMessageReceived;
@@ -67,6 +68,7 @@ namespace Chat.Client.Duplex.Services
             _serviceClient.MessageReceived += OnMessageReceived;
             _serviceClient.PrivateMessageReceived += OnPrivateMessageReceived;
             _serviceClient.FileShared += OnFileShared;
+            _serviceClient.PrivateFileShared += OnPrivateFileShared;
             _serviceClient.ChannelListChanged += OnChannelListChanged;
             _serviceClient.ChannelMembersChanged += OnChannelMembersChanged;
             _serviceClient.UserDisconnected += OnUserDisconnected;
@@ -80,6 +82,7 @@ namespace Chat.Client.Duplex.Services
                 _serviceClient.MessageReceived -= OnMessageReceived;
                 _serviceClient.PrivateMessageReceived -= OnPrivateMessageReceived;
                 _serviceClient.FileShared -= OnFileShared;
+                _serviceClient.PrivateFileShared -= OnPrivateFileShared;
                 _serviceClient.ChannelListChanged -= OnChannelListChanged;
                 _serviceClient.ChannelMembersChanged -= OnChannelMembersChanged;
                 _serviceClient.UserDisconnected -= OnUserDisconnected;
@@ -192,6 +195,19 @@ namespace Chat.Client.Duplex.Services
         public bool ShareFile(string fileName, FileType fileType, byte[] fileData) =>
             _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
 
+        public SharedFile SharePrivateFile(string recipientId, string fileName, FileType fileType, byte[] fileData) =>
+            _serviceClient.SharePrivateFile(_currentUserId, recipientId, fileName, fileType, fileData);
+
+        public bool DownloadAndOpenPrivateFile(SharedFile file)
+        {
+            var downloadedFile = _serviceClient.GetPrivateFile(_currentUserId, file.FileId);
+            if (downloadedFile?.FileData == null) return false;
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            if (!_fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath)) return false;
+            _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName));
+            return true;
+        }
+
         public bool DownloadAndOpenFile(SharedFile file)
         {
             var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId);
@@ -235,6 +251,13 @@ namespace Chat.Client.Duplex.Services
             {
                 RefreshChannelFiles();
             }
+        }
+
+        private void OnPrivateFileShared(object sender, SharedFile file)
+        {
+            string otherUserId = string.Equals(file.UploaderId, _currentUserId, StringComparison.OrdinalIgnoreCase)
+                ? file.RecipientId : file.UploaderId;
+            PrivateFileReceived?.Invoke(this, (otherUserId, file));
         }
 
         private void OnChannelListChanged(object sender, EventArgs e)

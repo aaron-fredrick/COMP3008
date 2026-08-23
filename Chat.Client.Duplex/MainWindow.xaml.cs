@@ -16,6 +16,7 @@ namespace Chat.Client.Duplex
         private ConversationView _conversationView;
         private readonly Dictionary<string, PrivateMessageView> _privateMessageViews;
         private readonly Dictionary<string, List<Message>> _privateMessageHistory;
+        private readonly Dictionary<string, List<SharedFile>> _privateFileHistory = new Dictionary<string, List<SharedFile>>();
         private bool _isSigningOut = false;
         private bool _channelListClosing = false;
         private bool _conversationClosing = false;
@@ -40,6 +41,7 @@ namespace Chat.Client.Duplex
             coordinator.ChannelFilesUpdated += Coordinator_ChannelFilesUpdated;
             coordinator.PublicMessageReceived += Coordinator_PublicMessageReceived;
             coordinator.PrivateMessageReceived += Coordinator_PrivateMessageReceived;
+            coordinator.PrivateFileReceived += Coordinator_PrivateFileReceived;
             coordinator.ConnectionStateChanged += Coordinator_ConnectionStateChanged;
             coordinator.UserDisconnected += Coordinator_UserDisconnected;
             coordinator.SystemMessageReceived += Coordinator_SystemMessageReceived;
@@ -278,6 +280,7 @@ namespace Chat.Client.Duplex
             privateMessageView.CurrentUserId = DuplexSessionCoordinator.Instance.CurrentUserId;
             privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
             privateMessageView.FileUploadRequested += DuplexPrivateMessageFileUploadRequested;
+            privateMessageView.FileDownloadRequested += DuplexPrivateMessageFileDownloadRequested;
             privateMessageView.Closing += PrivateMessageView_Closing;
             privateMessageView.Owner = _conversationView;
 
@@ -291,6 +294,8 @@ namespace Chat.Client.Duplex
                     privateMessageView.AddMessage(message);
                 }
             }
+            if (_privateFileHistory.ContainsKey(recipientId))
+                foreach (var file in _privateFileHistory[recipientId]) privateMessageView.AddPendingFile(file);
 
             privateMessageView.Show();
         }
@@ -329,7 +334,6 @@ namespace Chat.Client.Duplex
 
         private void DuplexPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
-            // TODO: Add a server operation for private-file transfer and replace this local-only preview.
             if (!(sender is PrivateMessageView view))
                 return;
 
@@ -345,14 +349,21 @@ namespace Chat.Client.Duplex
                 return;
             }
 
-            view.AddPendingFile(new SharedFile
+            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            if (sharedFile == null)
             {
-                FileName = coordinator.GetFileName(dialog.FileName),
-                FileType = coordinator.DetermineFileType(dialog.FileName),
-                FileSize = new System.IO.FileInfo(dialog.FileName).Length,
-                UploaderId = coordinator.CurrentUserId
-            });
-            MessageBox.Show("The file is shown in this conversation, but private-file server transfer is not implemented yet.", "Private file", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            view.AddPendingFile(sharedFile);
+            if (!_privateFileHistory.ContainsKey(view.RecipientId)) _privateFileHistory[view.RecipientId] = new List<SharedFile>();
+            _privateFileHistory[view.RecipientId].Add(sharedFile);
+        }
+
+        private void DuplexPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        {
+            if (!DuplexSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
+                MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void PrivateMessageView_Closing(object sender, CancelEventArgs e)
@@ -392,6 +403,14 @@ namespace Chat.Client.Duplex
                 OpenPrivateMessageView(args.OtherUserId);
             }
             _privateMessageViews[args.OtherUserId].AddMessage(args.Message);
+        }
+
+        private void Coordinator_PrivateFileReceived(object sender, (string OtherUserId, SharedFile File) args)
+        {
+            if (!_privateFileHistory.ContainsKey(args.OtherUserId)) _privateFileHistory[args.OtherUserId] = new List<SharedFile>();
+            if (!_privateFileHistory[args.OtherUserId].Exists(file => file.FileId == args.File.FileId)) _privateFileHistory[args.OtherUserId].Add(args.File);
+            if (!_privateMessageViews.ContainsKey(args.OtherUserId)) OpenPrivateMessageView(args.OtherUserId);
+            _privateMessageViews[args.OtherUserId].AddPendingFile(args.File);
         }
 
         private void Coordinator_UserDisconnected(object sender, string userId)
@@ -472,6 +491,7 @@ namespace Chat.Client.Duplex
         {
             CloseAllPrivateMessageViews();
             _privateMessageHistory.Clear();
+            _privateFileHistory.Clear();
         }
 
         protected override void OnClosed(EventArgs e)

@@ -12,6 +12,7 @@ namespace Chat.Client.Polling.Views
     {
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler FileUploadRequested;
+        public event EventHandler<SharedFile> FileDownloadRequested;
 
         public ObservableCollection<SharedFile> PendingFiles { get; } = new ObservableCollection<SharedFile>();
 
@@ -37,6 +38,7 @@ namespace Chat.Client.Polling.Views
         public PrivateMessageView(string recipientId)
         {
             InitializeComponent();
+            FilesListBox.MouseDoubleClick += FilesListBox_MouseDoubleClick;
             RecipientId = recipientId;
             Title = $"DM — {recipientId}";
             RecipientText.Text = $"{recipientId}";
@@ -68,7 +70,14 @@ namespace Chat.Client.Polling.Views
 
         public void AddPendingFile(SharedFile file)
         {
-            PendingFiles.Add(file);
+            if (file != null && !PendingFiles.Any(existing => existing.FileId != Guid.Empty && existing.FileId == file.FileId))
+                PendingFiles.Add(file);
+        }
+
+        private void FilesListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var file = FilesListBox.SelectedItem as SharedFile;
+            if (file != null && file.FileId != Guid.Empty) FileDownloadRequested?.Invoke(this, file);
         }
 
         private void UploadFileButton_Click(object sender, RoutedEventArgs e)

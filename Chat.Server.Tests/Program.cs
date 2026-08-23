@@ -399,6 +399,10 @@ namespace Chat.Server.Tests
             {
             }
 
+            public void OnPrivateFileShared(SharedFile file)
+            {
+            }
+
             public void OnUserDisconnected(string userId)
             {
             }

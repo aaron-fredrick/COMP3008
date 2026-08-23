@@ -186,6 +186,12 @@ namespace Chat.Client.Polling.Services
             }
         }
 
+        public System.Collections.Generic.List<SharedFile> GetPendingPrivateFiles(string userId)
+        {
+            try { return _proxy.GetPendingPrivateFiles(userId); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<SharedFile>(); }
+        }
+
         public bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData)
         {
             try
@@ -206,6 +212,12 @@ namespace Chat.Client.Polling.Services
             }
         }
 
+        public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
+        {
+            try { return _proxy.SharePrivateFile(senderId, recipientId, fileName, fileType, fileData); }
+            catch (Exception ex) { HandleError(ex); return null; }
+        }
+
         public SharedFile GetFile(string userId, Guid fileId)
         {
             try
@@ -217,6 +229,12 @@ namespace Chat.Client.Polling.Services
                 HandleError(ex);
                 return null;
             }
+        }
+
+        public SharedFile GetPrivateFile(string userId, Guid fileId)
+        {
+            try { return _proxy.GetPrivateFile(userId, fileId); }
+            catch (Exception ex) { HandleError(ex); return null; }
         }
 
         public System.Collections.Generic.List<SharedFile> GetChannelFiles(string channelName)

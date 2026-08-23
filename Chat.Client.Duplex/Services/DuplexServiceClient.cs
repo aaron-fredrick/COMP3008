@@ -24,6 +24,7 @@ namespace Chat.Client.Duplex.Services
         public event EventHandler<Message> MessageReceived;
         public event EventHandler<Message> PrivateMessageReceived;
         public event EventHandler<SharedFile> FileShared;
+        public event EventHandler<SharedFile> PrivateFileShared;
         public event EventHandler ChannelListChanged;
         public event EventHandler<string> ChannelMembersChanged;
         public event EventHandler<string> UserDisconnected;
@@ -198,6 +199,12 @@ namespace Chat.Client.Duplex.Services
             }
         }
 
+        public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
+        {
+            try { return _proxy.SharePrivateFile(senderId, recipientId, fileName, fileType, fileData); }
+            catch (Exception ex) { HandleError(ex); return null; }
+        }
+
         public SharedFile GetFile(string userId, Guid fileId)
         {
             try
@@ -209,6 +216,12 @@ namespace Chat.Client.Duplex.Services
                 HandleError(ex);
                 return null;
             }
+        }
+
+        public SharedFile GetPrivateFile(string userId, Guid fileId)
+        {
+            try { return _proxy.GetPrivateFile(userId, fileId); }
+            catch (Exception ex) { HandleError(ex); return null; }
         }
 
         public System.Collections.Generic.List<SharedFile> GetChannelFiles(string channelName)
@@ -285,6 +298,11 @@ namespace Chat.Client.Duplex.Services
         internal void OnFileSharedInternal(SharedFile file)
         {
             FileShared?.Invoke(this, file);
+        }
+
+        internal void OnPrivateFileSharedInternal(SharedFile file)
+        {
+            PrivateFileShared?.Invoke(this, file);
         }
 
         internal void OnChannelListChangedInternal()
