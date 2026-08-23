@@ -4,6 +4,20 @@
 
 Implement a real-time chat application demonstrating distributed systems concepts from COMP3008 Lectures 1–4. The application must satisfy Sections A (Functional Requirements), B (Server-Side Implementation), and C (Duplex Implementation) of the assignment specification.
 
+## 1.1 Implementation Status — 2026-08-23
+
+The required client/server architecture is implemented and the full solution builds in Debug configuration. Manual WPF verification is still pending; the implementation must not be represented as a confirmed mark outcome until the Part A scenarios have been demonstrated.
+
+Recent compliance changes:
+
+- Private-message history is retained for the active signed-in session, restored when its window reopens, and cleared on sign-out.
+- A PM window closes when its recipient is no longer a member of the current channel. The server acknowledges PM delivery so rejected sends stay in the input rather than appearing locally.
+- The server resets the polling boundary before channel membership changes, preventing public-message replay to a user who joins later.
+- File upload and download operations verify the caller's current channel membership on the server.
+- The duplex coordinator has no periodic server ping or refresh timer; core updates are callback-driven.
+
+Outstanding verification and hardening work is tracked in `implementation_plan.md` and `docs/WORKING.md`.
+
 ## 2. Marking Requirements Traceability
 
 The implementation must directly satisfy the three assessed sections of Assignment 1A.
@@ -55,6 +69,9 @@ The implementation must directly satisfy the three assessed sections of Assignme
 - Private messages are only allowed between members of the same channel
 - Private messages are delivered only to the intended recipient
 - Private message exchange appears in dedicated windows
+- Multiple private conversations may be open at once
+- Closing and reopening a PM window restores in-session history
+- A PM window is closed when the recipient leaves the channel
 
 ### 3.5 File Sharing
 - Users can share files in their current channel
@@ -62,6 +79,7 @@ The implementation must directly satisfy the three assessed sections of Assignme
 - Server validates file size (maximum 2 MB)
 - File contents are stored on the server
 - Files are accessible to channel members
+- Server validates the uploader's and downloader's membership before storing or serving file contents
 - Local filesystem paths are never shared between clients
 
 ### 3.6 Sign Out
@@ -235,7 +253,7 @@ Chat.Client.Shared/
 
 | Component Access | Contract             | Binding            | Address                                       | Purpose                   |
 | ---------------- | -------------------- | ------------------ | --------------------------------------------- | ------------------------- |
-| Polling client   | `IChatService`       | `BasicHttpBinding` | `http://localhost:8080/ChatService/Polling`   | Request/response RPC      |
+| Polling client   | `IChatService`       | `BasicHttpBinding` | `http://localhost:9000/ChatService/Polling`   | Request/response RPC      |
 | Duplex client    | `IDuplexChatService` | `NetTcpBinding`    | `net.tcp://localhost:8081/ChatService/Duplex` | Duplex RPC                |
 | Server callback  | `IChatCallback`      | Duplex channel     | Client callback channel                       | Server-to-client callback |
 

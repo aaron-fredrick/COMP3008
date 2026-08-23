@@ -48,7 +48,7 @@ COMP3008/
 ├── Chat.Client.Shared/      # Shared client logic (Services, Models, UI Resources)
 ├── Chat.Server/             # WCF server console application
 ├── Chat.Client.Polling/     # WPF polling client (✅ Complete)
-├── Chat.Client.Duplex/      # WPF duplex client (🔄 In Progress)
+├── Chat.Client.Duplex/      # WPF duplex client
 └── docs/                    # Documentation
 ```
 
@@ -76,6 +76,7 @@ COMP3008/
 - Instant message notifications
 - Channel member change notifications
 - File sharing notifications
+- Core state changes are callback-driven; the duplex client has no timer-based refresh loop
 
 ## File Restrictions
 
@@ -84,6 +85,8 @@ Allowed file types:
 - Text: `.txt`
 
 Maximum file size: **2 MB**
+
+The server also checks that the uploader or downloader is a current member of the file's channel.
 
 ## Getting Started
 
@@ -131,7 +134,7 @@ Chat.Server.exe
 
 **Using command-line arguments:**
 ```bash
-Chat.Server.exe --host localhost --polling-port 8080 --duplex-port 8081
+Chat.Server.exe --max-messages 100
 ```
 
 **View help:**
@@ -140,7 +143,7 @@ Chat.Server.exe --help
 ```
 
 **Default endpoints:**
-- Polling: `http://localhost:8080/ChatService/Polling`
+- Polling: `http://localhost:9000/ChatService/Polling`
 - Duplex: `net.tcp://localhost:8081/ChatService/Duplex`
 
 ### Configuration
@@ -150,12 +153,12 @@ Server endpoints can be configured in `Chat.Server/App.config`:
 ```xml
 <appSettings>
   <add key="Host" value="localhost" />
-  <add key="PollingPort" value="8080" />
+  <add key="PollingPort" value="9000" />
   <add key="DuplexPort" value="8081" />
 </appSettings>
 ```
 
-Command-line arguments override App.config values.
+The server currently supports `--max-messages` as a command-line override. Endpoint host and ports are configured in `App.config`.
 
 ## Architecture
 
@@ -208,6 +211,8 @@ Server → Push Event → Client (via callback)
 
 ## Assignment Part A Feature & Marks Alignment
 
+Implementation status below means the feature is present in code and the solution builds. GUI, cross-client, concurrency, and abnormal-disconnect verification remain manual work; this table is not a claim of awarded marks.
+
 | Feature | Section | Marks | Status | Implementation Location |
 |---------|---------|-------|--------|-------------------------|
 | **Section A: Client Functionality (14 Marks)** | | | | |
@@ -244,7 +249,7 @@ Server → Push Event → Client (via callback)
 | Value converters for UI data | - | - | ✅ Complete | FileSizeConverter, InitialsConverter, FileTypeConverter, etc. |
 | Unit test suite | - | - | ✅ Complete | `Chat.Server.Tests` project |
 
-**Total Part A Marks: 32/32 (100%)**
+**Part A implementation coverage: 32 marks mapped; manual verification pending.**
 
 ## Documentation
 

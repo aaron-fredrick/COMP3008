@@ -34,13 +34,13 @@ namespace Chat.Contracts.ServiceContracts
         void SendMessage(string senderId, string channelName, string content);
 
         [OperationContract]
-        void SendPrivateMessage(string senderId, string recipientId, string content);
+        bool SendPrivateMessage(string senderId, string recipientId, string content);
 
         [OperationContract]
         bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData);
 
         [OperationContract]
-        SharedFile GetFile(Guid fileId);
+        SharedFile GetFile(string userId, Guid fileId);
 
         [OperationContract]
         List<SharedFile> GetChannelFiles(string channelName);

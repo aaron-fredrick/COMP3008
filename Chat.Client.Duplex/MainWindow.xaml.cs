@@ -15,6 +15,7 @@ namespace Chat.Client.Duplex
         private ChannelListView _channelListView;
         private ConversationView _conversationView;
         private readonly Dictionary<string, PrivateMessageView> _privateMessageViews;
+        private readonly Dictionary<string, List<Message>> _privateMessageHistory;
         private bool _isSigningOut = false;
         private bool _channelListClosing = false;
         private bool _conversationClosing = false;
@@ -23,6 +24,7 @@ namespace Chat.Client.Duplex
         {
             InitializeComponent();
             _privateMessageViews = new Dictionary<string, PrivateMessageView>();
+            _privateMessageHistory = new Dictionary<string, List<Message>>();
             InitializeFooter();
             
             // Subscribe to global session coordinator events
@@ -198,6 +200,10 @@ namespace Chat.Client.Duplex
         private void ConversationView_LeaveChannelRequested(object sender, EventArgs e)
         {
             DuplexSessionCoordinator.Instance.LeaveChannel();
+
+            // Private messaging is valid only while both users remain in the channel.
+            CloseAllPrivateMessageViews();
+
             _conversationView.Close();
             _channelListView.Show();
             DuplexSessionCoordinator.Instance.RefreshChannels();
@@ -260,8 +266,18 @@ namespace Chat.Client.Duplex
             privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
             privateMessageView.Closing += PrivateMessageView_Closing;
             privateMessageView.Owner = _conversationView;
-            
+
             _privateMessageViews[recipientId] = privateMessageView;
+
+            // Restore message history if available
+            if (_privateMessageHistory.ContainsKey(recipientId))
+            {
+                foreach (var message in _privateMessageHistory[recipientId])
+                {
+                    privateMessageView.AddMessage(message);
+                }
+            }
+
             privateMessageView.Show();
         }
 
@@ -269,8 +285,13 @@ namespace Chat.Client.Duplex
         {
             if (sender is PrivateMessageView view)
             {
-                DuplexSessionCoordinator.Instance.SendPrivateMessage(view.RecipientId, message);
-                
+                if (!DuplexSessionCoordinator.Instance.SendPrivateMessage(view.RecipientId, message))
+                {
+                    MessageBox.Show("Private message could not be sent. The recipient may no longer be in this channel.",
+                        "Private Message", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 // Add own message directly to view
                 var ownMessage = new Message
                 {
@@ -281,7 +302,14 @@ namespace Chat.Client.Duplex
                     RecipientId = view.RecipientId,
                     IsCurrentUser = true
                 };
+
+                // Store sent message in history
+                if (!_privateMessageHistory.ContainsKey(view.RecipientId))
+                    _privateMessageHistory[view.RecipientId] = new List<Message>();
+                _privateMessageHistory[view.RecipientId].Add(ownMessage);
+
                 view.AddMessage(ownMessage);
+                view.ClearMessageInput();
             }
         }
 
@@ -298,8 +326,11 @@ namespace Chat.Client.Duplex
         private void Coordinator_ChannelsUpdated(object sender, List<Channel> channels) =>
             _channelListView?.UpdateChannels(channels);
 
-        private void Coordinator_ChannelMembersUpdated(object sender, List<string> members) =>
+        private void Coordinator_ChannelMembersUpdated(object sender, List<string> members)
+        {
             _conversationView?.UpdateMembers(members);
+            ClosePrivateMessageViewsForUnavailableMembers(members);
+        }
 
         private void Coordinator_ChannelFilesUpdated(object sender, List<SharedFile> files) =>
             _conversationView?.UpdateFiles(files);
@@ -309,6 +340,11 @@ namespace Chat.Client.Duplex
 
         private void Coordinator_PrivateMessageReceived(object sender, (string OtherUserId, Message Message) args)
         {
+            // Store message in history
+            if (!_privateMessageHistory.ContainsKey(args.OtherUserId))
+                _privateMessageHistory[args.OtherUserId] = new List<Message>();
+            _privateMessageHistory[args.OtherUserId].Add(args.Message);
+
             if (!_privateMessageViews.ContainsKey(args.OtherUserId))
             {
                 OpenPrivateMessageView(args.OtherUserId);
@@ -318,7 +354,7 @@ namespace Chat.Client.Duplex
 
         private void Coordinator_UserDisconnected(object sender, string userId)
         {
-            // The coordinator already triggers a channel members refresh on this
+            ClosePrivateMessageView(userId);
         }
 
         private void Coordinator_SystemMessageReceived(object sender, string message) =>
@@ -342,11 +378,7 @@ namespace Chat.Client.Duplex
 
             DuplexSessionCoordinator.Instance.SignOut();
 
-            foreach (var view in _privateMessageViews.Values)
-            {
-                view.Close();
-            }
-            _privateMessageViews.Clear();
+            ClearPrivateMessageState();
 
             if (!_channelListClosing) _channelListView?.Close();
             if (!_conversationClosing) _conversationView?.Close();
@@ -360,6 +392,44 @@ namespace Chat.Client.Duplex
             _channelListClosing = false;
             _conversationClosing = false;
             _isSigningOut = false;
+        }
+
+        private void ClosePrivateMessageView(string recipientId)
+        {
+            if (!_privateMessageViews.TryGetValue(recipientId, out var privateMessageView))
+                return;
+
+            privateMessageView.Close();
+            _privateMessageViews.Remove(recipientId);
+        }
+
+        private void CloseAllPrivateMessageViews()
+        {
+            var privateMessageViews = new List<PrivateMessageView>(_privateMessageViews.Values);
+            foreach (var privateMessageView in privateMessageViews)
+                privateMessageView.Close();
+            _privateMessageViews.Clear();
+        }
+
+        private void ClosePrivateMessageViewsForUnavailableMembers(List<string> members)
+        {
+            var availableMemberIds = new HashSet<string>(members);
+            var unavailableRecipientIds = new List<string>();
+
+            foreach (var privateMessageView in _privateMessageViews)
+            {
+                if (!availableMemberIds.Contains(privateMessageView.Key))
+                    unavailableRecipientIds.Add(privateMessageView.Key);
+            }
+
+            foreach (var recipientId in unavailableRecipientIds)
+                ClosePrivateMessageView(recipientId);
+        }
+
+        private void ClearPrivateMessageState()
+        {
+            CloseAllPrivateMessageViews();
+            _privateMessageHistory.Clear();
         }
 
         protected override void OnClosed(EventArgs e)

@@ -4,9 +4,9 @@
 
 **Phase:** Phase 6 — Integration Testing & Final Polish
 
-**Overall Status:** Both Polling and Duplex clients are fully functional and use identical global session state architectures.
+**Overall Status:** Core implementation is complete and Debug-build verified. Manual GUI, cross-client, concurrency, and abnormal-disconnect verification remain pending.
 
-**Last Updated:** 2026-08-22
+**Last Updated:** 2026-08-23
 
 ### Completed
 - [x] Service contracts defined (IChatService, IDuplexChatService, IChatCallback)
@@ -37,12 +37,15 @@
   - Renamed GetPendingPrivateMessages to ConsumePendingPrivateMessages for CQS compliance
   - Verified thread synchronization in ChannelManager
   - Verified resource definitions in Colors.xaml
-- [x] Updated README.md with Feature & Marks Alignment Matrix (32/32 marks)
+- [x] Updated assignment traceability documentation without claiming unverified marks
 - [x] Updated .gitignore to exclude agentic config directories
 - [x] Private messaging enhancements:
   - Added local PM history storage in both Polling and Duplex clients
   - Implemented PM history restoration when reopening conversation windows
   - PM windows now close automatically when leaving a channel (channel membership requirement)
+- [x] Server-enforced file channel access for uploads and downloads
+- [x] Join-time polling boundary prevents pre-join public-message replay
+- [x] Duplex client periodic ping removed so core duplex updates are callback-only
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
@@ -67,7 +70,7 @@
 
 ## Status Legend
 
-- `[x]` Implemented and verified
+- `[x]` Implemented and build-verified
 - `[~]` Implemented but not fully tested
 - `[ ]` Planned/not implemented
 - `[!]` Known issue
@@ -97,9 +100,9 @@ The implementation must directly satisfy the three assessed sections of Assignme
 
 ## Project Status
 
-**Current Phase**: Phase 6 - Final Verification (Complete)
+**Current Phase**: Phase 6 - Final Verification (Manual verification pending)
 
-**Last Updated**: August 21, 2026
+**Last Updated**: August 23, 2026
 
 ## Completed Work
 
@@ -399,7 +402,7 @@ Mapped to the project:
 ```text
 Contract: IChatService
 Binding: BasicHttpBinding
-Address: http://localhost:8080/ChatService/Polling
+Address: http://localhost:9000/ChatService/Polling
 ```
 
 **Duplex Endpoint**
@@ -2090,7 +2093,7 @@ UI Update (on UI thread)
 - **ChatServiceHost**: WCF service hosting with configurable endpoints
 
 ### Server Endpoints
-- **Polling**: `http://localhost:8080/ChatService/Polling` (BasicHttpBinding)
+- **Polling**: `http://localhost:9000/ChatService/Polling` (BasicHttpBinding)
 - **Duplex**: `net.tcp://localhost:8081/ChatService/Duplex` (NetTcpBinding)
 
 ### Configuration
@@ -3288,3 +3291,15 @@ Integration testing with both polling and duplex clients simultaneously is plann
 
 **Empty States:** Channel views now feature an 'empty state' message ('No shared files yet') in the Shared Files sidebar when no files have been uploaded.
 
+### Private Messaging Follow-up (2026-08-23)
+
+The private-message enhancement identified in `implementation_plan.md` is now implemented in both the polling and duplex clients.
+
+- PM history is retained in memory for each recipient while the current user remains signed in. Closing and reopening a PM window restores that conversation history.
+- A PM window closes when its recipient is no longer present in the current channel. The polling client determines this from its member refresh; the duplex client responds to both member-list updates and the user-disconnected callback.
+- Leaving a channel closes all open PM windows because private messages are only valid for members of the same channel. History remains available if the user rejoins during the same signed-in session.
+- Signing out closes all PM windows and clears all locally retained PM history so it cannot be displayed to the next signed-in account.
+- PM windows are closed from a snapshot of the open-window collection, preventing the `Closing` event from modifying that collection during enumeration.
+- `SendPrivateMessage` now returns an acknowledgement from the server. A client adds its own message to local history and clears the input only after the server accepts it; rejected sends display a concise warning instead of a phantom local message.
+
+Manual verification remains pending and will be performed through the WPF clients. Test the following scenarios for both client types: close/reopen a PM window, have the other user leave the channel while a PM is open, leave and rejoin the channel, and sign out then sign in as a different user.

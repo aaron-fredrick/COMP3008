@@ -16,12 +16,14 @@ namespace Chat.Client.Polling
         private ChannelListView _channelListView;
         private ConversationView _conversationView;
         private readonly Dictionary<string, PrivateMessageView> _privateMessageViews;
+        private readonly Dictionary<string, List<Message>> _privateMessageHistory;
         private WindowResizer _windowResizer;
 
         public MainWindow()
         {
             InitializeComponent();
             _privateMessageViews = new Dictionary<string, PrivateMessageView>();
+            _privateMessageHistory = new Dictionary<string, List<Message>>();
             _windowResizer = new WindowResizer(this);
 
             SubscribeCoordinatorEvents();
@@ -69,8 +71,11 @@ namespace Chat.Client.Polling
         private void OnChannelsUpdated(object sender, List<Channel> channels) =>
             _channelListView?.UpdateChannels(channels);
 
-        private void OnChannelMembersUpdated(object sender, List<string> members) =>
+        private void OnChannelMembersUpdated(object sender, List<string> members)
+        {
             _conversationView?.UpdateMembers(members);
+            ClosePrivateMessageViewsForUnavailableMembers(members);
+        }
 
         private void OnChannelFilesUpdated(object sender, List<SharedFile> files) =>
             _conversationView?.UpdateFiles(files);
@@ -83,6 +88,11 @@ namespace Chat.Client.Polling
 
         private void OnPrivateMessageReceived(object sender, (string OtherUserId, Message Message) args)
         {
+            // Store message in history
+            if (!_privateMessageHistory.ContainsKey(args.OtherUserId))
+                _privateMessageHistory[args.OtherUserId] = new List<Message>();
+            _privateMessageHistory[args.OtherUserId].Add(args.Message);
+
             if (!_privateMessageViews.ContainsKey(args.OtherUserId))
                 OpenPrivateMessageView(args.OtherUserId);
 
@@ -112,7 +122,7 @@ namespace Chat.Client.Polling
 
         private void SignOut()
         {
-            CloseAllPrivateMessageViews();
+            ClearPrivateMessageState();
             PollingSessionCoordinator.Instance.SignOut();
 
             AppFooter.CurrentUser = string.Empty;
@@ -195,6 +205,10 @@ namespace Chat.Client.Polling
         private void OnLeaveChannelRequested(object sender, EventArgs e)
         {
             PollingSessionCoordinator.Instance.LeaveChannel();
+
+            // Close all PM windows since they're only valid within the channel
+            CloseAllPrivateMessageViews();
+
             ShowChannelListView();
         }
 
@@ -266,6 +280,16 @@ namespace Chat.Client.Polling
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipient_id] = view;
+
+            // Restore message history if available
+            if (_privateMessageHistory.ContainsKey(recipient_id))
+            {
+                foreach (var message in _privateMessageHistory[recipient_id])
+                {
+                    view.AddMessage(message);
+                }
+            }
+
             view.Show();
         }
 
@@ -276,7 +300,12 @@ namespace Chat.Client.Polling
                 return;
 
             var coordinator = PollingSessionCoordinator.Instance;
-            coordinator.SendPrivateMessage(view.RecipientId, content);
+            if (!coordinator.SendPrivateMessage(view.RecipientId, content))
+            {
+                MessageBox.Show("Private message could not be sent. The recipient may no longer be in this channel.",
+                    "Private Message", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             var own_message = new Message
             {
@@ -287,7 +316,14 @@ namespace Chat.Client.Polling
                 RecipientId = view.RecipientId,
                 IsCurrentUser = true
             };
+
+            // Store sent message in history
+            if (!_privateMessageHistory.ContainsKey(view.RecipientId))
+                _privateMessageHistory[view.RecipientId] = new List<Message>();
+            _privateMessageHistory[view.RecipientId].Add(own_message);
+
             view.AddMessage(own_message);
+            view.ClearMessageInput();
         }
 
         private void OnPrivateMessageViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -299,9 +335,35 @@ namespace Chat.Client.Polling
 
         private void CloseAllPrivateMessageViews()
         {
-            foreach (var view in _privateMessageViews.Values)
+            var privateMessageViews = new List<PrivateMessageView>(_privateMessageViews.Values);
+            foreach (var view in privateMessageViews)
                 view.Close();
             _privateMessageViews.Clear();
+        }
+
+        private void ClosePrivateMessageViewsForUnavailableMembers(List<string> members)
+        {
+            var availableMemberIds = new HashSet<string>(members);
+            var unavailableRecipientIds = new List<string>();
+
+            foreach (var privateMessageView in _privateMessageViews)
+            {
+                if (!availableMemberIds.Contains(privateMessageView.Key))
+                    unavailableRecipientIds.Add(privateMessageView.Key);
+            }
+
+            foreach (var recipientId in unavailableRecipientIds)
+            {
+                var privateMessageView = _privateMessageViews[recipientId];
+                privateMessageView.Close();
+                _privateMessageViews.Remove(recipientId);
+            }
+        }
+
+        private void ClearPrivateMessageState()
+        {
+            CloseAllPrivateMessageViews();
+            _privateMessageHistory.Clear();
         }
 
         // ── Footer ────────────────────────────────────────────────────────────

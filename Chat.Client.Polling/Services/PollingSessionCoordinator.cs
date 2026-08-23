@@ -149,7 +149,7 @@ namespace Chat.Client.Polling.Services
             _serviceClient.SendMessage(_currentUserId, _currentChannel, content);
         }
 
-        public void SendPrivateMessage(string recipientId, string content) =>
+        public bool SendPrivateMessage(string recipientId, string content) =>
             _serviceClient.SendPrivateMessage(_currentUserId, recipientId, content);
 
         // ── File operations ──────────────────────────────────────────────────
@@ -171,7 +171,7 @@ namespace Chat.Client.Polling.Services
 
         public bool DownloadAndOpenFile(SharedFile file)
         {
-            var downloadedFile = _serviceClient.GetFile(file.FileId);
+            var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId);
             if (downloadedFile?.FileData == null)
                 return false;
 

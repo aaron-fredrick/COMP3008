@@ -43,6 +43,11 @@ namespace Chat.Client.Polling.Views
             RefreshMessages();
         }
 
+        public void ClearMessageInput()
+        {
+            MessageTextBox.Clear();
+        }
+
         private void RefreshMessages()
         {
             MessagesListBox.ItemsSource = _messages.ToList();
@@ -70,7 +75,6 @@ namespace Chat.Client.Polling.Views
             if (!string.IsNullOrEmpty(message))
             {
                 SendMessageRequested?.Invoke(this, message);
-                MessageTextBox.Clear();
             }
         }
     }

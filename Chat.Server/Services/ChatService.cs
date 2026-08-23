@@ -117,6 +117,9 @@ namespace Chat.Server.Services
                 _callbackManager.NotifyChannelMembersChanged(previousChannel);
             }
 
+            // Establish the polling boundary before membership changes so a user never
+            // receives messages that were sent before they joined this channel.
+            _userManager.UpdateLastPollTime(userId);
             bool success = _channelManager.JoinChannel(userId, channelName, out _);
             if (success)
             {
@@ -165,17 +168,27 @@ namespace Chat.Server.Services
             _messageRouter.RoutePublicMessage(senderId, channelName, content, out string reason);
         }
 
-        public void SendPrivateMessage(string senderId, string recipientId, string content)
+        public bool SendPrivateMessage(string senderId, string recipientId, string content)
         {
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "PRIVATE", $"{senderId} -> {recipientId}: {content}");
-            _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
+            bool result = _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
+            if (!result)
+                ServerLogger.Warning(clientType, "PRIVATE", $"{senderId} -> {recipientId} failed: {reason}");
+
+            return result;
         }
 
         public bool ShareFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData)
         {
-            bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason, out SharedFile storedFile);
             string clientType = DetectClientType();
+            if (!IsUserInChannel(uploaderId, channelName))
+            {
+                ServerLogger.Warning(clientType, "FILE", $"{uploaderId} attempted to share a file outside their current channel.");
+                return false;
+            }
+
+            bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason, out SharedFile storedFile);
             if (result)
             {
                 ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
@@ -197,11 +210,24 @@ namespace Chat.Server.Services
             return result;
         }
 
-        public SharedFile GetFile(Guid fileId)
+        public SharedFile GetFile(string userId, Guid fileId)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "FILE", $"Download file {fileId}");
-            return _fileHandler.GetFile(fileId);
+            var file = _fileHandler.GetFile(fileId);
+            if (file == null)
+            {
+                ServerLogger.Warning(clientType, "FILE", $"{userId} requested an unknown file {fileId}");
+                return null;
+            }
+
+            if (!IsUserInChannel(userId, file.ChannelName))
+            {
+                ServerLogger.Warning(clientType, "FILE", $"{userId} attempted to download a file outside their current channel.");
+                return null;
+            }
+
+            ServerLogger.Request(clientType, "FILE", $"{userId} downloaded file {fileId}");
+            return file;
         }
 
         public List<SharedFile> GetChannelFiles(string channelName)
@@ -269,6 +295,12 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "CALLBACK", $"{userId} -> unregistered");
             _callbackManager.UnregisterCallback(userId);
+        }
+
+        private bool IsUserInChannel(string userId, string channelName)
+        {
+            var session = _userManager.GetUserSession(userId);
+            return session != null && string.Equals(session.CurrentChannel, channelName, StringComparison.Ordinal);
         }
 
         private string GetClientIpAddress()

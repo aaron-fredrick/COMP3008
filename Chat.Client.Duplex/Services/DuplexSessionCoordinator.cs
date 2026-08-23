@@ -31,8 +31,6 @@ namespace Chat.Client.Duplex.Services
         private DuplexServiceClient _serviceClient;
         private readonly ValidationService _validationService;
         private readonly FileHelperService _fileHelperService;
-        private DispatcherTimer _pingTimer;
-        private readonly Random _random = new Random();
 
         private string _currentUserId;
         private string _currentChannel;
@@ -48,8 +46,6 @@ namespace Chat.Client.Duplex.Services
             _validationService = new ValidationService();
             _fileHelperService = new FileHelperService();
 
-            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-            _pingTimer.Tick += OnPingTick;
         }
 
         // ── Session lifecycle ────────────────────────────────────────────────
@@ -101,16 +97,13 @@ namespace Chat.Client.Duplex.Services
             if (success)
             {
                 _currentUserId = username;
-                _pingTimer.Start();
-                PerformPing();
+                ConnectionStateChanged?.Invoke(this, ConnectionState.Connected);
             }
             return success;
         }
 
         public void SignOut()
         {
-            _pingTimer.Stop();
-
             if (!string.IsNullOrEmpty(_currentChannel))
                 _serviceClient?.LeaveChannel(_currentUserId);
 
@@ -179,7 +172,7 @@ namespace Chat.Client.Duplex.Services
             _serviceClient.SendMessage(_currentUserId, _currentChannel, content);
         }
 
-        public void SendPrivateMessage(string recipientId, string content) =>
+        public bool SendPrivateMessage(string recipientId, string content) =>
             _serviceClient.SendPrivateMessage(_currentUserId, recipientId, content);
 
         // ── File operations ──────────────────────────────────────────────────
@@ -201,7 +194,7 @@ namespace Chat.Client.Duplex.Services
 
         public bool DownloadAndOpenFile(SharedFile file)
         {
-            var downloadedFile = _serviceClient.GetFile(file.FileId);
+            var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId);
             if (downloadedFile?.FileData == null)
                 return false;
 
@@ -266,7 +259,6 @@ namespace Chat.Client.Duplex.Services
 
         private void OnConnectionLost(object sender, EventArgs e)
         {
-            _pingTimer.Stop();
             ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
             
             // Clean up state on disconnect
@@ -275,35 +267,6 @@ namespace Chat.Client.Duplex.Services
         }
 
         // ── Ping ─────────────────────────────────────────────────────────────
-
-        private void OnPingTick(object sender, EventArgs e) => PerformPing();
-
-        private void PerformPing()
-        {
-            if (!IsSignedIn) return;
-
-            try
-            {
-                byte[] hash = new byte[6];
-                _random.NextBytes(hash);
-                string expectedPong = BitConverter.ToString(hash).Replace("-", "");
-
-                string pong = _serviceClient.Ping(_currentUserId ?? string.Empty, hash);
-                
-                if (pong == expectedPong)
-                {
-                    ConnectionStateChanged?.Invoke(this, ConnectionState.Connected);
-                }
-                else
-                {
-                    ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
-                }
-            }
-            catch
-            {
-                ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
-            }
-        }
 
         // ── IDisposable ──────────────────────────────────────────────────────
 
@@ -315,7 +278,6 @@ namespace Chat.Client.Duplex.Services
             if (IsSignedIn)
                 SignOut();
 
-            _pingTimer.Stop();
             UnsubscribeEvents();
             _serviceClient?.Dispose();
             _isDisposed = true;

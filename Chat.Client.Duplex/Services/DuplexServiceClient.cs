@@ -172,15 +172,16 @@ namespace Chat.Client.Duplex.Services
             }
         }
 
-        public void SendPrivateMessage(string senderId, string recipientId, string content)
+        public bool SendPrivateMessage(string senderId, string recipientId, string content)
         {
             try
             {
-                _proxy.SendPrivateMessage(senderId, recipientId, content);
+                return _proxy.SendPrivateMessage(senderId, recipientId, content);
             }
             catch (Exception ex)
             {
                 HandleError(ex);
+                return false;
             }
         }
 
@@ -197,11 +198,11 @@ namespace Chat.Client.Duplex.Services
             }
         }
 
-        public SharedFile GetFile(Guid fileId)
+        public SharedFile GetFile(string userId, Guid fileId)
         {
             try
             {
-                return _proxy.GetFile(fileId);
+                return _proxy.GetFile(userId, fileId);
             }
             catch (Exception ex)
             {
