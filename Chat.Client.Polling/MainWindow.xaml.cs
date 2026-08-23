@@ -155,6 +155,7 @@ namespace Chat.Client.Polling
             _conversationView.SendMessageRequested += OnSendMessageRequested;
             _conversationView.LeaveChannelRequested += OnLeaveChannelRequested;
             _conversationView.FileDownloadRequested += OnFileDownloadRequested;
+            _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
 
@@ -214,6 +215,18 @@ namespace Chat.Client.Polling
 
         private void OnFileDownloadRequested(object sender, SharedFile file) =>
             PollingSessionCoordinator.Instance.DownloadAndOpenFile(file);
+
+        private void OnFileMessageDownloadRequested(object sender, Message message)
+        {
+            if (!message.FileId.HasValue)
+                return;
+
+            PollingSessionCoordinator.Instance.DownloadAndOpenFile(new SharedFile
+            {
+                FileId = message.FileId.Value,
+                FileName = message.Content.Replace("Shared file: ", string.Empty)
+            });
+        }
 
         private void OnFileShareRequested(object sender, EventArgs e)
         {
@@ -277,6 +290,7 @@ namespace Chat.Client.Polling
             var view = new PrivateMessageView(recipient_id);
             view.CurrentUserId = PollingSessionCoordinator.Instance.CurrentUserId;
             view.SendMessageRequested += OnPrivateMessageSendRequested;
+            view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipient_id] = view;
@@ -324,6 +338,34 @@ namespace Chat.Client.Polling
 
             view.AddMessage(own_message);
             view.ClearMessageInput();
+        }
+
+        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        {
+            // TODO: Add a server operation for private-file transfer and replace this local-only preview.
+            if (!(sender is PrivateMessageView view))
+                return;
+
+            var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Select a file for this private conversation", Filter = "Allowed files|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.txt" };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var coordinator = PollingSessionCoordinator.Instance;
+            var validation = coordinator.ValidateFile(dialog.FileName);
+            if (!validation.IsValid)
+            {
+                MessageBox.Show(validation.ErrorMessage, "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            view.AddPendingFile(new SharedFile
+            {
+                FileName = coordinator.GetFileName(dialog.FileName),
+                FileType = coordinator.DetermineFileType(dialog.FileName),
+                FileSize = new System.IO.FileInfo(dialog.FileName).Length,
+                UploaderId = coordinator.CurrentUserId
+            });
+            MessageBox.Show("The file is shown in this conversation, but private-file server transfer is not implemented yet.", "Private file", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void OnPrivateMessageViewClosing(object sender, System.ComponentModel.CancelEventArgs e)

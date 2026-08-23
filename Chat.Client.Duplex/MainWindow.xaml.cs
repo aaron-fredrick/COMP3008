@@ -144,6 +144,7 @@ namespace Chat.Client.Duplex
             _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
             _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
             _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
+            _conversationView.FileMessageDownloadRequested += ConversationView_FileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += ConversationView_PrivateMessageRequested;
             _conversationView.FileShareRequested += ConversationView_FileShareRequested;
             _conversationView.SignOutRequested += (s, e) => SignOut();
@@ -212,6 +213,18 @@ namespace Chat.Client.Duplex
         private void ConversationView_FileDownloadRequested(object sender, SharedFile file) =>
             DuplexSessionCoordinator.Instance.DownloadAndOpenFile(file);
 
+        private void ConversationView_FileMessageDownloadRequested(object sender, Message message)
+        {
+            if (!message.FileId.HasValue)
+                return;
+
+            DuplexSessionCoordinator.Instance.DownloadAndOpenFile(new SharedFile
+            {
+                FileId = message.FileId.Value,
+                FileName = message.Content.Replace("Shared file: ", string.Empty)
+            });
+        }
+
         private void ConversationView_FileShareRequested(object sender, EventArgs e)
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
@@ -264,6 +277,7 @@ namespace Chat.Client.Duplex
             var privateMessageView = new PrivateMessageView(recipientId);
             privateMessageView.CurrentUserId = DuplexSessionCoordinator.Instance.CurrentUserId;
             privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
+            privateMessageView.FileUploadRequested += DuplexPrivateMessageFileUploadRequested;
             privateMessageView.Closing += PrivateMessageView_Closing;
             privateMessageView.Owner = _conversationView;
 
@@ -311,6 +325,34 @@ namespace Chat.Client.Duplex
                 view.AddMessage(ownMessage);
                 view.ClearMessageInput();
             }
+        }
+
+        private void DuplexPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        {
+            // TODO: Add a server operation for private-file transfer and replace this local-only preview.
+            if (!(sender is PrivateMessageView view))
+                return;
+
+            var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Select a file for this private conversation", Filter = "Allowed files|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.txt" };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var coordinator = DuplexSessionCoordinator.Instance;
+            var validation = coordinator.ValidateFile(dialog.FileName);
+            if (!validation.IsValid)
+            {
+                MessageBox.Show(validation.ErrorMessage, "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            view.AddPendingFile(new SharedFile
+            {
+                FileName = coordinator.GetFileName(dialog.FileName),
+                FileType = coordinator.DetermineFileType(dialog.FileName),
+                FileSize = new System.IO.FileInfo(dialog.FileName).Length,
+                UploaderId = coordinator.CurrentUserId
+            });
+            MessageBox.Show("The file is shown in this conversation, but private-file server transfer is not implemented yet.", "Private file", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void PrivateMessageView_Closing(object sender, CancelEventArgs e)

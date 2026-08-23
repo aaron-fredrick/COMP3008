@@ -46,6 +46,9 @@
 - [x] Server-enforced file channel access for uploads and downloads
 - [x] Join-time polling boundary prevents pre-join public-message replay
 - [x] Duplex client periodic ping removed so core duplex updates are callback-only
+- [x] Channel file-message cards are clickable and use the existing download/open flow
+- [x] PM windows now use channel-style grouped message metadata and a right-side file panel
+- [x] PM file upload UI validates and previews a local file; server/client private-file transfer remains explicitly deferred
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)
@@ -3303,3 +3306,9 @@ The private-message enhancement identified in `implementation_plan.md` is now im
 - `SendPrivateMessage` now returns an acknowledgement from the server. A client adds its own message to local history and clears the input only after the server accepts it; rejected sends display a concise warning instead of a phantom local message.
 
 Manual verification remains pending and will be performed through the WPF clients. Test the following scenarios for both client types: close/reopen a PM window, have the other user leave the channel while a PM is open, leave and rejoin the channel, and sign out then sign in as a different user.
+
+### UI Enhancement Follow-up (2026-08-23)
+
+- Channel file-message cards now carry the server file ID and can be clicked to download/open the file through the existing authorized file path.
+- Polling and duplex PM windows use grouped message metadata: consecutive messages from the same sender in the same local minute hide repeated sender/time metadata, including the current user.
+- PM windows include a right-side shared-files panel and local file-selection preview. The UI intentionally labels these entries as pending server support; a private-file WCF operation and routing are not implemented yet.

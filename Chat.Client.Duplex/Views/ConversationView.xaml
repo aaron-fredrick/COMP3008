@@ -271,7 +271,8 @@
                                                 <Border Visibility="{Binding Type, Converter={StaticResource FileTypeVisibilityConverter}}"
                                                         Margin="0,8,0,0" Padding="10,12" CornerRadius="10"
                                                         BorderBrush="{StaticResource LightBorderBrush}" BorderThickness="1"
-                                                        Background="{StaticResource BackgroundBrush}" MinWidth="220">
+                                                        Background="{StaticResource BackgroundBrush}" MinWidth="220" Cursor="Hand"
+                                                        MouseLeftButtonUp="FileMessage_MouseLeftButtonUp">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Style.Triggers>

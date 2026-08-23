@@ -24,6 +24,7 @@ namespace Chat.Client.Shared.ViewModels
         public string Content => Message.Content;
         public MessageType Type => Message.Type;
         public bool IsCurrentUser => Message.IsCurrentUser;
+        public Guid? FileId => Message.FileId;
 
         // Convert the server's UTC/local timestamp to the client's local time offset
         public DateTime Timestamp => Message.Timestamp.ToLocalTime();

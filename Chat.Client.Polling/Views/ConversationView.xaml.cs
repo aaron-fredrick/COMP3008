@@ -12,6 +12,7 @@ namespace Chat.Client.Polling.Views
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler LeaveChannelRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
+        public event EventHandler<Message> FileMessageDownloadRequested;
         public event EventHandler<string> PrivateMessageRequested;
         public event EventHandler FileShareRequested;
 
@@ -128,6 +129,15 @@ namespace Chat.Client.Polling.Views
             if (FilesListBox.SelectedItem is SharedFile selectedFile)
             {
                 FileDownloadRequested?.Invoke(this, selectedFile);
+            }
+        }
+
+        private void FileMessage_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is Chat.Client.Shared.ViewModels.MessageViewModel viewModel &&
+                viewModel.Message.FileId.HasValue)
+            {
+                FileMessageDownloadRequested?.Invoke(this, viewModel.Message);
             }
         }
 

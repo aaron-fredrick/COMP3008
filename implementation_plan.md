@@ -34,6 +34,21 @@ This document records implementation evidence and outstanding verification work.
 
 ## Outstanding Work
 
+### UI Enhancement Plan — Channel and Private Conversations
+
+1. Make file-message entries in the channel conversation clickable so selecting a file message downloads and opens the associated server file through the existing client service path.
+2. Add a private-conversation file panel with the same visual language as the channel conversation's shared-files panel.
+3. Add private-conversation file selection/upload UI only: validate the local file and show the selected/shared-file presentation, while leaving the PM server contract and transfer routing explicitly deferred for a follow-up implementation.
+4. Align PM message presentation with channel messages: group consecutive messages by sender within the same minute, show the sender/time metadata at group boundaries, and retain the current-user alignment.
+5. Keep PM files in a right-side panel; do not mix file entries into the message stream until PM file server routing is implemented.
+
+Acceptance criteria for this enhancement:
+
+- A channel file message can be clicked and uses the existing download/open flow.
+- Polling and duplex PM windows compile with the same message-grouping behavior.
+- PM windows display a right-side files panel and an upload affordance without inventing a new server operation.
+- The deferred PM file path is documented in code and working notes as a TODO, not presented as fully functional.
+
 ### P0 — Required manual verification
 
 Run the server plus at least three client instances, including both polling and duplex clients. Record actual results in `docs/WORKING.md`.

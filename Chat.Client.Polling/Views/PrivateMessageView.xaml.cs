@@ -1,14 +1,19 @@
 using System;
 using System.Linq;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using Chat.Contracts.DataContracts;
+using Chat.Contracts.SharedTypes;
 
 namespace Chat.Client.Polling.Views
 {
     public partial class PrivateMessageView : Window
     {
         public event EventHandler<string> SendMessageRequested;
+        public event EventHandler FileUploadRequested;
+
+        public ObservableCollection<SharedFile> PendingFiles { get; } = new ObservableCollection<SharedFile>();
 
         public string RecipientId { get; }
 
@@ -27,6 +32,7 @@ namespace Chat.Client.Polling.Views
         }
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
+        private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
 
         public PrivateMessageView(string recipientId)
         {
@@ -35,6 +41,7 @@ namespace Chat.Client.Polling.Views
             Title = $"DM — {recipientId}";
             RecipientText.Text = $"{recipientId}";
             _messages = new System.Collections.Generic.SortedSet<Message>();
+            _messageViewModels = new System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel>();
         }
 
         public void AddMessage(Message message)
@@ -48,9 +55,30 @@ namespace Chat.Client.Polling.Views
             MessageTextBox.Clear();
         }
 
+        public void AddPendingFile(SharedFile file)
+        {
+            PendingFiles.Add(file);
+        }
+
+        private void UploadFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            FileUploadRequested?.Invoke(this, EventArgs.Empty);
+        }
+
         private void RefreshMessages()
         {
-            MessagesListBox.ItemsSource = _messages.ToList();
+            _messageViewModels.Clear();
+            Chat.Client.Shared.ViewModels.MessageViewModel previous = null;
+            foreach (var message in _messages)
+            {
+                bool showMetadata = previous == null || previous.SenderId != message.SenderId ||
+                    previous.Timestamp.ToString("yyyyMMddHHmm") != message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm");
+                var viewModel = new Chat.Client.Shared.ViewModels.MessageViewModel(message, showMetadata);
+                _messageViewModels.Add(viewModel);
+                previous = viewModel;
+            }
+
+            MessagesListBox.ItemsSource = _messageViewModels.ToList();
             if (MessagesListBox.Items.Count > 0)
                 MessagesListBox.ScrollIntoView(MessagesListBox.Items[MessagesListBox.Items.Count - 1]);
         }

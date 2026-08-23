@@ -199,7 +199,8 @@ namespace Chat.Server.Services
                     Content = $"Shared file: {fileName}",
                     Timestamp = DateTime.UtcNow,
                     Type = MessageType.File,
-                    ChannelName = channelName
+                    ChannelName = channelName,
+                    FileId = storedFile.FileId
                 };
                 _messageRouter.RoutePublicMessage(fileMessage, out string _);
             }
