@@ -45,14 +45,23 @@ namespace Chat.Server.Logging
                 string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
                 string logMessage = $"[{timestamp}] [{clientType}] [{operation}] {details}";
 
-                // Write to file
                 try
                 {
                     File.AppendAllText(LogFilePath, logMessage + Environment.NewLine);
                 }
-                catch { }
+                catch (IOException ex)
+                {
+                    Console.Error.WriteLine($"Failed to write to log file: {ex.Message}");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.Error.WriteLine($"Failed to write to log file: {ex.Message}");
+                }
+                catch (System.Security.SecurityException ex)
+                {
+                    Console.Error.WriteLine($"Failed to write to log file: {ex.Message}");
+                }
 
-                // Write to console with colors
                 WriteToConsole(level, clientType, operation, details);
             }
         }

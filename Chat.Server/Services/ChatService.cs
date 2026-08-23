@@ -235,7 +235,7 @@ namespace Chat.Server.Services
 
         public List<Message> GetPendingPrivateMessages(string userId)
         {
-            var pendingQueue = _userManager.GetPendingPrivateMessages(userId);
+            var pendingQueue = _userManager.ConsumePendingPrivateMessages(userId);
             string clientType = DetectClientType();
             if (pendingQueue.Count > 0)
             {
@@ -289,7 +289,18 @@ namespace Chat.Server.Services
                     }
                 }
             }
-            catch { }
+            catch (System.ServiceModel.CommunicationException)
+            {
+                return "unknown";
+            }
+            catch (System.ObjectDisposedException)
+            {
+                return "unknown";
+            }
+            catch (System.InvalidOperationException)
+            {
+                return "unknown";
+            }
             return "unknown";
         }
 
@@ -352,7 +363,18 @@ namespace Chat.Server.Services
                     }
                 }
             }
-            catch { }
+            catch (System.ServiceModel.CommunicationException)
+            {
+                return "UNKNOWN";
+            }
+            catch (System.ObjectDisposedException)
+            {
+                return "UNKNOWN";
+            }
+            catch (System.InvalidOperationException)
+            {
+                return "UNKNOWN";
+            }
             return "UNKNOWN";
         }
     }

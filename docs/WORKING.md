@@ -30,6 +30,15 @@
 - [x] Project run scripts cleanup and directory organization
 - [x] Final UI layout polish (Header alignments, active view toggle default selection)
 - [x] Procedural SVG ribbon avatars (client-side generated, deterministic paths based on username)
+- [x] Engineering guideline compliance audit and cleanup:
+  - Fixed empty catch blocks in ChatService (GetClientIpAddress, DetectClientType)
+  - Fixed empty catch block in ServerLogger.Write()
+  - Removed unused parameter from UserManager.GetChannelMembers()
+  - Renamed GetPendingPrivateMessages to ConsumePendingPrivateMessages for CQS compliance
+  - Verified thread synchronization in ChannelManager
+  - Verified resource definitions in Colors.xaml
+- [x] Updated README.md with Feature & Marks Alignment Matrix (32/32 marks)
+- [x] Updated .gitignore to exclude agentic config directories
 
 ### In Progress
 - [/] End-to-end integration testing (both clients against same server)

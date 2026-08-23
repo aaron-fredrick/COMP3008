@@ -198,7 +198,7 @@ namespace Chat.Server.StateManagement
             }
         }
 
-        public Queue<Message> GetPendingPrivateMessages(string userId)
+        public Queue<Message> ConsumePendingPrivateMessages(string userId)
         {
             _lock.EnterWriteLock();
             try
@@ -217,7 +217,7 @@ namespace Chat.Server.StateManagement
             }
         }
 
-        public List<string> GetChannelMembers(string channelName, ChannelManager channelManager)
+        public List<string> GetChannelMembers(string channelName)
         {
             _lock.EnterReadLock();
             try
