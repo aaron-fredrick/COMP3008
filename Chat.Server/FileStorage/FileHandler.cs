@@ -71,8 +71,9 @@ namespace Chat.Server.FileStorage
             {
                 reason = null;
                 storedFile = null;
+                string validationReason = null;
 
-                if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out string validationReason))
+                if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out validationReason))
                 {
                     reason = validationReason;
                     return false;
