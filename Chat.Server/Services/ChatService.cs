@@ -9,6 +9,7 @@ using Chat.Contracts.SharedTypes;
 using Chat.Server.StateManagement;
 using Chat.Server.FileStorage;
 using Chat.Server.Logging;
+using ContractMessage = Chat.Contracts.DataContracts.Message;
 
 namespace Chat.Server.Services
 {
@@ -190,7 +191,7 @@ namespace Chat.Server.Services
             {
                 ServerLogger.Success(clientType, "FILE", $"{uploaderId} shared {fileName} in {channelName}");
                 _callbackManager.NotifyFileShared(channelName, ToFileMetadata(storedFile));
-                var fileMessage = new Message { SenderId = uploaderId, Content = $"Shared file: {fileName}", Timestamp = DateTime.UtcNow, Type = MessageType.File, ChannelName = channelName, FileId = storedFile.FileId };
+                var fileMessage = new ContractMessage { SenderId = uploaderId, Content = $"Shared file: {fileName}", Timestamp = DateTime.UtcNow, Type = MessageType.File, ChannelName = channelName, FileId = storedFile.FileId };
                 _messageRouter.RoutePublicMessage(fileMessage, out string _);
             }
             else ServerLogger.Warning(clientType, "FILE", $"Share failed: {reason}");
@@ -249,11 +250,11 @@ namespace Chat.Server.Services
             return files;
         }
 
-        public List<Message> GetPendingMessages(string userId)
+        public List<ContractMessage> GetPendingMessages(string userId)
         {
             string clientType = DetectClientType();
             var session = _userManager.GetUserSession(userId);
-            if (session == null) return new List<Message>();
+            if (session == null) return new List<ContractMessage>();
             long lastSequence = _userManager.GetLastPollSequence(userId);
             var messages = _channelManager.GetMessagesSinceSequence(session.CurrentChannel, lastSequence, userId);
             if (messages.Count > 0)
@@ -265,12 +266,12 @@ namespace Chat.Server.Services
             return messages;
         }
 
-        public List<Message> GetPendingPrivateMessages(string userId)
+        public List<ContractMessage> GetPendingPrivateMessages(string userId)
         {
             var pendingQueue = _userManager.ConsumePendingPrivateMessages(userId);
             string clientType = DetectClientType();
             if (pendingQueue.Count > 0) ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} private message(s)");
-            return new List<Message>(pendingQueue);
+            return new List<ContractMessage>(pendingQueue);
         }
 
         public List<SharedFile> GetPendingPrivateFiles(string userId)
