@@ -44,6 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="TestInfrastructure\TestAssert.cs" />
+    <Compile Include="Integration\IntegrationTestSuite.cs" />
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
