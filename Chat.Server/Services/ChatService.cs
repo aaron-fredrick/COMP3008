@@ -108,10 +108,10 @@ namespace Chat.Server.Services
                 if (success)
                 {
                     _userManager.SetUserChannel(userId, channelName);
-                    // Establish a deterministic boundary from the channel's server-issued
-                    // sequence. Messages already present in the channel are therefore never
-                    // replayed to a newly joined polling client.
+                    // Establish deterministic visibility boundaries from server state.
+                    // Existing messages/files are not replayed to a newly joined client.
                     _userManager.SetLastPollSequence(userId, _channelManager.GetCurrentSequence(channelName));
+                    _userManager.SetChannelFileVisibilityBoundary(userId, DateTime.UtcNow);
                     _userManager.UpdateLastPollTime(userId);
                 }
             }
@@ -143,6 +143,7 @@ namespace Chat.Server.Services
                     channel = session.CurrentChannel;
                     _channelManager.LeaveChannel(userId, channel);
                     _userManager.SetUserChannel(userId, null);
+                    _userManager.SetChannelFileVisibilityBoundary(userId, DateTime.MaxValue);
                 }
             }
             if (channel != null)
@@ -234,11 +235,18 @@ namespace Chat.Server.Services
             return file;
         }
 
-        public List<SharedFile> GetChannelFiles(string channelName)
+        public List<SharedFile> GetChannelFiles(string userId, string channelName)
         {
             string clientType = DetectClientType();
-            var files = _fileHandler.GetChannelFiles(channelName);
-            ServerLogger.Request(clientType, "FILES", $"Channel \"{channelName}\": {files.Count} file(s)");
+            var session = _userManager.GetUserSession(userId);
+            if (session == null || !string.Equals(session.CurrentChannel, channelName, StringComparison.Ordinal))
+            {
+                ServerLogger.Warning(clientType, "FILES", $"{userId} attempted to list files outside their current channel.");
+                return new List<SharedFile>();
+            }
+
+            var files = _fileHandler.GetChannelFiles(channelName, session.ChannelFileVisibilityBoundary);
+            ServerLogger.Request(clientType, "FILES", $"Channel \"{channelName}\": {files.Count} visible file(s)");
             return files;
         }
 

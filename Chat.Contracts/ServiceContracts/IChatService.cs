@@ -49,7 +49,7 @@ namespace Chat.Contracts.ServiceContracts
         SharedFile GetPrivateFile(string userId, Guid fileId);
 
         [OperationContract]
-        List<SharedFile> GetChannelFiles(string channelName);
+        List<SharedFile> GetChannelFiles(string userId, string channelName);
 
         [OperationContract]
         List<Message> GetPendingMessages(string userId);
