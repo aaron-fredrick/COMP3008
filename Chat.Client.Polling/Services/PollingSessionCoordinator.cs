@@ -11,6 +11,8 @@ namespace Chat.Client.Polling.Services
 {
     /// <summary>
     /// Owns session state, background polling orchestration, and WCF service calls.
+    /// Message polling is scoped to the currently active channel view; the WCF
+    /// transport and ping lifecycle are deliberately independent from that view.
     /// UI-facing events are marshalled back to the WPF Dispatcher.
     /// </summary>
     public sealed class PollingSessionCoordinator : IDisposable
@@ -71,19 +73,22 @@ namespace Chat.Client.Polling.Services
         }
 
         /// <summary>
-        /// Records the already-authenticated user and starts controlled background polling.
-        /// The actual WCF SignIn call is made by SignInView before this is called.
+        /// Records the already-authenticated user. Message polling starts only
+        /// after a channel is joined and its conversation view becomes active.
+        /// The ping timer is independent and remains available for session/transport health.
         /// </summary>
         public void SetSignedInUser(string username)
         {
             _currentUserId = username;
-            StartPolling();
+            StopPolling();
         }
 
         public void SignOut()
         {
+            // Message polling is view-scoped, so it stops on sign-out.
+            // Keep the WCF transport/ping lifecycle alive: signing out does not
+            // mean the client must be disposed immediately.
             StopPolling();
-            _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
             if (_serviceClient == null)
                 return;
@@ -98,10 +103,10 @@ namespace Chat.Client.Polling.Services
             }
             finally
             {
-                _serviceClient.Dispose();
-                _serviceClient = null;
                 _currentUserId = null;
                 _currentChannel = null;
+                // Deliberately do not dispose/null _serviceClient here.
+                // The ping lifecycle may continue while signed out.
             }
         }
 
@@ -110,17 +115,24 @@ namespace Chat.Client.Polling.Services
         public bool JoinChannel(string channelName)
         {
             if (!string.IsNullOrEmpty(_currentChannel))
+            {
+                StopPolling();
                 _serviceClient.LeaveChannel(_currentUserId);
+            }
 
             bool success = _serviceClient.JoinChannel(_currentUserId, channelName);
             if (success)
+            {
                 _currentChannel = channelName;
+                StartPolling();
+            }
 
             return success;
         }
 
         public void LeaveChannel()
         {
+            StopPolling();
             _serviceClient.LeaveChannel(_currentUserId);
             _currentChannel = null;
         }
@@ -215,6 +227,9 @@ namespace Chat.Client.Polling.Services
 
         private void StartPolling()
         {
+            if (_isDisposed || !IsSignedIn || string.IsNullOrEmpty(_currentChannel))
+                return;
+
             _pollingTimer.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(_pollingIntervalMs));
         }
 
@@ -227,7 +242,7 @@ namespace Chat.Client.Polling.Services
         {
             lock (_pollingLock)
             {
-                if (_isPolling || !IsSignedIn || _isDisposed)
+                if (_isPolling || !IsSignedIn || string.IsNullOrEmpty(_currentChannel) || _isDisposed)
                     return;
 
                 _isPolling = true;
@@ -256,14 +271,8 @@ namespace Chat.Client.Polling.Services
 
         private void PollOnce()
         {
-            if (!IsSignedIn || _serviceClient == null)
+            if (!IsSignedIn || _serviceClient == null || string.IsNullOrEmpty(_currentChannel))
                 return;
-
-            if (string.IsNullOrEmpty(_currentChannel))
-            {
-                RefreshChannels();
-                return;
-            }
 
             RefreshChannelMembers();
             RefreshChannelFiles();
@@ -383,8 +392,9 @@ namespace Chat.Client.Polling.Services
 
             if (IsSignedIn)
                 SignOut();
-            else
-                _serviceClient?.Dispose();
+
+            _serviceClient?.Dispose();
+            _serviceClient = null;
 
             _pollingTimer.Dispose();
             _pingTimer.Dispose();
