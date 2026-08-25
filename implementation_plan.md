@@ -38,6 +38,10 @@ Audit and harden:
 
 **Current audit:** the `CallbackManager` already catches `CommunicationException`, `TimeoutException`, and `ObjectDisposedException`, removes the callback, signs the user out, removes channel membership, and notifies remaining members. The existing disconnect-cleanup integration test proves the primary abnormal-disconnect path. P2 should therefore focus on lifecycle race cases and stale-session isolation rather than reimplementing the existing cleanup path.
 
+**Implemented:** callback cleanup now verifies that the callback which failed is still the callback registered for the user before removing the session. This prevents an old callback invocation from signing out a replacement session created after a normal sign-out/reconnect. A deterministic integration test holds an old callback invocation in flight, replaces the user session and callback, releases the stale callback to fail, and verifies that the replacement session remains signed in and receives subsequent callback notifications.
+
+**Verification status:** implementation and structured test are committed; local build/integration execution is the next verification step.
+
 ### P2.2 — Concurrent state integrity
 
 **Goal:** prove shared server state remains correct under concurrent operations.
@@ -156,7 +160,7 @@ The final automated gate must include:
 
 ## P2 Implementation Order
 
-1. **P2.1 — Connection lifecycle robustness**
+1. **P2.1 — Connection lifecycle robustness** — in implementation; local verification pending
 2. **P2.2 — Concurrent state integrity**
 3. **P2.3 — Delivery reliability**
 4. **P2.4 — File-transfer robustness**
