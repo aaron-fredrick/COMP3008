@@ -46,6 +46,12 @@ namespace Chat.Server.Tests
                     Console.WriteLine("[INFO] Starting P1 hardening suite...");
                     result = P1HardeningIntegrationSuite.Run(pollingUrl, duplexUrl);
                 }
+                if (result == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("[INFO] Starting P1 parity suite...");
+                    result = P1ParityIntegrationSuite.Run(pollingUrl, duplexUrl);
+                }
             }
 
             Console.WriteLine($"[INFO] Finished {DateTime.Now:yyyy-MM-dd HH:mm:ss} with exit code {result}.");
