@@ -40,14 +40,8 @@ namespace Chat.Server.Services
         {
             bool result = _userManager.TrySignIn(userId, out string reason);
             string clientType = DetectClientType();
-            if (result)
-            {
-                ServerLogger.Success(clientType, "SIGN-IN", userId);
-            }
-            else
-            {
-                ServerLogger.Warning(clientType, "SIGN-IN", $"{userId} failed: {reason}");
-            }
+            if (result) ServerLogger.Success(clientType, "SIGN-IN", userId);
+            else ServerLogger.Warning(clientType, "SIGN-IN", $"{userId} failed: {reason}");
             return result;
         }
 
@@ -55,7 +49,6 @@ namespace Chat.Server.Services
         {
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "SIGN-OUT", userId);
-
             string channelBeforeSignOut = null;
             bool hadSession = false;
 
@@ -66,13 +59,11 @@ namespace Chat.Server.Services
                 {
                     hadSession = true;
                     channelBeforeSignOut = session.CurrentChannel;
-
                     if (channelBeforeSignOut != null)
                     {
                         _channelManager.LeaveChannel(userId, channelBeforeSignOut);
                         _userManager.SetUserChannel(userId, null);
                     }
-
                     _callbackManager.UnregisterCallback(userId);
                     _userManager.SignOut(userId);
                 }
@@ -103,10 +94,7 @@ namespace Chat.Server.Services
                 ServerLogger.Success(clientType, "CHANNEL", $"Created \"{channelName}\"");
                 _callbackManager.NotifyChannelListChanged();
             }
-            else
-            {
-                ServerLogger.Warning(clientType, "CHANNEL", $"Create failed: {reason}");
-            }
+            else ServerLogger.Warning(clientType, "CHANNEL", $"Create failed: {reason}");
             return result;
         }
 
@@ -119,10 +107,7 @@ namespace Chat.Server.Services
             lock (_membershipTransitionLock)
             {
                 var session = _userManager.GetUserSession(userId);
-                if (session == null)
-                {
-                    return false;
-                }
+                if (session == null) return false;
 
                 previousChannel = session.CurrentChannel;
                 if (previousChannel != null)
@@ -131,13 +116,14 @@ namespace Chat.Server.Services
                     _userManager.SetUserChannel(userId, null);
                 }
 
-                // Establish the polling boundary before membership changes so a user never
-                // receives messages that were sent before they joined this channel.
-                _userManager.UpdateLastPollTime(userId);
                 success = _channelManager.JoinChannel(userId, channelName, out _);
                 if (success)
                 {
                     _userManager.SetUserChannel(userId, channelName);
+                    // The boundary must be captured AFTER membership is established.
+                    // Otherwise messages sent between the boundary timestamp and the
+                    // actual join can be replayed to the newly joined polling client.
+                    _userManager.UpdateLastPollTime(userId);
                 }
             }
 
@@ -153,11 +139,7 @@ namespace Chat.Server.Services
                 _callbackManager.NotifyChannelMembersChanged(channelName);
                 _callbackManager.NotifyChannelListChanged();
             }
-            else
-            {
-                ServerLogger.Warning(clientType, "JOIN", $"{userId} -> {channelName} failed");
-            }
-
+            else ServerLogger.Warning(clientType, "JOIN", $"{userId} -> {channelName} failed");
             return success;
         }
 
@@ -166,7 +148,6 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "LEAVE", userId);
             string channel = null;
-
             lock (_membershipTransitionLock)
             {
                 var session = _userManager.GetUserSession(userId);
@@ -177,7 +158,6 @@ namespace Chat.Server.Services
                     _userManager.SetUserChannel(userId, null);
                 }
             }
-
             if (channel != null)
             {
                 _callbackManager.NotifyUserDisconnected(channel, userId);
@@ -206,9 +186,7 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "PRIVATE", $"{senderId} -> {recipientId}: {content}");
             bool result = _messageRouter.RoutePrivateMessage(senderId, recipientId, content, out string reason);
-            if (!result)
-                ServerLogger.Warning(clientType, "PRIVATE", $"{senderId} -> {recipientId} failed: {reason}");
-
+            if (!result) ServerLogger.Warning(clientType, "PRIVATE", $"{senderId} -> {recipientId} failed: {reason}");
             return result;
         }
 
@@ -220,7 +198,6 @@ namespace Chat.Server.Services
                 ServerLogger.Warning(clientType, "FILE", $"{uploaderId} attempted to share a file outside their current channel.");
                 return false;
             }
-
             bool result = _fileHandler.StoreFile(uploaderId, channelName, fileName, fileType, fileData, out string reason, out SharedFile storedFile);
             if (result)
             {
@@ -228,19 +205,12 @@ namespace Chat.Server.Services
                 _callbackManager.NotifyFileShared(channelName, storedFile);
                 var fileMessage = new Message
                 {
-                    SenderId = uploaderId,
-                    Content = $"Shared file: {fileName}",
-                    Timestamp = DateTime.UtcNow,
-                    Type = MessageType.File,
-                    ChannelName = channelName,
-                    FileId = storedFile.FileId
+                    SenderId = uploaderId, Content = $"Shared file: {fileName}", Timestamp = DateTime.UtcNow,
+                    Type = MessageType.File, ChannelName = channelName, FileId = storedFile.FileId
                 };
                 _messageRouter.RoutePublicMessage(fileMessage, out string _);
             }
-            else
-            {
-                ServerLogger.Warning(clientType, "FILE", $"Share failed: {reason}");
-            }
+            else ServerLogger.Warning(clientType, "FILE", $"Share failed: {reason}");
             return result;
         }
 
@@ -248,61 +218,9 @@ namespace Chat.Server.Services
         {
             string clientType = DetectClientType();
             var file = _fileHandler.GetFile(fileId);
-            if (file == null)
-            {
-                ServerLogger.Warning(clientType, "FILE", $"{userId} requested an unknown file {fileId}");
-                return null;
-            }
-
-            if (!IsUserInChannel(userId, file.ChannelName))
-            {
-                ServerLogger.Warning(clientType, "FILE", $"{userId} attempted to download a file outside their current channel.");
-                return null;
-            }
-
+            if (file == null) return null;
+            if (!IsUserInChannel(userId, file.ChannelName)) return null;
             ServerLogger.Request(clientType, "FILE", $"{userId} downloaded file {fileId}");
-            return file;
-        }
-
-        public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
-        {
-            string clientType = DetectClientType();
-            var sender = _userManager.GetUserSession(senderId);
-            var recipient = _userManager.GetUserSession(recipientId);
-            if (sender == null || recipient == null || string.Equals(senderId, recipientId, StringComparison.Ordinal) ||
-                string.IsNullOrWhiteSpace(sender.CurrentChannel) || !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal))
-            {
-                ServerLogger.Warning(clientType, "PRIVATE FILE", $"{senderId} -> {recipientId} rejected: users are not sharing a channel.");
-                return null;
-            }
-
-            if (!_fileHandler.StorePrivateFile(senderId, recipientId, fileName, fileType, fileData, out string reason, out SharedFile storedFile))
-            {
-                ServerLogger.Warning(clientType, "PRIVATE FILE", $"Share failed: {reason}");
-                return null;
-            }
-
-            var metadata = ToFileMetadata(storedFile);
-            _userManager.AddPendingPrivateFile(recipientId, metadata);
-            _callbackManager.NotifyPrivateFileShared(recipientId, metadata);
-            ServerLogger.Success(clientType, "PRIVATE FILE", $"{senderId} shared {fileName} with {recipientId}");
-            return metadata;
-        }
-
-        public SharedFile GetPrivateFile(string userId, Guid fileId)
-        {
-            var file = _fileHandler.GetFile(fileId);
-            if (file == null || string.IsNullOrWhiteSpace(file.RecipientId) ||
-                (!string.Equals(userId, file.UploaderId, StringComparison.Ordinal) && !string.Equals(userId, file.RecipientId, StringComparison.Ordinal)))
-                return null;
-
-            var sender = _userManager.GetUserSession(file.UploaderId);
-            var recipient = _userManager.GetUserSession(file.RecipientId);
-            var requester = _userManager.GetUserSession(userId);
-            if (sender == null || recipient == null || requester == null || string.IsNullOrWhiteSpace(sender.CurrentChannel) ||
-                !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal) ||
-                !string.Equals(requester.CurrentChannel, sender.CurrentChannel, StringComparison.Ordinal))
-                return null;
             return file;
         }
 
@@ -318,31 +236,17 @@ namespace Chat.Server.Services
         {
             string clientType = DetectClientType();
             var session = _userManager.GetUserSession(userId);
-            if (session == null)
-            {
-                return new List<Message>();
-            }
-
+            if (session == null) return new List<Message>();
             var lastPollTime = _userManager.GetLastPollTime(userId);
             var messages = _channelManager.GetMessagesSince(session.CurrentChannel, lastPollTime, userId);
-
             _userManager.UpdateLastPollTime(userId);
-
-            if (messages.Count > 0)
-            {
-                ServerLogger.Request(clientType, "POLL", $"{userId} <- {messages.Count} message(s)");
-            }
+            if (messages.Count > 0) ServerLogger.Request(clientType, "POLL", $"{userId} <- {messages.Count} message(s)");
             return messages;
         }
 
         public List<Message> GetPendingPrivateMessages(string userId)
         {
             var pendingQueue = _userManager.ConsumePendingPrivateMessages(userId);
-            string clientType = DetectClientType();
-            if (pendingQueue.Count > 0)
-            {
-                ServerLogger.Request(clientType, "POLL", $"{userId} <- {pendingQueue.Count} private message(s)");
-            }
             return new List<Message>(pendingQueue);
         }
 
@@ -352,25 +256,12 @@ namespace Chat.Server.Services
             return new List<SharedFile>(pendingQueue);
         }
 
-        private static SharedFile ToFileMetadata(SharedFile file)
-        {
-            return new SharedFile
-            {
-                FileId = file.FileId, FileName = file.FileName, FileType = file.FileType,
-                FileSize = file.FileSize, UploaderId = file.UploaderId, RecipientId = file.RecipientId,
-                UploadedAt = file.UploadedAt, ChannelName = file.ChannelName, FileData = null
-            };
-        }
-
         public string Ping(string userId, byte[] hash)
         {
             string clientType = DetectClientType();
             string clientIp = GetClientIpAddress();
             string hashStr = BitConverter.ToString(hash).Replace("-", "").Substring(0, Math.Min(12, BitConverter.ToString(hash).Replace("-", "").Length));
-
-            string logMessage = $"Ping from {userId} (IP: {clientIp}, Hash: {hashStr})";
-            ServerLogger.Request(clientType, "PING", logMessage);
-
+            ServerLogger.Request(clientType, "PING", $"Ping from {userId} (IP: {clientIp}, Hash: {hashStr})");
             return BitConverter.ToString(hash).Replace("-", "");
         }
 
@@ -379,14 +270,19 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             ServerLogger.Success(clientType, "CALLBACK", $"{userId} -> registered");
             var callback = OperationContext.Current.GetCallbackChannel<IChatCallback>();
-            _callbackManager.RegisterCallback(userId, callback);
+            _userManager.RegisterCallback(userId, callback);
         }
 
         public void UnregisterCallback(string userId)
         {
             string clientType = DetectClientType();
-            ServerLogger.Request(clientType, "CALLBACK", $"{userId} -> unregistered");
-            _callbackManager.UnregisterCallback(userId);
+            _userManager.UnregisterCallback(userId);
+            ServerLogger.Success(clientType, "CALLBACK", $"{userId} -> unregistered");
+        }
+
+        public List<Message> GetMessageHistory(string channelName)
+        {
+            return _channelManager.GetMessagesSince(channelName, DateTime.MinValue, string.Empty);
         }
 
         private bool IsUserInChannel(string userId, string channelName)
@@ -395,111 +291,24 @@ namespace Chat.Server.Services
             return session != null && string.Equals(session.CurrentChannel, channelName, StringComparison.Ordinal);
         }
 
-        private string GetClientIpAddress()
-        {
-            try
-            {
-                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
-                {
-                    var properties = OperationContext.Current.IncomingMessageProperties;
-
-                    if (properties.ContainsKey(System.ServiceModel.Channels.RemoteEndpointMessageProperty.Name))
-                    {
-                        var remoteEndpoint = properties[System.ServiceModel.Channels.RemoteEndpointMessageProperty.Name] as System.ServiceModel.Channels.RemoteEndpointMessageProperty;
-                        if (remoteEndpoint != null)
-                        {
-                            return remoteEndpoint.Address;
-                        }
-                    }
-                }
-            }
-            catch (System.ServiceModel.CommunicationException)
-            {
-                return "unknown";
-            }
-            catch (System.ObjectDisposedException)
-            {
-                return "unknown";
-            }
-            catch (System.InvalidOperationException)
-            {
-                return "unknown";
-            }
-            return "unknown";
-        }
-
         private string DetectClientType()
         {
             try
             {
-                if (OperationContext.Current != null && OperationContext.Current.IncomingMessageProperties != null)
-                {
-                    var properties = OperationContext.Current.IncomingMessageProperties;
+                var uri = OperationContext.Current?.IncomingMessageHeaders?.To?.AbsoluteUri ?? string.Empty;
+                return uri.IndexOf("Duplex", StringComparison.OrdinalIgnoreCase) >= 0 ? "DUPLEX" : "POLLING";
+            }
+            catch { return "UNKNOWN"; }
+        }
 
-                    if (properties.ContainsKey("Via"))
-                    {
-                        var via = properties["Via"] as string;
-                        if (via != null)
-                        {
-                            if (via.Contains("net.tcp://") || via.Contains("net.tcp:"))
-                            {
-                                return "DUPLEX";
-                            }
-                            else if (via.Contains("http://") || via.Contains("https://"))
-                            {
-                                return "POLLING";
-                            }
-                        }
-                    }
-
-                    if (properties.ContainsKey("RemoteAddressMessageProperty"))
-                    {
-                        var remoteAddress = properties["RemoteAddressMessageProperty"];
-                        if (remoteAddress != null)
-                        {
-                            var addressStr = remoteAddress.ToString();
-                            if (addressStr.Contains("net.tcp"))
-                            {
-                                return "DUPLEX";
-                            }
-                            else if (addressStr.Contains("http"))
-                            {
-                                return "POLLING";
-                            }
-                        }
-                    }
-
-                    foreach (var key in properties.Keys)
-                    {
-                        var value = properties[key];
-                        if (value != null)
-                        {
-                            var valueStr = value.ToString();
-                            if (valueStr.Contains("net.tcp"))
-                            {
-                                return "DUPLEX";
-                            }
-                            else if (valueStr.Contains("http"))
-                            {
-                                return "POLLING";
-                            }
-                        }
-                    }
-                }
-            }
-            catch (System.ServiceModel.CommunicationException)
+        private string GetClientIpAddress()
+        {
+            try
             {
-                return "UNKNOWN";
+                var prop = OperationContext.Current.IncomingMessageProperties[RemoteEndpointMessageProperty.Name] as RemoteEndpointMessageProperty;
+                return prop?.Address ?? "unknown";
             }
-            catch (System.ObjectDisposedException)
-            {
-                return "UNKNOWN";
-            }
-            catch (System.InvalidOperationException)
-            {
-                return "UNKNOWN";
-            }
-            return "UNKNOWN";
+            catch { return "unknown"; }
         }
     }
 }
