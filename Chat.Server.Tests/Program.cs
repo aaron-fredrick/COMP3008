@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using Chat.Server.Tests.Integration;
+using Chat.Server.Tests.Unit;
 
 namespace Chat.Server.Tests
 {
@@ -23,20 +24,35 @@ namespace Chat.Server.Tests
             }
 
             Console.WriteLine("======================================================================");
-            Console.WriteLine("             COMP3008 STRUCTURED INTEGRATION TESTS");
+            Console.WriteLine("                COMP3008 STRUCTURED TEST SUITE");
             Console.WriteLine("======================================================================");
-            Console.WriteLine($"Polling: {pollingUrl}");
-            Console.WriteLine($"Duplex:  {duplexUrl}");
+
+            int unitFailures = 0;
+            unitFailures += RunUnit("UserManager", UserManagerTests.Run);
+            unitFailures += RunUnit("ChannelManager", ChannelManagerTests.Run);
             Console.WriteLine();
 
+            if (unitFailures != 0)
+            {
+                Console.Error.WriteLine($"Unit tests failed: {unitFailures}");
+                return 1;
+            }
+
+            Console.WriteLine("Starting integration suite...");
+            return IntegrationTestSuite.Run(pollingUrl, duplexUrl);
+        }
+
+        private static int RunUnit(string name, Action test)
+        {
             try
             {
-                return IntegrationTestSuite.Run(pollingUrl, duplexUrl);
+                test();
+                Console.WriteLine($"[PASS] Unit/{name}");
+                return 0;
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine("[FATAL] Integration test runner failed.");
-                Console.Error.WriteLine(ex);
+                Console.Error.WriteLine($"[FAIL] Unit/{name}: {ex.Message}");
                 return 1;
             }
         }
