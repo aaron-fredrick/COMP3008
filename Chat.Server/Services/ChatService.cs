@@ -22,6 +22,7 @@ namespace Chat.Server.Services
         private readonly MessageRouter _messageRouter;
         private readonly CallbackManager _callbackManager;
         private readonly FileHandler _fileHandler;
+        private readonly object _membershipTransitionLock;
 
         public ChatService() : this(50) { }
 
@@ -32,6 +33,7 @@ namespace Chat.Server.Services
             _callbackManager = new CallbackManager(_userManager, _channelManager);
             _messageRouter = new MessageRouter(_userManager, _channelManager, _callbackManager);
             _fileHandler = new FileHandler();
+            _membershipTransitionLock = new object();
         }
 
         public bool SignIn(string userId)
@@ -54,24 +56,34 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "SIGN-OUT", userId);
 
-            var session = _userManager.GetUserSession(userId);
-            if (session != null)
+            string channelBeforeSignOut = null;
+            bool hadSession = false;
+
+            lock (_membershipTransitionLock)
             {
-                string channelBeforeSignOut = session.CurrentChannel;
-
-                if (channelBeforeSignOut != null)
+                var session = _userManager.GetUserSession(userId);
+                if (session != null)
                 {
-                    _channelManager.LeaveChannel(userId, channelBeforeSignOut);
-                    _userManager.SetUserChannel(userId, null);
-                    _callbackManager.NotifyUserDisconnected(channelBeforeSignOut, userId);
-                    _callbackManager.NotifyChannelMembersChanged(channelBeforeSignOut);
-                    _callbackManager.NotifyChannelListChanged();
-                }
+                    hadSession = true;
+                    channelBeforeSignOut = session.CurrentChannel;
 
-                _callbackManager.UnregisterCallback(userId);
+                    if (channelBeforeSignOut != null)
+                    {
+                        _channelManager.LeaveChannel(userId, channelBeforeSignOut);
+                        _userManager.SetUserChannel(userId, null);
+                    }
+
+                    _callbackManager.UnregisterCallback(userId);
+                    _userManager.SignOut(userId);
+                }
             }
 
-            _userManager.SignOut(userId);
+            if (hadSession && channelBeforeSignOut != null)
+            {
+                _callbackManager.NotifyUserDisconnected(channelBeforeSignOut, userId);
+                _callbackManager.NotifyChannelMembersChanged(channelBeforeSignOut);
+                _callbackManager.NotifyChannelListChanged();
+            }
         }
 
         public List<Channel> GetChannels()
@@ -101,29 +113,42 @@ namespace Chat.Server.Services
         public bool JoinChannel(string userId, string channelName)
         {
             string clientType = DetectClientType();
-            var session = _userManager.GetUserSession(userId);
-            if (session == null)
+            string previousChannel = null;
+            bool success;
+
+            lock (_membershipTransitionLock)
             {
-                return false;
+                var session = _userManager.GetUserSession(userId);
+                if (session == null)
+                {
+                    return false;
+                }
+
+                previousChannel = session.CurrentChannel;
+                if (previousChannel != null)
+                {
+                    _channelManager.LeaveChannel(userId, previousChannel);
+                    _userManager.SetUserChannel(userId, null);
+                }
+
+                // Establish the polling boundary before membership changes so a user never
+                // receives messages that were sent before they joined this channel.
+                _userManager.UpdateLastPollTime(userId);
+                success = _channelManager.JoinChannel(userId, channelName, out _);
+                if (success)
+                {
+                    _userManager.SetUserChannel(userId, channelName);
+                }
             }
 
-            string previousChannel = session.CurrentChannel;
             if (previousChannel != null)
             {
-                _channelManager.LeaveChannel(userId, previousChannel);
-                _userManager.SetUserChannel(userId, null);
-
                 _callbackManager.NotifyUserDisconnected(previousChannel, userId);
                 _callbackManager.NotifyChannelMembersChanged(previousChannel);
             }
 
-            // Establish the polling boundary before membership changes so a user never
-            // receives messages that were sent before they joined this channel.
-            _userManager.UpdateLastPollTime(userId);
-            bool success = _channelManager.JoinChannel(userId, channelName, out _);
             if (success)
             {
-                _userManager.SetUserChannel(userId, channelName);
                 ServerLogger.Success(clientType, "JOIN", $"{userId} -> {channelName}");
                 _callbackManager.NotifyChannelMembersChanged(channelName);
                 _callbackManager.NotifyChannelListChanged();
@@ -140,13 +165,21 @@ namespace Chat.Server.Services
         {
             string clientType = DetectClientType();
             ServerLogger.Request(clientType, "LEAVE", userId);
+            string channel = null;
 
-            var session = _userManager.GetUserSession(userId);
-            if (session != null && session.CurrentChannel != null)
+            lock (_membershipTransitionLock)
             {
-                string channel = session.CurrentChannel;
-                _channelManager.LeaveChannel(userId, channel);
-                _userManager.SetUserChannel(userId, null);
+                var session = _userManager.GetUserSession(userId);
+                if (session != null && session.CurrentChannel != null)
+                {
+                    channel = session.CurrentChannel;
+                    _channelManager.LeaveChannel(userId, channel);
+                    _userManager.SetUserChannel(userId, null);
+                }
+            }
+
+            if (channel != null)
+            {
                 _callbackManager.NotifyUserDisconnected(channel, userId);
                 _callbackManager.NotifyChannelMembersChanged(channel);
                 _callbackManager.NotifyChannelListChanged();
