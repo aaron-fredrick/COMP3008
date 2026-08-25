@@ -61,14 +61,13 @@ try {
     Write-Host 'Server endpoints are ready. Starting structured tests...'
     $tests = Start-Process -FilePath $testPath -WorkingDirectory (Split-Path $testPath) -RedirectStandardOutput $testLog -RedirectStandardError $testErrorLog -PassThru
 
-    # Wait on the process handle rather than polling a cached Process object state.
-    # This avoids false timeouts when the executable has already terminated but the
-    # PowerShell Process wrapper has not refreshed its state yet.
-    $tests.WaitForExit(300000) | Out-Null
+    # Wait on the process handle. Do not use the PowerShell pipeline result as the
+    # test status; capture the executable's exit code explicitly after it exits.
+    $exited = $tests.WaitForExit(300000)
     $tests.Refresh()
 
-    if ($tests.HasExited) {
-        $testResult = $tests.ExitCode
+    if ($exited -and $tests.HasExited) {
+        $testResult = [int]$tests.ExitCode
     }
     else {
         $testTimedOut = $true
@@ -78,6 +77,7 @@ try {
 
     if ($tests -and -not $tests.HasExited) {
         Stop-Process -Id $tests.Id -Force -ErrorAction SilentlyContinue
+        $tests.Refresh()
     }
 
     if ($testResult -ne 0) {
