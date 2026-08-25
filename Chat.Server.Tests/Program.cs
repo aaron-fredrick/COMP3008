@@ -20,7 +20,7 @@ namespace Chat.Server.Tests
         private static string _pollingUrl;
         private static string _duplexUrl;
 
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             LoadConfiguration(args);
             PrintHeader();
@@ -30,7 +30,6 @@ namespace Chat.Server.Tests
                 TestPollingEndpoint();
                 TestChannelMembershipConcurrency();
                 TestDuplexEndpoint();
-                PrintSummary();
             }
             catch (Exception ex)
             {
@@ -41,8 +40,9 @@ namespace Chat.Server.Tests
                 _failedTests++;
             }
 
-            Console.WriteLine("\nPress any key to exit...");
-            Console.ReadKey();
+            PrintSummary();
+            Environment.ExitCode = _failedTests == 0 ? 0 : 1;
+            return Environment.ExitCode;
         }
 
         static void LoadConfiguration(string[] args)
@@ -83,23 +83,23 @@ namespace Chat.Server.Tests
 
         static void PrintHeader()
         {
-            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine("======================================================================");
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("                     COMP3008 CHAT SERVER");
             Console.WriteLine("                       INTEGRATION TESTS");
             Console.ResetColor();
-            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine("======================================================================");
             Console.WriteLine();
         }
 
         static void PrintSectionHeader(string title)
         {
             Console.WriteLine();
-            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine("======================================================================");
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"                         {title}");
             Console.ResetColor();
-            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine("======================================================================");
             Console.WriteLine();
         }
 
@@ -107,7 +107,7 @@ namespace Chat.Server.Tests
         {
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("  SERVER CONNECTION");
-            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine("  --------------------------------------------------------------------");
             Console.WriteLine();
             Console.WriteLine($"  [INFO] {message}");
             Console.WriteLine($"         {url}");
@@ -151,11 +151,11 @@ namespace Chat.Server.Tests
 
         static void PrintSectionSummary(string section, int passed, int total)
         {
-            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine("  --------------------------------------------------------------------");
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"  {section}: {passed}/{total} PASSED");
             Console.ResetColor();
-            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine("  --------------------------------------------------------------------");
             Console.WriteLine();
         }
 
@@ -164,7 +164,7 @@ namespace Chat.Server.Tests
             PrintSectionHeader("TEST SUMMARY");
             Console.WriteLine($"  Passed Tests        {_passedTests} / {_totalTests}");
             Console.WriteLine($"  Failed Tests        {_failedTests}");
-            Console.WriteLine("  ────────────────────────────────────────────────────────────────────");
+            Console.WriteLine("  --------------------------------------------------------------------");
             if (_failedTests == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -177,7 +177,7 @@ namespace Chat.Server.Tests
             }
             Console.ResetColor();
             Console.WriteLine();
-            Console.WriteLine("══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine("======================================================================");
         }
 
         static IChatService CreatePollingProxy(out ChannelFactory<IChatService> factory)
@@ -208,35 +208,34 @@ namespace Chat.Server.Tests
             PrintTestResult(1, "SignIn", signInResult, $"SignIn result: {signInResult}");
 
             var channels = proxy.GetChannels();
-            PrintTestResult(2, "GetChannels", true, $"Channel count: {channels.Count}");
+            PrintTestResult(2, "GetChannels", channels != null, $"Channel count: {channels?.Count ?? 0}");
 
             bool createResult = proxy.CreateChannel("general");
-            PrintTestResult(3, "CreateChannel", true, createResult ? "Channel \"general\" created" : "Channel \"general\" already exists - Expected rejection");
+            PrintTestResult(3, "CreateChannel", createResult, createResult ? "Channel \"general\" created" : "Channel \"general\" was not created");
 
             channels = proxy.GetChannels();
-            string channelInfo = channels.Count > 0 ? $"Channel: {channels[0].Name}" : "No channels";
-            PrintTestResult(4, "GetChannels after creation", true, $"Channel count: {channels.Count}, {channelInfo}");
+            bool generalExists = channels.Any(c => c.Name == "general");
+            PrintTestResult(4, "GetChannels after creation", generalExists, $"Channel count: {channels.Count}, general present: {generalExists}");
 
             bool joinResult = proxy.JoinChannel("pollinguser1", "general");
             PrintTestResult(5, "JoinChannel", joinResult, $"JoinChannel result: {joinResult}");
 
             var members = proxy.GetChannelMembers("general");
-            string memberInfo = members.Count > 0 ? $"Member: {members[0]}" : "No members";
-            PrintTestResult(6, "GetChannelMembers", true, $"Member count: {members.Count}, {memberInfo}");
+            bool memberPresent = members.Contains("pollinguser1");
+            PrintTestResult(6, "GetChannelMembers", memberPresent, $"Member count: {members.Count}, pollinguser1 present: {memberPresent}");
 
             proxy.SendMessage("pollinguser1", "general", "Hello from polling client!");
-            PrintTestResult(7, "SendMessage", true, "Message sent successfully");
-
             var messages = proxy.GetPendingMessages("pollinguser1");
-            string messageInfo = messages.Count > 0 ? $"Message: {messages[0].Content}" : "No messages";
-            PrintTestResult(8, "GetPendingMessages", true, $"Pending message count: {messages.Count}, {messageInfo}");
+            bool messageReceived = messages.Any(m => m.Content == "Hello from polling client!");
+            PrintTestResult(7, "SendMessage", messageReceived, $"Expected message received: {messageReceived}");
+            PrintTestResult(8, "GetPendingMessages", messageReceived, $"Pending message count: {messages.Count}");
 
-            proxy.SignOut("pollinguser1");
-            PrintTestResult(9, "SignOut", true, "SignOut completed");
+            bool signOutResult = proxy.SignOut("pollinguser1");
+            PrintTestResult(9, "SignOut", signOutResult, "SignOut completed");
 
-            proxy.SignIn("pollinguser1");
+            bool reSignInResult = proxy.SignIn("pollinguser1");
             bool duplicateSignIn = proxy.SignIn("pollinguser1");
-            PrintTestResult(10, "Duplicate SignIn", !duplicateSignIn, $"Duplicate sign-in rejected: {!duplicateSignIn}");
+            PrintTestResult(10, "Duplicate SignIn", reSignInResult && !duplicateSignIn, $"Initial re-sign-in: {reSignInResult}, duplicate rejected: {!duplicateSignIn}");
 
             proxy.SignOut("pollinguser1");
             string[] users = new string[] { "user1", "user2", "user3", "user4", "user5" };
@@ -249,7 +248,8 @@ namespace Chat.Server.Tests
             PrintTestResult(12, "Multi-User Join Channel", joinedCount == 5, $"Successfully joined {joinedCount}/5 users to general");
 
             members = proxy.GetChannelMembers("general");
-            PrintTestResult(13, "Multi-User Channel Members", members.Count == 5, $"Channel has {members.Count} members");
+            bool allUsersPresent = users.All(members.Contains) && members.Count == 5;
+            PrintTestResult(13, "Multi-User Channel Members", allUsersPresent, $"Channel has {members.Count} members; expected exactly 5 test users");
 
             foreach (string user in users) proxy.SignOut(user);
             ClosePollingProxy(proxy, channelFactory);
@@ -269,8 +269,8 @@ namespace Chat.Server.Tests
             IChatService setup = CreatePollingProxy(out setupFactory);
             try
             {
-                if (!setup.CreateChannel(general)) { }
-                if (!setup.CreateChannel(other)) { }
+                setup.CreateChannel(general);
+                setup.CreateChannel(other);
                 foreach (string user in users)
                 {
                     setup.SignOut(user);
@@ -370,8 +370,8 @@ namespace Chat.Server.Tests
             bool joinResult = pollingProxy.JoinChannel("duplexuser1", "general");
             PrintTestResult(19, "JoinChannel", joinResult, $"JoinChannel result: {joinResult}");
 
-            proxy.RegisterCallback("duplexuser1");
-            PrintTestResult(20, "RegisterCallback", true, "Callback registered successfully");
+            bool registered = proxy.RegisterCallback("duplexuser1");
+            PrintTestResult(20, "RegisterCallback", registered, "Callback registration result");
 
             PrintInfo("Sending message...");
             pollingProxy.SendMessage("duplexuser1", "general", "Hello from duplex client!");
@@ -382,11 +382,11 @@ namespace Chat.Server.Tests
             bool callbackReceived = callback.LastMessageReceived == "Hello from duplex client!";
             PrintTestResult(21, "SendMessage (with callback)", callbackReceived, "Server pushed message to client");
 
-            proxy.UnregisterCallback("duplexuser1");
-            PrintTestResult(22, "UnregisterCallback", true, "Callback unregistered successfully");
+            bool unregistered = proxy.UnregisterCallback("duplexuser1");
+            PrintTestResult(22, "UnregisterCallback", unregistered, "Callback unregistration result");
 
-            pollingProxy.SignOut("duplexuser1");
-            PrintTestResult(23, "SignOut", true, "SignOut completed");
+            bool signOutResult = pollingProxy.SignOut("duplexuser1");
+            PrintTestResult(23, "SignOut", signOutResult, "SignOut completed");
 
             try { ((IClientChannel)proxy).Close(); } catch { ((IClientChannel)proxy).Abort(); }
             try { channelFactory.Close(); } catch { channelFactory.Abort(); }
