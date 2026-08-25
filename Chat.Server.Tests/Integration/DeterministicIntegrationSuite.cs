@@ -121,9 +121,9 @@ namespace Chat.Server.Tests.Integration
 
         private static void SignOut(IChatService c, string id) { try { c.SignOut(id); } catch { } }
 
-        private static void Abort(IClientChannel proxy, ICommunicationObject factory)
+        private static void Abort(IChatService proxy, ICommunicationObject factory)
         {
-            try { proxy.Abort(); } catch { }
+            try { ((IClientChannel)proxy).Abort(); } catch { }
             try { factory.Abort(); } catch { }
         }
 
