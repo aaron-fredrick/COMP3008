@@ -31,6 +31,7 @@ namespace Chat.Server.Tests.Integration
             const string adminId = "duplex_callback_race_admin";
             const string channel = "duplex_callback_race_channel";
             const string probeChannel = "duplex_callback_race_probe";
+            const string replacementProbeChannel = "duplex_callback_race_replacement_probe";
 
             ChannelFactory<IChatService> adminFactory = CreatePollingFactory(pollingUrl);
             IChatService admin = adminFactory.CreateChannel();
@@ -73,6 +74,8 @@ namespace Chat.Server.Tests.Integration
                 TestAssert.False(notificationThread.IsAlive, "Notification thread did not complete");
 
                 TestAssert.True(cleanup.GetChannelMembers(channel).Contains(userId), "Replacement session was removed by stale callback cleanup");
+
+                admin.CreateChannel(replacementProbeChannel);
                 TestAssert.True(newCallback.ChannelListChanged.WaitOne(3000), "Replacement callback did not remain active");
             }
             finally
@@ -97,7 +100,7 @@ namespace Chat.Server.Tests.Integration
 
         private static void SafeSignOut(IChatService proxy, string userId) { try { proxy.SignOut(userId); } catch { } }
 
-        private static void Close(IDuplexChatService proxy, IChannelFactory<IDuplexChatService> factory)
+        private static void Close(IDuplexChatService proxy, DuplexChannelFactory<IDuplexChatService> factory)
         {
             if (proxy != null)
             {
@@ -110,7 +113,7 @@ namespace Chat.Server.Tests.Integration
         private static void Close(IChatService proxy, ChannelFactory<IChatService> factory)
         {
             try { ((IClientChannel)proxy).Close(); } catch { try { ((IClientChannel)proxy).Abort(); } catch { } }
-            try { factory.Close(); } catch { try { factory.Abort(); } catch { } }
+            try { factory.Close(); } catch { try { factory.Abort(); } }
         }
 
         private sealed class BlockingThrowingCallback : IChatCallback
