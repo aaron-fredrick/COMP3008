@@ -102,7 +102,6 @@ namespace Chat.Server.Tests.Integration
                 TestAssert.True(duplex.SignIn(id), "Duplex sign-in failed");
                 TestAssert.True(polling.JoinChannel(id, channel), "Duplex join failed");
                 duplex.RegisterCallback(id);
-                // Ping is two-way on the same duplex channel and therefore establishes an ordering point after the one-way registration.
                 duplex.Ping(id, new byte[] { 1, 2, 3 });
                 polling.SendMessage(id, channel, text);
                 WaitUntil(() => callback.LastMessage != null, 3000, "Duplex message callback was not received");
@@ -122,9 +121,9 @@ namespace Chat.Server.Tests.Integration
 
         private static void SignOut(IChatService c, string id) { try { c.SignOut(id); } catch { } }
 
-        private static void Abort(object proxy, IChannelFactory factory)
+        private static void Abort(IClientChannel proxy, ICommunicationObject factory)
         {
-            try { ((IClientChannel)proxy).Abort(); } catch { }
+            try { proxy.Abort(); } catch { }
             try { factory.Abort(); } catch { }
         }
 
