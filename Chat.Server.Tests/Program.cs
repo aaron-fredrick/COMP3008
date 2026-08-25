@@ -25,9 +25,22 @@ namespace Chat.Server.Tests
             unitFailures += RunUnit("UserManager", UserManagerTests.Run);
             unitFailures += RunUnit("ChannelManager", ChannelManagerTests.Run);
             Console.WriteLine();
-            if (unitFailures != 0) return 1;
-            Console.WriteLine("Starting integration suite...");
-            return DeterministicIntegrationSuite.Run(pollingUrl, duplexUrl);
+            int result;
+            if (unitFailures != 0)
+            {
+                result = 1;
+            }
+            else
+            {
+                Console.WriteLine("Starting integration suite...");
+                result = DeterministicIntegrationSuite.Run(pollingUrl, duplexUrl);
+            }
+
+            // WCF client channels can leave background communication threads alive after
+            // the suite completes. This executable is a CI test runner, so terminate with
+            // the actual suite status rather than waiting for those threads indefinitely.
+            Environment.Exit(result);
+            return result;
         }
 
         private static int RunUnit(string name, Action test)
