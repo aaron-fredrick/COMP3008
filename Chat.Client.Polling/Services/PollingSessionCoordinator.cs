@@ -68,8 +68,10 @@ namespace Chat.Client.Polling.Services
         public void StartSession(ChatServiceClient serviceClient)
         {
             _serviceClient = serviceClient ?? throw new ArgumentNullException(nameof(serviceClient));
+            // Do not perform the first Ping synchronously here. StartSession is
+            // normally called from the WPF Dispatcher and Ping is a blocking WCF
+            // operation. The timer callback runs on a ThreadPool thread instead.
             _pingTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
-            PerformPing();
         }
 
         /// <summary>
@@ -274,6 +276,11 @@ namespace Chat.Client.Polling.Services
             if (!IsSignedIn || _serviceClient == null || string.IsNullOrEmpty(_currentChannel))
                 return;
 
+            // P0 UI-responsiveness invariant: these WCF calls execute on the
+            // ThreadPool timer callback, never on the WPF Dispatcher. UI events
+            // are marshalled with BeginInvoke below.
+            // TODO(P0): add a client-side behavioral test using a deliberately
+            // delayed WCF response and assert the Dispatcher remains responsive.
             RefreshChannelMembers();
             RefreshChannelFiles();
             PollPublicMessages();
