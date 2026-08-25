@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build solution
+        shell: powershell
+        run: .\build.ps1 -Configuration Debug
+
+      - name: Run automated tests
+        shell: powershell
+        run: |
+          $testProject = "Chat.Server.Tests\Chat.Server.Tests.csproj"
+          if (-not (Test-Path $testProject)) {
+            Write-Error "Test project not found: $testProject"
+            exit 1
+          }
+
+          # The current test project is a console integration harness rather than
+          # a headless test runner. Do not silently report it as a passing test.
+          # This step becomes executable once the harness is converted to
+          # deterministic automated tests suitable for CI.
+          Write-Host "Automated test harness requires conversion before CI execution."
+          exit 1
