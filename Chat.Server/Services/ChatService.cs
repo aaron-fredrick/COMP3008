@@ -108,8 +108,10 @@ namespace Chat.Server.Services
                 if (success)
                 {
                     _userManager.SetUserChannel(userId, channelName);
-                    // Capture the polling boundary only after membership has been established.
-                    // This excludes messages sent before the join while allowing subsequent messages.
+                    // Establish a deterministic boundary from the channel's server-issued
+                    // sequence. Messages already present in the channel are therefore never
+                    // replayed to a newly joined polling client.
+                    _userManager.SetLastPollSequence(userId, _channelManager.GetCurrentSequence(channelName));
                     _userManager.UpdateLastPollTime(userId);
                 }
             }
@@ -245,8 +247,12 @@ namespace Chat.Server.Services
             string clientType = DetectClientType();
             var session = _userManager.GetUserSession(userId);
             if (session == null) return new List<Message>();
-            var lastPollTime = _userManager.GetLastPollTime(userId);
-            var messages = _channelManager.GetMessagesSince(session.CurrentChannel, lastPollTime, userId);
+            long lastSequence = _userManager.GetLastPollSequence(userId);
+            var messages = _channelManager.GetMessagesSinceSequence(session.CurrentChannel, lastSequence, userId);
+            if (messages.Count > 0)
+                _userManager.SetLastPollSequence(userId, messages[messages.Count - 1].Sequence);
+            else
+                _userManager.SetLastPollSequence(userId, _channelManager.GetCurrentSequence(session.CurrentChannel));
             _userManager.UpdateLastPollTime(userId);
             if (messages.Count > 0) ServerLogger.Request(clientType, "POLL", $"{userId} <- {messages.Count} message(s)");
             return messages;
