@@ -13,6 +13,7 @@ namespace Chat.Client.Polling.Services
         private IChatService _proxy;
         private string _serverUrl;
         private bool _isConnected;
+        private readonly object _proxyLock = new object();
 
         public bool IsConnected => _isConnected;
 
@@ -48,147 +49,73 @@ namespace Chat.Client.Polling.Services
 
         public bool SignIn(string userId)
         {
-            try
-           {
-                return _proxy.SignIn(userId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return false;
-            }
+            try { lock (_proxyLock) return _proxy.SignIn(userId); }
+            catch (Exception ex) { HandleError(ex); return false; }
         }
 
         public void SignOut(string userId)
         {
-            try
-            {
-                _proxy.SignOut(userId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-            }
+            try { lock (_proxyLock) _proxy.SignOut(userId); }
+            catch (Exception ex) { HandleError(ex); }
         }
 
         public System.Collections.Generic.List<Channel> GetChannels()
         {
-            try
-            {
-                return _proxy.GetChannels();
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return new System.Collections.Generic.List<Channel>();
-            }
+            try { lock (_proxyLock) return _proxy.GetChannels(); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<Channel>(); }
         }
 
         public bool CreateChannel(string channelName)
         {
-            try
-            {
-                return _proxy.CreateChannel(channelName);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return false;
-            }
+            try { lock (_proxyLock) return _proxy.CreateChannel(channelName); }
+            catch (Exception ex) { HandleError(ex); return false; }
         }
 
         public bool JoinChannel(string userId, string channelName)
         {
-            try
-            {
-                return _proxy.JoinChannel(userId, channelName);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return false;
-            }
+            try { lock (_proxyLock) return _proxy.JoinChannel(userId, channelName); }
+            catch (Exception ex) { HandleError(ex); return false; }
         }
 
         public void LeaveChannel(string userId)
         {
-            try
-            {
-                _proxy.LeaveChannel(userId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-            }
+            try { lock (_proxyLock) _proxy.LeaveChannel(userId); }
+            catch (Exception ex) { HandleError(ex); }
         }
 
         public System.Collections.Generic.List<string> GetChannelMembers(string channelName)
         {
-            try
-            {
-                return _proxy.GetChannelMembers(channelName);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return new System.Collections.Generic.List<string>();
-            }
+            try { lock (_proxyLock) return _proxy.GetChannelMembers(channelName); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<string>(); }
         }
 
         public void SendMessage(string senderId, string channelName, string content)
         {
-            try
-            {
-                _proxy.SendMessage(senderId, channelName, content);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-            }
+            try { lock (_proxyLock) _proxy.SendMessage(senderId, channelName, content); }
+            catch (Exception ex) { HandleError(ex); }
         }
 
         public bool SendPrivateMessage(string senderId, string recipientId, string content)
         {
-            try
-            {
-                return _proxy.SendPrivateMessage(senderId, recipientId, content);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return false;
-            }
+            try { lock (_proxyLock) return _proxy.SendPrivateMessage(senderId, recipientId, content); }
+            catch (Exception ex) { HandleError(ex); return false; }
         }
 
         public System.Collections.Generic.List<Message> GetPendingMessages(string userId)
         {
-            try
-            {
-                return _proxy.GetPendingMessages(userId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return new System.Collections.Generic.List<Message>();
-            }
+            try { lock (_proxyLock) return _proxy.GetPendingMessages(userId); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<Message>(); }
         }
 
         public System.Collections.Generic.List<Message> GetPendingPrivateMessages(string userId)
         {
-            try
-            {
-                return _proxy.GetPendingPrivateMessages(userId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return new System.Collections.Generic.List<Message>();
-            }
+            try { lock (_proxyLock) return _proxy.GetPendingPrivateMessages(userId); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<Message>(); }
         }
 
         public System.Collections.Generic.List<SharedFile> GetPendingPrivateFiles(string userId)
         {
-            try { return _proxy.GetPendingPrivateFiles(userId); }
+            try { lock (_proxyLock) return _proxy.GetPendingPrivateFiles(userId); }
             catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<SharedFile>(); }
         }
 
@@ -196,71 +123,42 @@ namespace Chat.Client.Polling.Services
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] Calling ShareFile: {fileName} to {channelName}");
-                Console.WriteLine($"[SERVICE CLIENT] Calling ShareFile: {fileName} to {channelName}");
-                bool result = _proxy.ShareFile(uploaderId, channelName, fileName, fileType, fileData);
-                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] ShareFile result: {result}");
-                Console.WriteLine($"[SERVICE CLIENT] ShareFile result: {result}");
+                bool result;
+                lock (_proxyLock)
+                    result = _proxy.ShareFile(uploaderId, channelName, fileName, fileType, fileData);
                 return result;
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[SERVICE CLIENT] ShareFile exception: {ex.Message}");
-                Console.WriteLine($"[SERVICE CLIENT] ShareFile exception: {ex.Message}");
-                HandleError(ex);
-                return false;
-            }
+            catch (Exception ex) { HandleError(ex); return false; }
         }
 
         public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
         {
-            try { return _proxy.SharePrivateFile(senderId, recipientId, fileName, fileType, fileData); }
+            try { lock (_proxyLock) return _proxy.SharePrivateFile(senderId, recipientId, fileName, fileType, fileData); }
             catch (Exception ex) { HandleError(ex); return null; }
         }
 
         public SharedFile GetFile(string userId, Guid fileId)
         {
-            try
-            {
-                return _proxy.GetFile(userId, fileId);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return null;
-            }
+            try { lock (_proxyLock) return _proxy.GetFile(userId, fileId); }
+            catch (Exception ex) { HandleError(ex); return null; }
         }
 
         public SharedFile GetPrivateFile(string userId, Guid fileId)
         {
-            try { return _proxy.GetPrivateFile(userId, fileId); }
+            try { lock (_proxyLock) return _proxy.GetPrivateFile(userId, fileId); }
             catch (Exception ex) { HandleError(ex); return null; }
         }
 
         public System.Collections.Generic.List<SharedFile> GetChannelFiles(string channelName)
         {
-            try
-            {
-                return _proxy.GetChannelFiles(channelName);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return new System.Collections.Generic.List<SharedFile>();
-            }
+            try { lock (_proxyLock) return _proxy.GetChannelFiles(channelName); }
+            catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<SharedFile>(); }
         }
 
         public string Ping(string userId, byte[] hash)
         {
-            try
-            {
-                return _proxy.Ping(userId, hash);
-            }
-            catch (Exception ex)
-            {
-                HandleError(ex);
-                return null;
-            }
+            try { lock (_proxyLock) return _proxy.Ping(userId, hash); }
+            catch (Exception ex) { HandleError(ex); return null; }
         }
 
         private void HandleError(Exception ex)
@@ -271,18 +169,17 @@ namespace Chat.Client.Polling.Services
 
         public void Dispose()
         {
-            if (_proxy != null)
+            lock (_proxyLock)
             {
-                var channel = _proxy as ICommunicationObject;
-                if (channel != null && channel.State == CommunicationState.Opened)
+                if (_proxy != null)
                 {
-                    channel.Close();
+                    var channel = _proxy as ICommunicationObject;
+                    if (channel != null && channel.State == CommunicationState.Opened)
+                        channel.Close();
                 }
-            }
 
-            if (_channelFactory != null)
-            {
-                _channelFactory.Close();
+                if (_channelFactory != null)
+                    _channelFactory.Close();
             }
         }
     }

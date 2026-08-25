@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/p0-correctness ]
   pull_request:
     branches: [ main ]
 
@@ -21,18 +21,15 @@ jobs:
         shell: powershell
         run: .\build.ps1 -Configuration Debug
 
-      - name: Run automated tests
+      - name: Run server-backed integration tests
         shell: powershell
-        run: |
-          $testProject = "Chat.Server.Tests\Chat.Server.Tests.csproj"
-          if (-not (Test-Path $testProject)) {
-            Write-Error "Test project not found: $testProject"
-            exit 1
-          }
+        run: .\scripts\ci\run-integration-tests.ps1
 
-          # The current test project is a console integration harness rather than
-          # a headless test runner. Do not silently report it as a passing test.
-          # This step becomes executable once the harness is converted to
-          # deterministic automated tests suitable for CI.
-          Write-Host "Automated test harness requires conversion before CI execution."
-          exit 1
+      - name: Upload integration logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: artifacts/integration/
+          if-no-files-found: warn
+          retention-days: 14
