@@ -29,6 +29,7 @@
     <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
     <Compile Include="Unit\UserManagerTests.cs" />
     <Compile Include="Unit\ChannelManagerTests.cs" />
+    <Compile Include="Unit\FileStorageTests.cs" />
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
