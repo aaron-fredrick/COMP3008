@@ -24,6 +24,7 @@ namespace Chat.Server.Tests
             int unitFailures = 0;
             unitFailures += RunUnit("UserManager", UserManagerTests.Run);
             unitFailures += RunUnit("ChannelManager", ChannelManagerTests.Run);
+            unitFailures += RunUnit("FileStorage", FileStorageTests.Run);
             Console.WriteLine();
             int result;
             if (unitFailures != 0)
