@@ -71,7 +71,9 @@ namespace Chat.Server.FileStorage
             }
             catch (Exception ex)
             {
-                if (storageKey != null) { try { _contentStore.Delete(fileId); } catch { } }
+                // Store() may have created partial content before throwing, so cleanup is
+                // attempted unconditionally. Delete() is idempotent for the filesystem store.
+                try { _contentStore.Delete(fileId); } catch { }
                 reason = $"Exception during file storage: {ex.Message}";
                 return false;
             }
