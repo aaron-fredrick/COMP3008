@@ -17,6 +17,8 @@ namespace Chat.Client.Duplex.Services
             _serviceClient = serviceClient;
         }
 
+        // TODO: Before production release, verify WPF Dispatcher responsiveness during a deliberately slow WCF operation.
+        // This is a deferred verification task; do not add artificial production delays for this check.
         public void OnChannelListChanged()
         {
             _dispatcher.BeginInvoke(new Action(() =>
