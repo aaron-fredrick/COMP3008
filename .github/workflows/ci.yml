@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, feature/p0-correctness ]
+    branches: [ main, feature/p0-correctness, feature/p1-implementation ]
   pull_request:
     branches: [ main ]
 
