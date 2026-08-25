@@ -59,6 +59,20 @@ namespace Chat.Server.StateManagement
             finally { _lock.ExitWriteLock(); }
         }
 
+        public void SetChannelFileVisibilityBoundary(string userId, DateTime boundaryUtc)
+        {
+            _lock.EnterWriteLock();
+            try { if (_users.ContainsKey(userId)) _users[userId].ChannelFileVisibilityBoundary = boundaryUtc; }
+            finally { _lock.ExitWriteLock(); }
+        }
+
+        public DateTime GetChannelFileVisibilityBoundary(string userId)
+        {
+            _lock.EnterReadLock();
+            try { return _users.ContainsKey(userId) ? _users[userId].ChannelFileVisibilityBoundary : DateTime.MaxValue; }
+            finally { _lock.ExitReadLock(); }
+        }
+
         public void RegisterCallback(string userId, IChatCallback callback)
         {
             _lock.EnterWriteLock();

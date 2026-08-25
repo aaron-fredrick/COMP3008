@@ -11,6 +11,8 @@ namespace Chat.Server.StateManagement
         public string CurrentChannel { get; set; }
         public DateTime LastPollTime { get; set; }
         public long LastPollSequence { get; set; }
+        // Files uploaded before this boundary are not visible after joining a channel.
+        public DateTime ChannelFileVisibilityBoundary { get; set; }
         public Queue<Message> PendingPrivateMessages { get; set; }
         public Queue<SharedFile> PendingPrivateFiles { get; set; }
         public IChatCallback Callback { get; set; }
@@ -21,6 +23,7 @@ namespace Chat.Server.StateManagement
             CurrentChannel = null;
             LastPollTime = DateTime.UtcNow;
             LastPollSequence = 0;
+            ChannelFileVisibilityBoundary = DateTime.MaxValue;
             PendingPrivateMessages = new Queue<Message>();
             PendingPrivateFiles = new Queue<SharedFile>();
             Callback = null;

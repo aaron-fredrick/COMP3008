@@ -1,5 +1,6 @@
 using System;
 using System.Configuration;
+using System.Diagnostics;
 using Chat.Server.Tests.Integration;
 using Chat.Server.Tests.Unit;
 
@@ -21,32 +22,66 @@ namespace Chat.Server.Tests
             Console.WriteLine("======================================================================");
             Console.WriteLine("                COMP3008 STRUCTURED TEST SUITE");
             Console.WriteLine("======================================================================");
+            Console.WriteLine($"[INFO] Started {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
             int unitFailures = 0;
             unitFailures += RunUnit("UserManager", UserManagerTests.Run);
             unitFailures += RunUnit("ChannelManager", ChannelManagerTests.Run);
+            unitFailures += RunUnit("FileStorage", FileStorageTests.Run);
             Console.WriteLine();
+
             int result;
             if (unitFailures != 0)
             {
                 result = 1;
+                Console.WriteLine("[FAIL] Unit test phase failed; integration tests were not started.");
             }
             else
             {
-                Console.WriteLine("Starting integration suite...");
+                Console.WriteLine("[INFO] Starting integration suite...");
                 result = DeterministicIntegrationSuite.Run(pollingUrl, duplexUrl);
+                if (result == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("[INFO] Starting authorization hardening suite...");
+                    result = AuthorizationHardeningIntegrationSuite.Run(pollingUrl, duplexUrl);
+                }
+                if (result == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("[INFO] Starting polling/duplex parity suite...");
+                    result = PollingDuplexParityIntegrationSuite.Run(pollingUrl, duplexUrl);
+                }
+                if (result == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("[INFO] Starting duplex disconnect cleanup suite...");
+                    result = DuplexDisconnectCleanupIntegrationSuite.Run(pollingUrl, duplexUrl);
+                }
             }
 
-            // WCF client channels can leave background communication threads alive after
-            // the suite completes. This executable is a CI test runner, so terminate with
-            // the actual suite status rather than waiting for those threads indefinitely.
+            Console.WriteLine($"[INFO] Finished {DateTime.Now:yyyy-MM-dd HH:mm:ss} with exit code {result}.");
             Environment.Exit(result);
             return result;
         }
 
         private static int RunUnit(string name, Action test)
         {
-            try { test(); Console.WriteLine($"[PASS] Unit/{name}"); return 0; }
-            catch (Exception ex) { Console.Error.WriteLine($"[FAIL] Unit/{name}: {ex.Message}"); return 1; }
+            var timer = Stopwatch.StartNew();
+            try
+            {
+                test();
+                timer.Stop();
+                Console.WriteLine($"[PASS] Unit/{name} ({timer.ElapsedMilliseconds} ms)");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                timer.Stop();
+                Console.Error.WriteLine($"[FAIL] Unit/{name} ({timer.ElapsedMilliseconds} ms): {ex.Message}");
+                Console.Error.WriteLine(ex.ToString());
+                return 1;
+            }
         }
     }
 }
