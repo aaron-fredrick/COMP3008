@@ -61,16 +61,16 @@ try {
     Write-Host 'Server endpoints are ready. Starting structured tests...'
     $tests = Start-Process -FilePath $testPath -WorkingDirectory (Split-Path $testPath) -RedirectStandardOutput $testLog -RedirectStandardError $testErrorLog -PassThru
 
-    $deadline = (Get-Date).AddMinutes(5)
-    while ((Get-Date) -lt $deadline) {
-        if ($tests.HasExited) {
-            $testResult = if ($tests.ExitCode -eq 0) { 0 } else { $tests.ExitCode }
-            break
-        }
-        Start-Sleep -Seconds 1
-    }
+    # Wait on the process handle rather than polling a cached Process object state.
+    # This avoids false timeouts when the executable has already terminated but the
+    # PowerShell Process wrapper has not refreshed its state yet.
+    $tests.WaitForExit(300000) | Out-Null
+    $tests.Refresh()
 
-    if ($null -eq $testResult) {
+    if ($tests.HasExited) {
+        $testResult = $tests.ExitCode
+    }
+    else {
         $testTimedOut = $true
         $testResult = 1
         Write-Host 'Integration tests timed out before the process exited.' -ForegroundColor Red
