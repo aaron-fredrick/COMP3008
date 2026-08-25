@@ -10,32 +10,31 @@ namespace Chat.Server.FileStorage
 {
     public class FileHandler
     {
-        private readonly string _storageDirectory;
+        private readonly IFileContentStore _contentStore;
         private readonly Dictionary<Guid, SharedFile> _files;
         private readonly ReaderWriterLockSlim _lock;
         private readonly HashSet<string> _allowedExtensions;
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
         public FileHandler()
+            : this(new ShardedFileContentStore(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StoredFiles")))
         {
-            _storageDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StoredFiles");
+        }
+
+        public FileHandler(IFileContentStore contentStore)
+        {
+            _contentStore = contentStore ?? throw new ArgumentNullException(nameof(contentStore));
             _files = new Dictionary<Guid, SharedFile>();
             _lock = new ReaderWriterLockSlim();
             _allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".txt"
             };
-
-            if (!Directory.Exists(_storageDirectory))
-            {
-                Directory.CreateDirectory(_storageDirectory);
-            }
         }
 
         public bool ValidateFile(string fileName, long fileSize, FileType fileType, out string reason)
         {
             reason = null;
-
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 reason = "File name cannot be empty.";
@@ -79,30 +78,7 @@ namespace Chat.Server.FileStorage
                     return false;
                 }
 
-                var fileId = Guid.NewGuid();
-                var filePath = Path.Combine(_storageDirectory, fileId.ToString());
-                File.WriteAllBytes(filePath, fileData);
-
-                storedFile = new SharedFile
-                {
-                    FileId = fileId,
-                    FileName = fileName,
-                    FileType = fileType,
-                    FileSize = fileData.Length,
-                    UploaderId = uploaderId,
-                    UploadedAt = DateTime.UtcNow,
-                    ChannelName = channelName,
-                    FileData = fileData
-                };
-
-                _files[fileId] = storedFile;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                storedFile = null;
-                reason = $"Exception during file storage: {ex.Message}";
-                return false;
+                return StoreInternal(uploaderId, channelName, null, fileName, fileType, fileData, out reason, out storedFile);
             }
             finally
             {
@@ -124,26 +100,48 @@ namespace Chat.Server.FileStorage
                     return false;
                 }
 
-                var fileId = Guid.NewGuid();
-                var filePath = Path.Combine(_storageDirectory, fileId.ToString());
-                File.WriteAllBytes(filePath, fileData);
+                return StoreInternal(uploaderId, null, recipientId, fileName, fileType, fileData, out reason, out storedFile);
+            }
+            finally
+            {
+                _lock.ExitWriteLock();
+            }
+        }
+
+        private bool StoreInternal(string uploaderId, string channelName, string recipientId, string fileName, FileType fileType, byte[] fileData, out string reason, out SharedFile storedFile)
+        {
+            reason = null;
+            storedFile = null;
+            var fileId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+
+            try
+            {
+                string storageKey = _contentStore.Store(fileId, fileData);
                 storedFile = new SharedFile
                 {
-                    FileId = fileId, FileName = fileName, FileType = fileType,
-                    FileSize = fileData.Length, UploaderId = uploaderId,
-                    RecipientId = recipientId, UploadedAt = DateTime.UtcNow,
-                    ChannelName = null, FileData = fileData
+                    FileId = fileId,
+                    FileName = fileName,
+                    FileType = fileType,
+                    FileSize = fileData.Length,
+                    UploaderId = uploaderId,
+                    UploadedAt = now,
+                    LastUpdatedAt = now,
+                    ChannelName = channelName,
+                    RecipientId = recipientId,
+                    StorageKey = storageKey,
+                    FileData = null
                 };
+
                 _files[fileId] = storedFile;
                 return true;
             }
             catch (Exception ex)
             {
-                storedFile = null;
+                try { _contentStore.Delete(fileId); } catch { }
                 reason = $"Exception during file storage: {ex.Message}";
                 return false;
             }
-            finally { _lock.ExitWriteLock(); }
         }
 
         public SharedFile GetFile(Guid fileId)
@@ -151,9 +149,14 @@ namespace Chat.Server.FileStorage
             _lock.EnterReadLock();
             try
             {
-                if (_files.ContainsKey(fileId))
-                    return _files[fileId];
-                return null;
+                if (!_files.TryGetValue(fileId, out var metadata))
+                    return null;
+
+                var content = _contentStore.Read(fileId);
+                if (content == null)
+                    return null;
+
+                return CopyMetadata(metadata, content);
             }
             finally { _lock.ExitReadLock(); }
         }
@@ -165,18 +168,7 @@ namespace Chat.Server.FileStorage
             {
                 return _files.Values
                     .Where(f => f.ChannelName == channelName && f.UploadedAt >= visibleFromUtc)
-                    .Select(f => new SharedFile
-                    {
-                        FileId = f.FileId,
-                        FileName = f.FileName,
-                        FileType = f.FileType,
-                        FileSize = f.FileSize,
-                        UploaderId = f.UploaderId,
-                        UploadedAt = f.UploadedAt,
-                        ChannelName = f.ChannelName,
-                        RecipientId = f.RecipientId,
-                        FileData = null // contents served only via GetFile(fileId)
-                    })
+                    .Select(f => CopyMetadata(f, null))
                     .ToList();
             }
             finally { _lock.ExitReadLock(); }
@@ -194,13 +186,29 @@ namespace Chat.Server.FileStorage
 
                 foreach (var fileId in filesToRemove)
                 {
-                    var filePath = Path.Combine(_storageDirectory, fileId.ToString());
-                    if (File.Exists(filePath))
-                        File.Delete(filePath);
+                    try { _contentStore.Delete(fileId); } catch { }
                     _files.Remove(fileId);
                 }
             }
             finally { _lock.ExitWriteLock(); }
+        }
+
+        private static SharedFile CopyMetadata(SharedFile file, byte[] content)
+        {
+            return new SharedFile
+            {
+                FileId = file.FileId,
+                FileName = file.FileName,
+                FileType = file.FileType,
+                FileSize = file.FileSize,
+                UploaderId = file.UploaderId,
+                UploadedAt = file.UploadedAt,
+                LastUpdatedAt = file.LastUpdatedAt,
+                ChannelName = file.ChannelName,
+                RecipientId = file.RecipientId,
+                StorageKey = file.StorageKey,
+                FileData = content
+            };
         }
     }
 }
