@@ -46,12 +46,18 @@
     <Compile Include="Program.cs" />
     <Compile Include="TestInfrastructure\TestAssert.cs" />
     <Compile Include="Integration\IntegrationTestSuite.cs" />
+    <Compile Include="Unit\UserManagerTests.cs" />
+    <Compile Include="Unit\ChannelManagerTests.cs" />
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj">
       <Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project>
       <Name>Chat.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Chat.Server\Chat.Server.csproj">
+      <Project>{B2C3D4E5-F6A7-4890-B123-4567890ABCDE}</Project>
+      <Name>Chat.Server</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
