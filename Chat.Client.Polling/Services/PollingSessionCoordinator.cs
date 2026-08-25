@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Windows.Threading;
 using Chat.Client.Shared.Controls;
 using Chat.Client.Shared.Services;
@@ -9,12 +10,12 @@ using Chat.Contracts.SharedTypes;
 namespace Chat.Client.Polling.Services
 {
     /// <summary>
-    /// Owns all session state, polling orchestration, and WCF service calls.
-    /// Raises events that the MainWindow reacts to — keeping UI and logic separate.
+    /// Owns session state, background polling orchestration, and WCF service calls.
+    /// UI-facing events are marshalled back to the WPF Dispatcher.
     /// </summary>
     public sealed class PollingSessionCoordinator : IDisposable
     {
-        private static readonly Lazy<PollingSessionCoordinator> _instance = 
+        private static readonly Lazy<PollingSessionCoordinator> _instance =
             new Lazy<PollingSessionCoordinator>(() => new PollingSessionCoordinator());
 
         public static PollingSessionCoordinator Instance => _instance.Value;
@@ -31,13 +32,16 @@ namespace Chat.Client.Polling.Services
         private ChatServiceClient _serviceClient;
         private readonly ValidationService _validationService;
         private readonly FileHelperService _fileHelperService;
-        private readonly DispatcherTimer _pollingTimer;
-        private readonly DispatcherTimer _pingTimer;
+        private readonly Dispatcher _dispatcher;
+        private readonly Timer _pollingTimer;
+        private readonly Timer _pingTimer;
         private readonly Random _random = new Random();
         private readonly int _pollingIntervalMs;
+        private readonly object _pollingLock = new object();
 
         private string _currentUserId;
         private string _currentChannel;
+        private bool _isPolling;
         private bool _isDisposed;
 
         public string CurrentUserId => _currentUserId;
@@ -47,53 +51,61 @@ namespace Chat.Client.Polling.Services
 
         private PollingSessionCoordinator()
         {
+            _dispatcher = Dispatcher.CurrentDispatcher;
             int pollingIntervalMs = int.Parse(System.Configuration.ConfigurationManager.AppSettings["PollingInterval"] ?? "2000");
             _pollingIntervalMs = pollingIntervalMs;
             _validationService = new ValidationService();
             _fileHelperService = new FileHelperService();
 
-            _pollingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(pollingIntervalMs) };
-            _pollingTimer.Tick += OnPollingTick;
-
-            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-            _pingTimer.Tick += OnPingTick;
+            _pollingTimer = new Timer(OnPollingTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
+            _pingTimer = new Timer(OnPingTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        // ── Session lifecycle ────────────────────────────────────────────────
+        // Session lifecycle
 
         public void StartSession(ChatServiceClient serviceClient)
         {
-            _serviceClient = serviceClient;
-            _pingTimer.Start();
+            _serviceClient = serviceClient ?? throw new ArgumentNullException(nameof(serviceClient));
+            _pingTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
             PerformPing();
         }
 
         /// <summary>
-        /// Records the already-authenticated user and starts the polling timer.
+        /// Records the already-authenticated user and starts controlled background polling.
         /// The actual WCF SignIn call is made by SignInView before this is called.
         /// </summary>
         public void SetSignedInUser(string username)
         {
             _currentUserId = username;
-            _pollingTimer.Start();
+            StartPolling();
         }
 
         public void SignOut()
         {
-            _pollingTimer.Stop();
-            _pingTimer.Stop();
+            StopPolling();
+            _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
-            if (!string.IsNullOrEmpty(_currentChannel))
-                _serviceClient?.LeaveChannel(_currentUserId);
+            if (_serviceClient == null)
+                return;
 
-            _serviceClient?.SignOut(_currentUserId);
-            _serviceClient?.Dispose();
+            try
+            {
+                if (!string.IsNullOrEmpty(_currentChannel))
+                    _serviceClient.LeaveChannel(_currentUserId);
 
-            _currentUserId = null;
-            _currentChannel = null;
+                if (!string.IsNullOrEmpty(_currentUserId))
+                    _serviceClient.SignOut(_currentUserId);
+            }
+            finally
+            {
+                _serviceClient.Dispose();
+                _serviceClient = null;
+                _currentUserId = null;
+                _currentChannel = null;
+            }
         }
 
-        // ── Channel operations ───────────────────────────────────────────────
+        // Channel operations
 
         public bool JoinChannel(string channelName)
         {
@@ -119,7 +131,7 @@ namespace Chat.Client.Polling.Services
         public void RefreshChannels()
         {
             var channels = _serviceClient.GetChannels();
-            ChannelsUpdated?.Invoke(this, channels);
+            RaiseOnUiThread(ChannelsUpdated, channels);
         }
 
         public void RefreshChannelMembers()
@@ -128,7 +140,7 @@ namespace Chat.Client.Polling.Services
                 return;
 
             var members = _serviceClient.GetChannelMembers(_currentChannel);
-            ChannelMembersUpdated?.Invoke(this, members);
+            RaiseOnUiThread(ChannelMembersUpdated, members);
         }
 
         public void RefreshChannelFiles()
@@ -137,10 +149,10 @@ namespace Chat.Client.Polling.Services
                 return;
 
             var files = _serviceClient.GetChannelFiles(_currentChannel);
-            ChannelFilesUpdated?.Invoke(this, files);
+            RaiseOnUiThread(ChannelFilesUpdated, files);
         }
 
-        // ── Messaging ────────────────────────────────────────────────────────
+        // Messaging
 
         public void SendPublicMessage(string content)
         {
@@ -153,7 +165,7 @@ namespace Chat.Client.Polling.Services
         public bool SendPrivateMessage(string recipientId, string content) =>
             _serviceClient.SendPrivateMessage(_currentUserId, recipientId, content);
 
-        // ── File operations ──────────────────────────────────────────────────
+        // File operations
 
         public ValidationResult ValidateFile(string filePath) =>
             _validationService.ValidateFile(filePath);
@@ -199,11 +211,52 @@ namespace Chat.Client.Polling.Services
             return true;
         }
 
-        // ── Polling ──────────────────────────────────────────────────────────
+        // Polling
 
-        private void OnPollingTick(object sender, EventArgs e)
+        private void StartPolling()
         {
-            if (!IsSignedIn)
+            _pollingTimer.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(_pollingIntervalMs));
+        }
+
+        private void StopPolling()
+        {
+            _pollingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        private void OnPollingTimerElapsed(object state)
+        {
+            lock (_pollingLock)
+            {
+                if (_isPolling || !IsSignedIn || _isDisposed)
+                    return;
+
+                _isPolling = true;
+            }
+
+            try
+            {
+                PollOnce();
+            }
+            catch (System.ServiceModel.CommunicationException)
+            {
+                RaiseConnectionState(ConnectionState.Disconnected);
+            }
+            catch (TimeoutException)
+            {
+                RaiseConnectionState(ConnectionState.Disconnected);
+            }
+            finally
+            {
+                lock (_pollingLock)
+                {
+                    _isPolling = false;
+                }
+            }
+        }
+
+        private void PollOnce()
+        {
+            if (!IsSignedIn || _serviceClient == null)
                 return;
 
             if (string.IsNullOrEmpty(_currentChannel))
@@ -225,7 +278,7 @@ namespace Chat.Client.Polling.Services
             foreach (var message in messages)
             {
                 message.IsCurrentUser = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase);
-                PublicMessageReceived?.Invoke(this, message);
+                RaiseOnUiThread(PublicMessageReceived, message);
             }
         }
 
@@ -239,7 +292,7 @@ namespace Chat.Client.Polling.Services
                     : message.SenderId;
 
                 message.IsCurrentUser = string.Equals(message.SenderId, _currentUserId, StringComparison.OrdinalIgnoreCase);
-                PrivateMessageReceived?.Invoke(this, (otherUserId, message));
+                RaiseOnUiThread(PrivateMessageReceived, (otherUserId, message));
             }
         }
 
@@ -250,57 +303,91 @@ namespace Chat.Client.Polling.Services
             {
                 string otherUserId = string.Equals(file.UploaderId, _currentUserId, StringComparison.OrdinalIgnoreCase)
                     ? file.RecipientId : file.UploaderId;
-                PrivateFileReceived?.Invoke(this, (otherUserId, file));
+                RaiseOnUiThread(PrivateFileReceived, (otherUserId, file));
             }
         }
 
-        // ── Ping ─────────────────────────────────────────────────────────────
+        // Ping
 
-        private void OnPingTick(object sender, EventArgs e) => PerformPing();
+        private void OnPingTimerElapsed(object state) => PerformPing();
 
-        private async void PerformPing()
+        private void PerformPing()
         {
+            if (_serviceClient == null || _isDisposed)
+                return;
+
             try
             {
                 byte[] hash = new byte[6];
-                _random.NextBytes(hash);
-                string expectedPong = BitConverter.ToString(hash).Replace("-", "");
+                lock (_random)
+                {
+                    _random.NextBytes(hash);
+                }
 
+                string expectedPong = BitConverter.ToString(hash).Replace("-", "");
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 string pong = _serviceClient.Ping(_currentUserId ?? string.Empty, hash);
                 stopwatch.Stop();
 
                 if (pong == expectedPong)
                 {
-                    PingMsUpdated?.Invoke(this, (int)stopwatch.ElapsedMilliseconds);
-                    ConnectionStateChanged?.Invoke(this, ConnectionState.Connected);
+                    RaisePing(stopwatch.ElapsedMilliseconds);
+                    RaiseConnectionState(ConnectionState.Connected);
                 }
                 else
                 {
-                    PingMsUpdated?.Invoke(this, 0);
-                    ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+                    RaisePing(0);
+                    RaiseConnectionState(ConnectionState.Disconnected);
                 }
             }
-            catch
+            catch (System.ServiceModel.CommunicationException)
             {
-                PingMsUpdated?.Invoke(this, 0);
-                ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected);
+                RaisePing(0);
+                RaiseConnectionState(ConnectionState.Disconnected);
+            }
+            catch (TimeoutException)
+            {
+                RaisePing(0);
+                RaiseConnectionState(ConnectionState.Disconnected);
             }
         }
 
-        // ── IDisposable ──────────────────────────────────────────────────────
+        private void RaiseOnUiThread<T>(EventHandler<T> handler, T value)
+        {
+            if (handler == null)
+                return;
+
+            _dispatcher.BeginInvoke(new Action(() => handler(this, value)));
+        }
+
+        private void RaisePing(long milliseconds)
+        {
+            int ping = milliseconds > int.MaxValue ? int.MaxValue : (int)milliseconds;
+            RaiseOnUiThread(PingMsUpdated, ping);
+        }
+
+        private void RaiseConnectionState(ConnectionState state)
+        {
+            RaiseOnUiThread(ConnectionStateChanged, state);
+        }
+
+        // IDisposable
 
         public void Dispose()
         {
             if (_isDisposed)
                 return;
 
+            StopPolling();
+            _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
             if (IsSignedIn)
                 SignOut();
+            else
+                _serviceClient?.Dispose();
 
-            _pollingTimer.Stop();
-            _pingTimer.Stop();
-            _serviceClient?.Dispose();
+            _pollingTimer.Dispose();
+            _pingTimer.Dispose();
             _isDisposed = true;
         }
     }
