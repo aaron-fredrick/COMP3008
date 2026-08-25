@@ -27,7 +27,7 @@
     <Compile Include="TestInfrastructure\TestAssert.cs" />
     <Compile Include="Integration\IntegrationTestSuite.cs" />
     <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
-    <Compile Include="Integration\P1HardeningIntegrationSuite.cs" />
+    <Compile Include="Integration\AuthorizationHardeningIntegrationSuite.cs" />
     <Compile Include="Integration\PollingDuplexParityIntegrationSuite.cs" />
     <Compile Include="Unit\UserManagerTests.cs" />
     <Compile Include="Unit\ChannelManagerTests.cs" />
