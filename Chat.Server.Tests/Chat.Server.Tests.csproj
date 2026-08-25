@@ -28,6 +28,7 @@
     <Compile Include="Integration\IntegrationTestSuite.cs" />
     <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
     <Compile Include="Integration\P1HardeningIntegrationSuite.cs" />
+    <Compile Include="Integration\P1ParityIntegrationSuite.cs" />
     <Compile Include="Unit\UserManagerTests.cs" />
     <Compile Include="Unit\ChannelManagerTests.cs" />
     <Compile Include="Unit\FileStorageTests.cs" />
