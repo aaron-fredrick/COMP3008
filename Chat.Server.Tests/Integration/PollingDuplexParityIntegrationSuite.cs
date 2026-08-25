@@ -95,16 +95,27 @@ namespace Chat.Server.Tests.Integration
 
         private static void ChannelMembershipParity(string pollingUrl, string duplexUrl)
         {
-            const string pollUser = "parity_poll_membership", duplexUser = "parity_duplex_membership";
+            const string pollUser = "parity_poll_membership", duplexUser = "parity_duplex_membership", duplexObserver = "parity_duplex_membership_observer";
             const string pollChannel = "parity-poll-membership", duplexChannel = "parity-duplex-membership", probe = "parity-duplex-membership-probe";
             var pf = PollingFactory(pollingUrl); var callback = new TestCallback(); var df = DuplexFactory(duplexUrl, callback); var p = pf.CreateChannel(); var d = df.CreateChannel();
             try
             {
-                SignInClean(p, pollUser); CreateChannel(p, pollChannel); Join(p, pollUser, pollChannel); TestAssert.True(p.GetChannelMembers(pollChannel).Contains(pollUser), "Polling membership update was not visible"); p.LeaveChannel(pollUser); TestAssert.False(p.GetChannelMembers(pollChannel).Contains(pollUser), "Polling leave did not update membership");
-                SignInClean(d, duplexUser); CreateChannel(d, duplexChannel); d.RegisterCallback(duplexUser); TriggerCallbackRegistration(d, probe, callback); Join(d, duplexUser, duplexChannel); WaitUntil(() => callback.LastMembersChanged, 3000, "Duplex membership update was not delivered"); TestAssert.Equal(duplexChannel, callback.LastMembersChannel, "Duplex membership update referenced the wrong channel"); callback.LastMembersChanged = false;
-                d.LeaveChannel(duplexUser); WaitUntil(() => callback.LastMembersChanged, 3000, "Duplex leave update was not delivered"); TestAssert.Equal(duplexChannel, callback.LastMembersChannel, "Duplex leave update referenced the wrong channel");
+                SignInClean(p, pollUser); CreateChannel(p, pollChannel); Join(p, pollUser, pollChannel);
+                TestAssert.True(p.GetChannelMembers(pollChannel).Contains(pollUser), "Polling membership update was not visible");
+                p.LeaveChannel(pollUser);
+                TestAssert.False(p.GetChannelMembers(pollChannel).Contains(pollUser), "Polling leave did not update membership");
+
+                SignInClean(d, duplexUser); SignInClean(p, duplexObserver); CreateChannel(d, duplexChannel);
+                Join(d, duplexUser, duplexChannel); Join(p, duplexObserver, duplexChannel);
+                d.RegisterCallback(duplexUser); TriggerCallbackRegistration(d, probe, callback);
+                callback.LastMembersChanged = false;
+                p.LeaveChannel(duplexObserver);
+                WaitUntil(() => callback.LastMembersChanged, 3000, "Duplex membership leave update was not delivered to a remaining member");
+                TestAssert.Equal(duplexChannel, callback.LastMembersChannel, "Duplex leave update referenced the wrong channel");
+                TestAssert.True(d.GetChannelMembers(duplexChannel).Contains(duplexUser), "Remaining duplex member was incorrectly removed");
+                TestAssert.False(d.GetChannelMembers(duplexChannel).Contains(duplexObserver), "Left member remained in authoritative membership state");
             }
-            finally { SignOut(p, pollUser); SignOut(d, duplexUser); Close(p, pf); Close(d, df); }
+            finally { SignOut(p, pollUser); SignOut(p, duplexObserver); SignOut(d, duplexUser); Close(p, pf); Close(d, df); }
         }
 
         private static void RunTest(string name, Action test, ref int passed, ref int failed) { try { test(); passed++; Console.WriteLine($"[PASS] {name}"); } catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); } }
