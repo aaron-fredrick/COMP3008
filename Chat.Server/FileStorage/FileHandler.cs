@@ -51,7 +51,7 @@ namespace Chat.Server.FileStorage
 
             if (fileSize > MaxFileSizeBytes)
             {
-                reason = $"File size exceeds the maximum allowed size of 2 MB.";
+                reason = "File size exceeds the maximum allowed size of 2 MB.";
                 return false;
             }
 
@@ -72,7 +72,7 @@ namespace Chat.Server.FileStorage
                 reason = null;
                 storedFile = null;
 
-                if (!ValidateFile(fileName, fileData.Length, fileType, out string validationReason))
+                if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out string validationReason))
                 {
                     reason = validationReason;
                     return false;
@@ -151,24 +151,19 @@ namespace Chat.Server.FileStorage
             try
             {
                 if (_files.ContainsKey(fileId))
-                {
                     return _files[fileId];
-                }
                 return null;
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            finally { _lock.ExitReadLock(); }
         }
 
-        public List<SharedFile> GetChannelFiles(string channelName)
+        public List<SharedFile> GetChannelFiles(string channelName, DateTime visibleFromUtc)
         {
             _lock.EnterReadLock();
             try
             {
                 return _files.Values
-                    .Where(f => f.ChannelName == channelName)
+                    .Where(f => f.ChannelName == channelName && f.UploadedAt >= visibleFromUtc)
                     .Select(f => new SharedFile
                     {
                         FileId = f.FileId,
@@ -179,14 +174,11 @@ namespace Chat.Server.FileStorage
                         UploadedAt = f.UploadedAt,
                         ChannelName = f.ChannelName,
                         RecipientId = f.RecipientId,
-                        FileData = null  // contents served only via GetFile(fileId)
+                        FileData = null // contents served only via GetFile(fileId)
                     })
                     .ToList();
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            finally { _lock.ExitReadLock(); }
         }
 
         public void ClearChannelFiles(string channelName)
@@ -203,16 +195,11 @@ namespace Chat.Server.FileStorage
                 {
                     var filePath = Path.Combine(_storageDirectory, fileId.ToString());
                     if (File.Exists(filePath))
-                    {
                         File.Delete(filePath);
-                    }
                     _files.Remove(fileId);
                 }
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
     }
 }
