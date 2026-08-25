@@ -44,7 +44,7 @@ namespace Chat.Server.Tests
                 {
                     Console.WriteLine();
                     Console.WriteLine("[INFO] Starting authorization hardening suite...");
-                    result = P1HardeningIntegrationSuite.Run(pollingUrl, duplexUrl);
+                    result = AuthorizationHardeningIntegrationSuite.Run(pollingUrl, duplexUrl);
                 }
                 if (result == 0)
                 {
@@ -56,9 +56,6 @@ namespace Chat.Server.Tests
 
             Console.WriteLine($"[INFO] Finished {DateTime.Now:yyyy-MM-dd HH:mm:ss} with exit code {result}.");
 
-            // WCF client channels can leave background communication threads alive after
-            // the suite completes. This executable is a CI test runner, so terminate with
-            // the actual suite status rather than waiting for those threads indefinitely.
             Environment.Exit(result);
             return result;
         }
