@@ -6,17 +6,20 @@ Improve the existing distributed chat application incrementally without changing
 
 Technology remains: C#, .NET Framework 4.8, WPF, WCF, NetTcpBinding, controlled polling, WCF Duplex callbacks, and authoritative in-memory server state.
 
-## Priority Roadmap
+## P0 — Correctness and distributed-system safety
 
-### P0 — Correctness and distributed-system safety
+P0 is the current implementation scope. **All P0 work belongs on `feature/p0-correctness` and must be reviewed through PR #1 before merging to `main`.** Do not implement P0 changes directly on `main`.
 
-#### 1. Fix the polling thread model
+### 1. Polling correctness and verification
+
 - Move synchronous WCF polling calls off the WPF Dispatcher/UI thread.
 - Use one controlled polling cycle at a time; prevent overlapping requests.
 - Stop polling on sign-out and shutdown.
 - Handle communication failures without freezing or crashing the client.
 - Marshal resulting UI/state updates back to the Dispatcher.
 - Keep the interval controlled and configurable.
+- Verify the implementation builds successfully in a clean Windows/.NET Framework environment.
+- If CI exposes compile/runtime issues, fix those issues in the PR before continuing to later P0 work.
 
 Target:
 
@@ -34,7 +37,7 @@ Dispatcher.BeginInvoke
 WPF state/UI
 ```
 
-#### 2. Establish and protect server state invariants
+### 2. Server state invariants and atomic channel transitions
 
 Primary invariant:
 
@@ -46,9 +49,23 @@ Channel X contains that user
 
 Audit `UserManager`, `ChannelManager`, `MessageRouter`, `CallbackManager`, `FileHandler`, and `ChatService`.
 
-Focus on join, leave, channel switching, sign-out, disconnect, and message delivery. Define state transitions before changing locking. Do not add synchronization indiscriminately.
+Operations requiring explicit state-transition analysis:
 
-#### 3. Isolate Duplex callback delivery from state mutation
+- sign-in
+- sign-out
+- disconnect
+- create channel
+- join channel
+- leave channel
+- switch channel
+- public message send/delivery
+- private message send/delivery
+
+For `JoinChannel`, `LeaveChannel`, and `SwitchChannel`, make the membership/session transition atomic from the perspective of concurrent WCF requests. A user must not be observable as belonging to two channels or to no channel when the operation has completed.
+
+Before adding locks, identify state ownership and the complete transition. Use the simplest suitable synchronization mechanism. Avoid holding state locks across remote WCF callback calls.
+
+### 3. Duplex callback isolation
 
 Use this pattern:
 
@@ -64,25 +81,208 @@ Release state locks
 Deliver callbacks safely
 ```
 
-Audit callback lock scope, slow/dead clients, exceptions, registration/removal races, duplicate registration, and disconnect cleanup. A failed callback must not terminate or stall unrelated server work.
+Audit:
 
-#### 4. Replace optimistic integration tests with real assertions
+- callback lock scope
+- slow/dead clients
+- callback exceptions
+- registration/removal races
+- duplicate registration
+- disconnect cleanup
+- callbacks occurring after a client has left/disconnected
 
-Turn `Chat.Server.Tests` into deterministic tests. A test must fail when behaviour is wrong; success and failure must not both count as a pass.
+A failed callback must not terminate or stall unrelated server work. Remote callback calls must not occur while holding authoritative state locks.
 
-Coverage:
+### 4. Convert `Chat.Server.Tests` into real asserted tests
 
-- Authentication: unique sign-in, duplicate rejection, ID reuse after sign-out/disconnect.
-- Channels: creation, duplicate rejection, join, leave, switching, one-channel invariant, concurrent membership changes.
-- Public messaging: current-member delivery, no non-member delivery, no pre-join replay, concurrent sends.
-- Private messaging: same-channel enforcement, recipient-only delivery, invalid recipient, recipient leaving, multiple conversations.
-- Files: valid files, invalid extension, empty file, exactly 2 MB, over 2 MB, member-only download, access after leaving.
-- Duplex: registration, message/member/channel/file callbacks, callback failure, disconnect.
-- Concurrency: 3–5 clients, concurrent joins/leaves/messages, post-concurrency state consistency.
+Replace the current optimistic/manual test-harness behaviour with a deterministic automated test project suitable for local execution and CI.
 
-### P1 — Security, resource handling, and communication design
+A test must fail when behaviour is wrong. Do not treat a completed call, absence of an exception, or a printed `PASS` message as proof unless the expected state/result is actually asserted.
 
-#### 5. Audit server-side identity and authorization
+Minimum coverage:
+
+**Authentication**
+- unique sign-in
+- duplicate sign-in rejection
+- ID reuse after sign-out
+- ID reuse after disconnect
+
+**Channels**
+- channel creation
+- duplicate channel rejection
+- join
+- leave
+- switching
+- one-channel invariant
+- concurrent membership changes
+
+**Public messaging**
+- current-member delivery
+- no non-member delivery
+- no pre-join replay
+- concurrent sends
+
+**Private messaging**
+- same-channel enforcement
+- recipient-only delivery
+- invalid recipient
+- recipient leaving
+- multiple conversations
+
+**Files**
+- valid `.txt` and image files
+- invalid extensions
+- empty files
+- exactly 2 MB
+- over 2 MB
+- member-only download
+- rejection after leaving the channel
+
+**Duplex**
+- callback registration
+- message callback
+- member callback
+- channel callback
+- file callback
+- callback failure
+- disconnect cleanup
+
+### 5. Add concurrency tests
+
+Add deterministic tests for the highest-risk shared-state operations. Begin with small client counts rather than uncontrolled stress tests.
+
+Minimum scenarios:
+
+- 3–5 simultaneous clients joining the same channel
+- concurrent joins/leaves
+- concurrent channel switches
+- concurrent public messages
+- concurrent sign-out/disconnect during channel activity
+- callback failure while other clients remain active
+
+After each concurrency scenario, assert final server invariants rather than merely asserting that no exception was thrown.
+
+The core invariant must hold:
+
+```text
+For every connected user:
+CurrentChannel == null  OR  exactly one channel contains that user
+```
+
+### 6. Make CI enforce the real test suite
+
+CI must remain on the P0 PR branch until the automated test suite is trustworthy.
+
+Required pipeline:
+
+```text
+checkout
+  ↓
+restore/build .NET Framework solution on Windows
+  ↓
+run deterministic automated tests
+  ↓
+fail on build/test failure
+```
+
+Do **not** remove or bypass a failing test step merely to obtain a green build. If the existing test harness cannot run headlessly/deterministically, convert it first.
+
+CI must:
+
+1. Run on pushes to `main`.
+2. Run on pull requests targeting `main`.
+3. Use a Windows runner.
+4. Build the complete solution.
+5. Run headless-safe tests.
+6. Fail on test/build failures.
+7. Avoid unrelated tooling.
+
+### P0 acceptance criteria
+
+P0 is ready to merge only when all of the following are true:
+
+- polling network calls are off the WPF UI thread
+- polling cannot overlap and stops cleanly
+- polling communication failures do not freeze/crash the UI
+- server channel membership/session transitions are concurrency-safe
+- membership invariants are explicitly tested
+- callbacks are delivered outside authoritative state locks
+- failed/dead callbacks do not stall unrelated clients
+- `Chat.Server.Tests` contains real assertions
+- concurrency scenarios have deterministic assertions
+- local automated tests pass
+- CI builds and runs the same supported automated tests successfully
+- no unrelated architecture/framework changes were introduced
+
+## Local verification required before PR review
+
+Run these checks locally on Windows before treating P0 as ready.
+
+### Build
+
+```powershell
+.\build.ps1
+```
+
+Then confirm the full solution builds without errors.
+
+### Automated tests
+
+Run the repository's test command once the test project has been converted. Confirm that:
+
+- all tests pass
+- a deliberately broken assertion makes the test run fail (then restore it)
+- no test relies on manual console inspection to determine success
+- tests clean up WCF hosts, channels, callbacks, temporary files, and server state
+
+### Polling manual test
+
+Run the server and polling client.
+
+1. Sign in.
+2. Confirm normal polling updates arrive.
+3. Make the server unavailable or otherwise force a communication failure.
+4. Confirm the WPF UI remains responsive.
+5. Restore the server and confirm the client recovers according to the existing connection behaviour.
+6. Sign out and confirm polling stops.
+7. Close the client and confirm no background polling continues.
+8. If possible, temporarily make a server request slow and confirm the UI remains responsive.
+
+### Distributed manual test
+
+Run the server plus at least three clients, including at least one polling client and one Duplex client.
+
+Verify:
+
+1. Duplicate sign-in is rejected.
+2. Sign-out/disconnect makes the ID reusable.
+3. Create/join/leave/switch channel works.
+4. A user cannot end up in two channels.
+5. Public messages only reach current members.
+6. Joining after a message does not replay it.
+7. Private messages enforce the existing same-channel rules.
+8. A client leaving/disconnecting does not corrupt remaining membership.
+9. Duplex clients receive callbacks without manual refresh.
+10. A disconnected Duplex client does not prevent other clients receiving updates.
+11. Three to five clients can perform concurrent activity without visible state corruption.
+
+### File verification
+
+Verify the existing file rules, including:
+
+- valid text/image file
+- invalid extension
+- empty file
+- exactly 2 MB
+- greater than 2 MB
+- member download allowed
+- non-member/left-member download rejected
+
+Record manual results in `docs/WORKING.md`. Source inspection is not manual verification.
+
+## P1 — Security, resource handling, and communication design
+
+### 7. Audit server-side identity and authorization
 
 Review every public WCF operation:
 
@@ -91,9 +291,9 @@ Review every public WCF operation:
 - Is the caller a member of the relevant channel?
 - Is the caller authorized to access the requested state/file/message?
 
-Pay particular attention to client-supplied `userId`, `channelName`, and file identifiers. Strengthen validation without redesigning authentication.
+Pay particular attention to client-supplied `userId`, `channelName`, and file identifiers.
 
-#### 6. Simplify file storage
+### 8. Simplify file storage
 
 Prefer:
 
@@ -104,69 +304,33 @@ Contents → server filesystem
 
 Load bytes only when explicitly downloaded. Avoid exposing raw internal exception messages. Keep user-facing errors concise and clean up temporary/invalid files.
 
-#### 7. Make configuration consistent
+### 9. Make configuration consistent
 
-Audit server, polling client, duplex client, test configuration, README, and build scripts. Establish one canonical localhost/default endpoint for each binding. Do not introduce a configuration framework.
+Audit server, polling client, Duplex client, test configuration, README, and build scripts. Establish one canonical localhost/default endpoint for each binding. Do not introduce a configuration framework.
 
-#### 8. Improve Duplex push semantics
+### 10. Improve Duplex push semantics
 
-Prefer:
-
-```text
-Server state change
-    ↓
-Callback containing required update data
-    ↓
-Client state/UI update
-```
-
-over callback-then-immediate-refresh-RPC where practical.
+Prefer callbacks containing the data needed for client state updates over callback-then-immediate-refresh-RPC where practical.
 
 Do not add polling, timers, or refresh buttons to the Duplex client. Explicit user actions such as downloading file bytes remain normal request/response operations.
 
-### P2 — Maintainability and shared client design
+## P2 — Maintainability and shared client design
 
-#### 9. Reduce coordinator responsibility where justified
+### 11. Reduce coordinator responsibility where justified
 
-Review `PollingSessionCoordinator` and `DuplexSessionCoordinator` after correctness work. Extract only genuine responsibilities that improve testability, reuse, or readability. Do not perform a large abstraction rewrite.
+Review `PollingSessionCoordinator` and `DuplexSessionCoordinator` after correctness work. Extract only genuine responsibilities that improve testability, reuse, or readability.
 
-Potential boundaries include session lifecycle, communication, file operations, message operations, and client state/event coordination.
-
-#### 10. Consolidate genuinely shared client functionality
+### 12. Consolidate genuinely shared client functionality
 
 Keep common validation, file helpers, display models, converters, reusable WPF controls, styles/resources, and presentation behaviour in `Chat.Client.Shared`.
 
 Keep polling and Duplex transport behaviour separate. Do not convert the application to MVVM merely for abstraction purposes.
 
-### P3 — CI, quality, documentation, and polish
+## P3 — Quality, documentation, and polish
 
-#### 11. Add GitHub Actions CI
+### 13. Clean documentation
 
-Create `.github/workflows/ci.yml`.
-
-CI must:
-
-1. Run on pushes to `main`.
-2. Run on pull requests targeting `main`.
-3. Use a Windows runner because the solution targets .NET Framework/WPF/WCF.
-4. Build the complete solution in a clean environment.
-5. Run deterministic, headless-safe automated tests.
-6. Fail on build or test failures.
-7. Avoid unrelated tooling.
-
-WPF/manual multi-client verification remains separate from CI.
-
-If the current test harness cannot run deterministically/headlessly, improve the test harness rather than making CI ignore failures.
-
-#### 12. Strengthen automated tests
-
-Prioritize deterministic server/business-rule tests because they provide high-value coverage without requiring an interactive WPF desktop session.
-
-Include validation, user lifecycle, channel lifecycle, membership invariants, public/private routing, file authorization, callback registration/removal, and concurrency-sensitive state transitions.
-
-#### 13. Clean documentation
-
-Keep `README.md`, `docs/PROJECT_PLAN.md`, `docs/WORKING.md`, and this plan synchronized with the implementation.
+Keep `README.md`, `docs/PROJECT_PLAN.md`, `docs/WORKING.md`, and this plan synchronized with implementation and verification state.
 
 Clearly distinguish:
 
@@ -178,9 +342,7 @@ Not yet verified
 Deferred
 ```
 
-Documentation must describe actual verified behaviour, not intended behaviour.
-
-#### 14. Final cleanup
+### 14. Final cleanup
 
 After substantive changes:
 
@@ -193,62 +355,8 @@ After substantive changes:
 - review configuration
 - avoid unrelated refactoring
 
-## Testing Strategy
-
-### Automated / CI
-
-- Server state and validation tests
-- User/channel lifecycle tests
-- Message routing tests
-- File validation and authorization tests
-- Deterministic WCF integration tests
-- Concurrency tests that do not require interactive WPF
-
-### Manual distributed verification
-
-Run the server plus at least three clients, including both polling and Duplex clients. Verify:
-
-1. Duplicate sign-in and ID reuse.
-2. Channel create/join/leave/switch.
-3. Public messages only reach current members.
-4. Joining after a message does not replay it.
-5. Private messages, multiple PM windows, history restoration, and recipient leave.
-6. Allowed/blocked file types and the 2 MB boundary.
-7. Member-only file download.
-8. Polling updates without UI freezes.
-9. Duplex updates without timer/refresh fetching.
-10. Duplex close/crash cleanup.
-11. Three to five concurrent clients remain usable under activity.
-
-Record manual results in `docs/WORKING.md`; source inspection is not manual verification.
-
-## Build
-
-Local build remains:
-
-```powershell
-.\build.ps1
-```
-
-CI should perform the equivalent clean solution build and test execution using the repository's existing .NET Framework tooling.
-
 ## Non-Goals
 
 Do not introduce ASP.NET Core, REST, Entity Framework, SQLite/databases, MAUI, WinUI, Blazor, third-party MVVM frameworks, DI containers, external messaging systems, or generic repositories/factories without a concrete need.
 
 The goal is a technically sound and understandable educational distributed WPF/WCF application, not a production-scale framework exercise.
-
-## Definition of Done
-
-- Polling network calls are off the WPF UI thread.
-- Server state transitions are concurrency-safe and invariants are demonstrably maintained.
-- Callback failures cannot stall unrelated server operations.
-- Automated tests contain real assertions and cover core server behaviour.
-- CI builds and runs supported automated tests on Windows.
-- Server-side authorization has been audited and corrected.
-- File resource handling is sensible.
-- Configuration is consistent.
-- Duplex core updates are genuinely callback-driven.
-- Shared client functionality is not unnecessarily duplicated.
-- Documentation matches implementation and verification state.
-- Manual distributed scenarios are recorded separately from automated results.
