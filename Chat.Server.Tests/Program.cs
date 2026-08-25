@@ -52,10 +52,15 @@ namespace Chat.Server.Tests
                     Console.WriteLine("[INFO] Starting polling/duplex parity suite...");
                     result = PollingDuplexParityIntegrationSuite.Run(pollingUrl, duplexUrl);
                 }
+                if (result == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("[INFO] Starting duplex disconnect cleanup suite...");
+                    result = DuplexDisconnectCleanupIntegrationSuite.Run(pollingUrl, duplexUrl);
+                }
             }
 
             Console.WriteLine($"[INFO] Finished {DateTime.Now:yyyy-MM-dd HH:mm:ss} with exit code {result}.");
-
             Environment.Exit(result);
             return result;
         }
