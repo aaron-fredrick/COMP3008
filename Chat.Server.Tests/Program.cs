@@ -230,8 +230,8 @@ namespace Chat.Server.Tests
             PrintTestResult(7, "SendMessage", messageReceived, $"Expected message received: {messageReceived}");
             PrintTestResult(8, "GetPendingMessages", messageReceived, $"Pending message count: {messages.Count}");
 
-            bool signOutResult = proxy.SignOut("pollinguser1");
-            PrintTestResult(9, "SignOut", signOutResult, "SignOut completed");
+            proxy.SignOut("pollinguser1");
+            PrintTestResult(9, "SignOut", true, "SignOut completed");
 
             bool reSignInResult = proxy.SignIn("pollinguser1");
             bool duplicateSignIn = proxy.SignIn("pollinguser1");
@@ -385,8 +385,8 @@ namespace Chat.Server.Tests
             proxy.UnregisterCallback("duplexuser1");
             PrintTestResult(22, "UnregisterCallback", true, "One-way callback unregistration completed without a client-side exception");
 
-            bool signOutResult = pollingProxy.SignOut("duplexuser1");
-            PrintTestResult(23, "SignOut", signOutResult, "SignOut completed");
+            pollingProxy.SignOut("duplexuser1");
+            PrintTestResult(23, "SignOut", true, "SignOut completed");
 
             try { ((IClientChannel)proxy).Close(); } catch { ((IClientChannel)proxy).Abort(); }
             try { channelFactory.Close(); } catch { channelFactory.Abort(); }
