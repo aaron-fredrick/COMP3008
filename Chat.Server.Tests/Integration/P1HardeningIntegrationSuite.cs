@@ -58,13 +58,15 @@ namespace Chat.Server.Tests.Integration
         {
             var sf = PollingFactory(url); var rf = PollingFactory(url); var of = PollingFactory(url);
             var s = sf.CreateChannel(); var r = rf.CreateChannel(); var o = of.CreateChannel();
-            const string sid = "p1_pm_sender", rid = "p1_pm_recipient", oid = "p1_pm_other";
+            const string sid = "p1_pm_sender", rid = "p1_pm_recipient", oid = "p1_pm_other", channelA = "p1-pm-a", channelB = "p1-pm-b";
             try
             {
                 SignInClean(s, sid); SignInClean(r, rid); SignInClean(o, oid);
-                TestAssert.True(s.JoinChannel(sid, "p1-pm-a"), "Sender join failed");
-                TestAssert.True(r.JoinChannel(rid, "p1-pm-a"), "Recipient join failed");
-                TestAssert.True(o.JoinChannel(oid, "p1-pm-b"), "Other user join failed");
+                CreateChannel(s, channelA);
+                CreateChannel(s, channelB);
+                TestAssert.True(s.JoinChannel(sid, channelA), "Sender join failed");
+                TestAssert.True(r.JoinChannel(rid, channelA), "Recipient join failed");
+                TestAssert.True(o.JoinChannel(oid, channelB), "Other user join failed");
                 TestAssert.True(s.SendPrivateMessage(sid, rid, "same-channel"), "Same-channel private message was rejected");
                 TestAssert.True(r.GetPendingPrivateMessages(rid).Any(m => m.SenderId == sid && m.Content == "same-channel"), "Recipient did not receive the same-channel private message");
                 TestAssert.False(s.SendPrivateMessage(sid, oid, "cross-channel"), "Cross-channel private message was accepted");
@@ -79,13 +81,15 @@ namespace Chat.Server.Tests.Integration
         {
             var sf = PollingFactory(url); var rf = PollingFactory(url); var of = PollingFactory(url);
             var s = sf.CreateChannel(); var r = rf.CreateChannel(); var o = of.CreateChannel();
-            const string sid = "p1_private_file_sender", rid = "p1_private_file_recipient", oid = "p1_private_file_other";
+            const string sid = "p1_private_file_sender", rid = "p1_private_file_recipient", oid = "p1_private_file_other", channelA = "p1-private-a", channelB = "p1-private-b";
             try
             {
                 SignInClean(s, sid); SignInClean(r, rid); SignInClean(o, oid);
-                TestAssert.True(s.JoinChannel(sid, "p1-private-a"), "Private-file sender join failed");
-                TestAssert.True(r.JoinChannel(rid, "p1-private-a"), "Private-file recipient join failed");
-                TestAssert.True(o.JoinChannel(oid, "p1-private-b"), "Private-file other user join failed");
+                CreateChannel(s, channelA);
+                CreateChannel(s, channelB);
+                TestAssert.True(s.JoinChannel(sid, channelA), "Private-file sender join failed");
+                TestAssert.True(r.JoinChannel(rid, channelA), "Private-file recipient join failed");
+                TestAssert.True(o.JoinChannel(oid, channelB), "Private-file other user join failed");
                 var file = s.SharePrivateFile(sid, rid, "private.txt", FileType.Txt, new byte[] { 4, 5, 6 });
                 TestAssert.True(file != null, "Same-channel private file share was rejected");
                 var recipientFile = r.GetPrivateFile(rid, file.FileId);
@@ -103,13 +107,14 @@ namespace Chat.Server.Tests.Integration
         {
             var sf = PollingFactory(url); var rf = PollingFactory(url); var of = PollingFactory(url);
             var s = sf.CreateChannel(); var r = rf.CreateChannel(); var o = of.CreateChannel();
-            const string sid = "p1_pending_file_sender", rid = "p1_pending_file_recipient", oid = "p1_pending_file_other";
+            const string sid = "p1_pending_file_sender", rid = "p1_pending_file_recipient", oid = "p1_pending_file_other", channel = "p1-pending";
             try
             {
                 SignInClean(s, sid); SignInClean(r, rid); SignInClean(o, oid);
-                TestAssert.True(s.JoinChannel(sid, "p1-pending"), "Pending-file sender join failed");
-                TestAssert.True(r.JoinChannel(rid, "p1-pending"), "Pending-file recipient join failed");
-                TestAssert.True(o.JoinChannel(oid, "p1-pending"), "Pending-file other user join failed");
+                CreateChannel(s, channel);
+                TestAssert.True(s.JoinChannel(sid, channel), "Pending-file sender join failed");
+                TestAssert.True(r.JoinChannel(rid, channel), "Pending-file recipient join failed");
+                TestAssert.True(o.JoinChannel(oid, channel), "Pending-file other user join failed");
                 var file = s.SharePrivateFile(sid, rid, "pending.txt", FileType.Txt, new byte[] { 10, 11 });
                 TestAssert.True(file != null, "Private file setup failed");
                 var pending = r.GetPendingPrivateFiles(rid);
@@ -129,6 +134,7 @@ namespace Chat.Server.Tests.Integration
             {
                 SignOut(polling, id);
                 TestAssert.True(duplex.SignIn(id), "Duplex file test sign-in failed");
+                CreateChannel(polling, channel);
                 TestAssert.True(polling.JoinChannel(id, channel), "Duplex file test join failed");
                 duplex.RegisterCallback(id);
                 TestAssert.True(polling.ShareFile(id, channel, "duplex.txt", FileType.Txt, new byte[] { 20, 21 }), "Duplex file share failed");
@@ -147,6 +153,7 @@ namespace Chat.Server.Tests.Integration
         }
 
         private static ChannelFactory<IChatService> PollingFactory(string url) => new ChannelFactory<IChatService>(new BasicHttpBinding(), new EndpointAddress(url));
+        private static void CreateChannel(IChatService client, string channelName) { TestAssert.True(client.CreateChannel(channelName), "Test channel creation failed: " + channelName); }
         private static void SignInClean(IChatService client, string id) { SignOut(client, id); TestAssert.True(client.SignIn(id), "Sign-in failed for " + id); }
         private static void SignOut(IChatService client, string id) { try { client.SignOut(id); } catch { } }
         private static void Abort(IChatService proxy, ICommunicationObject factory) { try { ((IClientChannel)proxy).Abort(); } catch { } try { factory.Abort(); } catch { } }
