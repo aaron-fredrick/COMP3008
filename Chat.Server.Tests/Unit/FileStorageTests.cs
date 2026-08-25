@@ -40,7 +40,6 @@ namespace Chat.Server.Tests.Unit
         private static void FileHandlerKeepsContentOutOfMetadataAndRestoresItOnRead(string root)
         {
             var handler = new FileHandler(new ShardedFileContentStore(root));
-            string reason;
             var bytes = new byte[] { 10, 20, 30 };
             SharedFileMetadataAssertion(handler, bytes, out Guid fileId, out string storageKey);
 
@@ -54,7 +53,7 @@ namespace Chat.Server.Tests.Unit
         {
             string reason;
             Chat.Contracts.DataContracts.SharedFile stored;
-            TestAssert.True(handler.StoreFile("author1", "unit-files", "note.txt", FileType.Text, bytes, out reason, out stored), reason ?? "File storage failed");
+            TestAssert.True(handler.StoreFile("author1", "unit-files", "note.txt", FileType.Txt, bytes, out reason, out stored), reason ?? "File storage failed");
             TestAssert.True(stored.FileData == null, "In-memory file metadata should not retain the file bytes");
             TestAssert.Equal("author1", stored.UploaderId, "Uploader metadata should be server-owned");
             TestAssert.True(stored.UploadedAt == stored.LastUpdatedAt, "Initial upload and last-update timestamps should match");
