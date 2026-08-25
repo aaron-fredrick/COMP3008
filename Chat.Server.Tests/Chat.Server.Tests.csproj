@@ -29,6 +29,7 @@
     <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
     <Compile Include="Integration\AuthorizationHardeningIntegrationSuite.cs" />
     <Compile Include="Integration\PollingDuplexParityIntegrationSuite.cs" />
+    <Compile Include="Integration\DuplexDisconnectCleanupIntegrationSuite.cs" />
     <Compile Include="Unit\UserManagerTests.cs" />
     <Compile Include="Unit\ChannelManagerTests.cs" />
     <Compile Include="Unit\FileStorageTests.cs" />
