@@ -120,8 +120,8 @@ Thumbs.db
 *.cache
 
 # Educational materials
-docs/lecs/
-docs/labs/
+#docs/lecs/
+#docs/labs/
 
 # Agentic tool configs & rules
 .agents/
