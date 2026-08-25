@@ -20,17 +20,35 @@ P1 builds on the P0 correctness baseline. The goal is to add the next assignment
 
 ### P1.1 — File-sharing correctness and lifecycle
 
-**Concept:** Treat file metadata and file transfer as channel-scoped distributed state rather than UI-only state.
+**Concept:** Treat file metadata and file transfer as channel-scoped distributed state rather than UI-only state. The assignment's channel-history visibility rule must be enforced at the service boundary: a client joining a channel must not receive files that were already present before that join, just as it must not receive previous channel messages.
+
+**Visibility invariant:**
+
+```text
+Client joins channel at T_join
+        |
+        +-- files uploaded after T_join  -> visible
+        |
+        +-- files uploaded before T_join -> not visible
+        |
+        +-- user not in channel          -> not visible
+```
+
+The server therefore owns a per-session file visibility boundary. This is not merely a UI filtering rule. File metadata and download authorization remain server-side concerns.
 
 Tasks:
-- Verify file upload/share validation at the service boundary.
-- Verify files are visible only in the appropriate channel context.
-- Preserve channel membership authorization for file operations.
-- Ensure polling refreshes files only while the channel view is active.
-- Define behaviour for duplicate names, missing files, and invalid requests.
-- Add deterministic unit/integration coverage.
+- Pass the authenticated user identity to channel-file retrieval so the server can enforce membership.
+- Record a file visibility boundary when a user joins a channel.
+- Return only channel files uploaded after that boundary.
+- Preserve channel membership authorization for file listing, upload, and download.
+- Keep file polling active only while the channel view is active.
+- Keep private-file delivery separate from channel-file history.
+- Verify invalid, duplicate, empty, oversized, and unsupported files remain rejected.
+- Add deterministic tests for pre-join exclusion and post-join delivery.
 
-**Assignment relation:** supports the file-sharing requirement and the distributed-client/server separation.
+**Assignment relation:** supports the file-sharing requirement and the distributed client/server separation. The server, not the UI, defines what content a client is permitted to observe.
+
+**Lecture/lab relation:** reinforces state ownership, RPC/service-boundary validation, polling, and consistency of distributed state across clients.
 
 ### P1.2 — Private messaging correctness
 
