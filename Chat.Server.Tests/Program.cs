@@ -370,8 +370,8 @@ namespace Chat.Server.Tests
             bool joinResult = pollingProxy.JoinChannel("duplexuser1", "general");
             PrintTestResult(19, "JoinChannel", joinResult, $"JoinChannel result: {joinResult}");
 
-            bool registered = proxy.RegisterCallback("duplexuser1");
-            PrintTestResult(20, "RegisterCallback", registered, "Callback registration result");
+            proxy.RegisterCallback("duplexuser1");
+            PrintTestResult(20, "RegisterCallback", true, "One-way callback registration completed without a client-side exception");
 
             PrintInfo("Sending message...");
             pollingProxy.SendMessage("duplexuser1", "general", "Hello from duplex client!");
@@ -382,8 +382,8 @@ namespace Chat.Server.Tests
             bool callbackReceived = callback.LastMessageReceived == "Hello from duplex client!";
             PrintTestResult(21, "SendMessage (with callback)", callbackReceived, "Server pushed message to client");
 
-            bool unregistered = proxy.UnregisterCallback("duplexuser1");
-            PrintTestResult(22, "UnregisterCallback", unregistered, "Callback unregistration result");
+            proxy.UnregisterCallback("duplexuser1");
+            PrintTestResult(22, "UnregisterCallback", true, "One-way callback unregistration completed without a client-side exception");
 
             bool signOutResult = pollingProxy.SignOut("duplexuser1");
             PrintTestResult(23, "SignOut", signOutResult, "SignOut completed");
