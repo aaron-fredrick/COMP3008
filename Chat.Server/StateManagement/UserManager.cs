@@ -22,157 +22,75 @@ namespace Chat.Server.StateManagement
             _lock.EnterWriteLock();
             try
             {
-                if (string.IsNullOrWhiteSpace(userId))
-                {
-                    reason = "Username cannot be empty.";
-                    return false;
-                }
-
-                if (_users.ContainsKey(userId))
-                {
-                    reason = $"The username '{userId}' is already in use.";
-                    return false;
-                }
-
+                if (string.IsNullOrWhiteSpace(userId)) { reason = "Username cannot be empty."; return false; }
+                if (_users.ContainsKey(userId)) { reason = $"The username '{userId}' is already in use."; return false; }
                 _users[userId] = new UserSession(userId);
                 reason = null;
                 return true;
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void SignOut(string userId)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users.Remove(userId);
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            try { if (_users.ContainsKey(userId)) _users.Remove(userId); }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public bool IsUserSignedIn(string userId)
         {
             _lock.EnterReadLock();
-            try
-            {
-                return _users.ContainsKey(userId);
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return _users.ContainsKey(userId); }
+            finally { _lock.ExitReadLock(); }
         }
 
         public UserSession GetUserSession(string userId)
         {
             _lock.EnterReadLock();
-            try
-            {
-                return _users.TryGetValue(userId, out var session) ? session : null;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return _users.TryGetValue(userId, out var session) ? session : null; }
+            finally { _lock.ExitReadLock(); }
         }
 
         public void SetUserChannel(string userId, string channelName)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].CurrentChannel = channelName;
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            try { if (_users.ContainsKey(userId)) _users[userId].CurrentChannel = channelName; }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void RegisterCallback(string userId, IChatCallback callback)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].Callback = callback;
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            try { if (_users.ContainsKey(userId)) _users[userId].Callback = callback; }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void UnregisterCallback(string userId)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].Callback = null;
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            try { if (_users.ContainsKey(userId)) _users[userId].Callback = null; }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public IChatCallback GetCallback(string userId)
         {
             _lock.EnterReadLock();
-            try
-            {
-                return _users.TryGetValue(userId, out var session) ? session.Callback : null;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return _users.TryGetValue(userId, out var session) ? session.Callback : null; }
+            finally { _lock.ExitReadLock(); }
         }
 
         public void AddPendingPrivateMessage(string userId, Message message)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].PendingPrivateMessages.Enqueue(message);
-                }
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            try { if (_users.ContainsKey(userId)) _users[userId].PendingPrivateMessages.Enqueue(message); }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void AddPendingPrivateFile(string userId, SharedFile file)
         {
             _lock.EnterWriteLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    _users[userId].PendingPrivateFiles.Enqueue(file);
-                }
-            }
+            try { if (_users.ContainsKey(userId)) _users[userId].PendingPrivateFiles.Enqueue(file); }
             finally { _lock.ExitWriteLock(); }
         }
 
@@ -188,27 +106,28 @@ namespace Chat.Server.StateManagement
                 }
                 return DateTime.UtcNow;
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public DateTime GetLastPollTime(string userId)
         {
             _lock.EnterReadLock();
-            try
-            {
-                if (_users.ContainsKey(userId))
-                {
-                    return _users[userId].LastPollTime;
-                }
-                return DateTime.UtcNow;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return _users.ContainsKey(userId) ? _users[userId].LastPollTime : DateTime.UtcNow; }
+            finally { _lock.ExitReadLock(); }
+        }
+
+        public void SetLastPollSequence(string userId, long sequence)
+        {
+            _lock.EnterWriteLock();
+            try { if (_users.ContainsKey(userId)) _users[userId].LastPollSequence = sequence; }
+            finally { _lock.ExitWriteLock(); }
+        }
+
+        public long GetLastPollSequence(string userId)
+        {
+            _lock.EnterReadLock();
+            try { return _users.ContainsKey(userId) ? _users[userId].LastPollSequence : 0; }
+            finally { _lock.ExitReadLock(); }
         }
 
         public Queue<Message> ConsumePendingPrivateMessages(string userId)
@@ -224,10 +143,7 @@ namespace Chat.Server.StateManagement
                 }
                 return new Queue<Message>();
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public Queue<SharedFile> ConsumePendingPrivateFiles(string userId)
@@ -253,31 +169,17 @@ namespace Chat.Server.StateManagement
             {
                 var members = new List<string>();
                 foreach (var kvp in _users)
-                {
-                    if (kvp.Value.CurrentChannel == channelName)
-                    {
-                        members.Add(kvp.Key);
-                    }
-                }
+                    if (kvp.Value.CurrentChannel == channelName) members.Add(kvp.Key);
                 return members;
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            finally { _lock.ExitReadLock(); }
         }
 
         public List<string> GetAllSignedInUserIds()
         {
             _lock.EnterReadLock();
-            try
-            {
-                return new List<string>(_users.Keys);
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return new List<string>(_users.Keys); }
+            finally { _lock.ExitReadLock(); }
         }
     }
 }
