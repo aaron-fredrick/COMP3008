@@ -11,6 +11,7 @@ namespace Chat.Server.StateManagement
     {
         private readonly Dictionary<string, Channel> _channels;
         private readonly Dictionary<string, Queue<Message>> _channelMessages;
+        private readonly Dictionary<string, long> _channelSequences;
         private readonly ReaderWriterLockSlim _lock;
         private readonly int _maxMessages;
 
@@ -18,6 +19,7 @@ namespace Chat.Server.StateManagement
         {
             _channels = new Dictionary<string, Channel>();
             _channelMessages = new Dictionary<string, Queue<Message>>();
+            _channelSequences = new Dictionary<string, long>();
             _lock = new ReaderWriterLockSlim();
             _maxMessages = maxMessages;
         }
@@ -45,6 +47,7 @@ namespace Chat.Server.StateManagement
                     Members = new List<string>()
                 };
                 _channelMessages[channelName] = new Queue<Message>();
+                _channelSequences[channelName] = 0;
 
                 reason = null;
                 return true;
@@ -58,14 +61,8 @@ namespace Chat.Server.StateManagement
         public bool ChannelExists(string channelName)
         {
             _lock.EnterReadLock();
-            try
-            {
-                return _channels.ContainsKey(channelName);
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            try { return _channels.ContainsKey(channelName); }
+            finally { _lock.ExitReadLock(); }
         }
 
         public List<Channel> GetChannels()
@@ -80,10 +77,7 @@ namespace Chat.Server.StateManagement
                     UserCount = c.Members.Count
                 }).ToList();
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            finally { _lock.ExitReadLock(); }
         }
 
         public List<string> GetChannelMembers(string channelName)
@@ -91,16 +85,11 @@ namespace Chat.Server.StateManagement
             _lock.EnterReadLock();
             try
             {
-                if (_channels.ContainsKey(channelName))
-                {
-                    return new List<string>(_channels[channelName].Members);
-                }
-                return new List<string>();
+                return _channels.ContainsKey(channelName)
+                    ? new List<string>(_channels[channelName].Members)
+                    : new List<string>();
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+            finally { _lock.ExitReadLock(); }
         }
 
         public bool JoinChannel(string userId, string channelName, out string previousChannel)
@@ -109,26 +98,13 @@ namespace Chat.Server.StateManagement
             try
             {
                 previousChannel = null;
-
-                if (!_channels.ContainsKey(channelName))
-                {
-                    return false;
-                }
-
+                if (!_channels.ContainsKey(channelName)) return false;
                 var channel = _channels[channelName];
-
-                if (channel.Members.Contains(userId))
-                {
-                    return true;
-                }
-
+                if (channel.Members.Contains(userId)) return true;
                 channel.Members.Add(userId);
                 return true;
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void LeaveChannel(string userId, string channelName)
@@ -137,14 +113,9 @@ namespace Chat.Server.StateManagement
             try
             {
                 if (_channels.ContainsKey(channelName))
-                {
                     _channels[channelName].Members.Remove(userId);
-                }
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public void RemoveUserFromAllChannels(string userId)
@@ -152,15 +123,19 @@ namespace Chat.Server.StateManagement
             _lock.EnterWriteLock();
             try
             {
-                foreach (var channel in _channels.Values)
-                {
-                    channel.Members.Remove(userId);
-                }
+                foreach (var channel in _channels.Values) channel.Members.Remove(userId);
             }
-            finally
+            finally { _lock.ExitWriteLock(); }
+        }
+
+        public long GetCurrentSequence(string channelName)
+        {
+            _lock.EnterReadLock();
+            try
             {
-                _lock.ExitWriteLock();
+                return _channelSequences.ContainsKey(channelName) ? _channelSequences[channelName] : 0;
             }
+            finally { _lock.ExitReadLock(); }
         }
 
         public void AddChannelMessage(string channelName, Message message)
@@ -168,9 +143,10 @@ namespace Chat.Server.StateManagement
             _lock.EnterWriteLock();
             try
             {
-                if (!_channelMessages.ContainsKey(channelName))
-                    return;
+                if (!_channelMessages.ContainsKey(channelName)) return;
 
+                long sequence = ++_channelSequences[channelName];
+                message.Sequence = sequence;
                 var queue = _channelMessages[channelName];
 
                 if (queue.Count >= _maxMessages)
@@ -178,20 +154,15 @@ namespace Chat.Server.StateManagement
                     var evicted = queue.Dequeue();
                     ServerLogger.Info(
                         $"[QUEUE] #{channelName} at capacity ({_maxMessages}). " +
-                        $"Evicted oldest message from '{evicted.SenderId}' " +
-                        $"sent at {evicted.Timestamp:HH:mm:ss}.");
+                        $"Evicted oldest message from '{evicted.SenderId}' sent at {evicted.Timestamp:HH:mm:ss}.");
                 }
 
                 queue.Enqueue(message);
-
                 ServerLogger.Info(
                     $"[QUEUE] #{channelName} +1 message from '{message.SenderId}'. " +
                     $"Queue size: {queue.Count}/{_maxMessages}.");
             }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            finally { _lock.ExitWriteLock(); }
         }
 
         public List<Message> GetMessagesSince(string channelName, DateTime since, string requestingUserId)
@@ -199,21 +170,31 @@ namespace Chat.Server.StateManagement
             _lock.EnterReadLock();
             try
             {
-                if (!_channelMessages.ContainsKey(channelName))
-                    return new List<Message>();
-
+                if (!_channelMessages.ContainsKey(channelName)) return new List<Message>();
                 var channel = _channels[channelName];
-                if (!channel.Members.Contains(requestingUserId))
-                    return new List<Message>();
+                if (!channel.Members.Contains(requestingUserId)) return new List<Message>();
 
                 return _channelMessages[channelName]
                     .Where(m => m.Timestamp > since && m.SenderId != requestingUserId)
                     .ToList();
             }
-            finally
+            finally { _lock.ExitReadLock(); }
+        }
+
+        public List<Message> GetMessagesSinceSequence(string channelName, long sequence, string requestingUserId)
+        {
+            _lock.EnterReadLock();
+            try
             {
-                _lock.ExitReadLock();
+                if (!_channelMessages.ContainsKey(channelName)) return new List<Message>();
+                var channel = _channels[channelName];
+                if (!channel.Members.Contains(requestingUserId)) return new List<Message>();
+
+                return _channelMessages[channelName]
+                    .Where(m => m.Sequence > sequence && m.SenderId != requestingUserId)
+                    .ToList();
             }
+            finally { _lock.ExitReadLock(); }
         }
     }
 }

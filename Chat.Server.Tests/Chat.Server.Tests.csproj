@@ -14,43 +14,26 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget><DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize><OutputPath>bin\Debug\</OutputPath><DefineConstants>DEBUG;TRACE</DefineConstants><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget><DebugType>pdbonly</DebugType><Optimize>true</Optimize><OutputPath>bin\Release\</OutputPath><DefineConstants>TRACE</DefineConstants><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System" /><Reference Include="System.Core" /><Reference Include="Microsoft.CSharp" /><Reference Include="System.Data" /><Reference Include="System.Xml" /><Reference Include="System.Configuration" /><Reference Include="System.ServiceModel" /><Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="TestInfrastructure\TestAssert.cs" />
+    <Compile Include="Integration\IntegrationTestSuite.cs" />
+    <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
+    <Compile Include="Unit\UserManagerTests.cs" />
+    <Compile Include="Unit\ChannelManagerTests.cs" />
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj">
-      <Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project>
-      <Name>Chat.Contracts</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj"><Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project><Name>Chat.Contracts</Name></ProjectReference>
+    <ProjectReference Include="..\Chat.Server\Chat.Server.csproj"><Project>{C3D4E5F6-A7B8-4901-C234-56789012CDEF}</Project><Name>Chat.Server</Name></ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
