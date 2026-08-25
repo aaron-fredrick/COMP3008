@@ -2,137 +2,167 @@
 
 ## Purpose
 
-P1 builds on the P0 correctness baseline. The goal is to add the next assignment-required capabilities without weakening the concurrency, session-lifecycle, polling, duplex, and bounded-queue guarantees established in P0.
+P1 builds on the P0 correctness baseline. The goal is to harden the assignment-required chat/file functionality without changing the core architecture: C#, .NET Framework 4.8, WPF, WCF, BasicHttp polling, NetTcp duplex callbacks, authoritative in-memory server state, and server-side filesystem content storage.
 
-## P0 baseline carried forward
+## Current repository baseline — 2026-08-25
 
-- Polling and duplex service contracts remain compatible.
-- Channel membership is maintained atomically.
-- Message history is bounded per channel.
-- Polling message retrieval is scoped to the active channel view.
-- Private-message polling remains available while the PM/channel relationship is valid.
-- Ping remains independent of channel-view polling and continues through session lifecycle as required.
-- WCF calls are kept off the WPF Dispatcher.
-- Shared WCF proxy access is serialized where required.
-- Structured unit/integration tests remain the regression gate.
+The `feature/p1-implementation` branch contains the first P1 file-storage increment. The latest reported deterministic suite result is **6 passed, 0 failed**. The local full solution build also succeeded after the latest storage/test corrections.
+
+These results prove the current automated server/integration paths. They do **not** prove WPF Dispatcher responsiveness, abnormal disconnect cleanup, or full cross-client manual behaviour.
 
 ## P1 work breakdown
 
 ### P1.1 — File-sharing correctness and lifecycle
 
-**Concept:** Treat file metadata and file transfer as channel-scoped distributed state rather than UI-only state. The assignment's channel-history visibility rule must be enforced at the service boundary: a client joining a channel must not receive files that were already present before that join, just as it must not receive previous channel messages.
+**Status: substantially implemented; hardening remains.**
 
-**Visibility invariant:**
+The current design separates file metadata from file bytes. `FileHandler` owns in-memory `SharedFile` metadata while `IFileContentStore`/`ShardedFileContentStore` persist content on the server filesystem. The storage key is derived from the file ID and content is sharded into nested directories, e.g. a key beginning `48f574...` can be stored under `StoredFiles/48/f5/...`. Metadata such as uploader, upload time and last-updated time remains application state and does not change the content key.
 
-```text
-Client joins channel at T_join
-        |
-        +-- files uploaded after T_join  -> visible
-        |
-        +-- files uploaded before T_join -> not visible
-        |
-        +-- user not in channel          -> not visible
-```
+The server already enforces the important assignment boundary: channel files are visible only to authorised channel members and the join-time visibility boundary prevents a new member from receiving files uploaded before they joined.
 
-The server therefore owns a per-session file visibility boundary. This is not merely a UI filtering rule. File metadata and download authorization remain server-side concerns.
+Remaining work:
+- audit every upload/list/download operation for authenticated identity and current channel membership;
+- verify content-store failure cleanup cannot leave orphaned metadata or bytes;
+- verify duplicate/empty/oversized/unsupported files are rejected deterministically;
+- verify file downloads load bytes only for an explicit authorised download;
+- add negative tests for non-members and invalid file identifiers;
+- manually verify file upload/download with both polling and duplex clients.
 
-Tasks:
-- Pass the authenticated user identity to channel-file retrieval so the server can enforce membership.
-- Record a file visibility boundary when a user joins a channel.
-- Return only channel files uploaded after that boundary.
-- Preserve channel membership authorization for file listing, upload, and download.
-- Keep file polling active only while the channel view is active.
-- Keep private-file delivery separate from channel-file history.
-- Verify invalid, duplicate, empty, oversized, and unsupported files remain rejected.
-- Add deterministic tests for pre-join exclusion and post-join delivery.
+**Assignment relation:** directly supports A6/B5 file sharing. The server controls visibility and authorisation; clients do not directly access server storage.
 
-**Assignment relation:** supports the file-sharing requirement and the distributed client/server separation. The server, not the UI, defines what content a client is permitted to observe.
-
-**Lecture/lab relation:** reinforces state ownership, RPC/service-boundary validation, polling, and consistency of distributed state across clients.
+**Lecture/lab relation:** demonstrates service-boundary validation, distributed state ownership, RPC, and separation of metadata/state from persisted content.
 
 ### P1.2 — Private messaging correctness
 
-**Concept:** PM delivery is a server-mediated operation with explicit authorization based on the assignment's same-channel rule.
+**Status: partially implemented; requires a focused audit/test pass.**
 
-Tasks:
-- Validate sender and recipient sessions.
-- Require both users to satisfy the channel relationship required by the assignment.
-- Queue PMs independently from public channel history.
-- Preserve polling retrieval semantics for PMs.
-- Ensure PM queues are drained only by the intended recipient.
-- Add negative tests for users outside the permitted channel relationship.
+Current code already has server-mediated PM routing, same-channel enforcement, per-session PM retrieval, PM history behaviour and leave-channel lifecycle handling. The remaining question is whether every service path consistently enforces the same authorization invariant.
 
-**Assignment relation:** directly supports private messaging while demonstrating server-side validation and state management.
+Required invariant:
+
+```text
+Sender signed in
+AND recipient signed in
+AND sender and recipient satisfy the assignment's same-channel rule
+        => PM may be accepted
+otherwise
+        => PM is rejected
+```
+
+Remaining work:
+- audit `SendPrivateMessage` and pending-PM retrieval for identity/session validation;
+- verify only the intended recipient can consume a PM;
+- verify a PM cannot cross the channel boundary after either participant leaves;
+- add negative tests for sender/recipient outside the permitted channel relationship;
+- verify repeated sign-in/sign-out cannot expose stale PM queues to a reused user ID.
 
 ### P1.3 — Polling/duplex behavioural parity
 
-**Concept:** Both clients should expose equivalent chat semantics while using different transport mechanisms.
+**Status: partially implemented; needs verification rather than a redesign.**
 
-Tasks:
-- Compare polling and duplex behaviour for sign-in, channel membership, messages, PMs, and files.
-- Ensure duplex callbacks do not bypass server authorization/state rules.
-- Verify unregister/sign-out stops callback delivery.
-- Verify polling continues to use explicit retrieval rather than WCF callbacks.
-- Add cross-transport regression tests where practical.
+The polling client uses explicit retrieval while the duplex client uses callbacks. They should nevertheless expose the same authoritative server semantics.
 
-**Lecture/lab relation:** reinforces RPC, callbacks, polling, asynchronous notification, and distributed-state consistency concepts.
+Remaining work:
+- compare public-message, PM, membership and file behaviour across both transports;
+- verify duplex callbacks are emitted only after server-side validation/state mutation;
+- verify callback unregister/sign-out/leave behaviour;
+- verify a failed callback cannot block unrelated clients;
+- verify file notifications do not bypass the same membership/visibility rules used by polling;
+- add focused cross-transport regression coverage where a deterministic server test can prove the invariant.
 
-### P1.4 — Client lifecycle and UI robustness
+**Lecture/lab relation:** reinforces RPC, polling versus asynchronous callback notification, and consistency across different communication mechanisms.
 
-**Concept:** Network operations must not make the WPF UI unresponsive and must not leak timers/subscriptions.
+### P1.4 — Client lifecycle and WPF UI robustness
 
-Tasks:
-- Complete the P0 TODO for a delayed-WCF Dispatcher responsiveness test.
-- Verify polling timers are stopped/disposed when appropriate.
-- Verify a session cannot accidentally create duplicate polling loops.
-- Verify channel-view refreshes stop after leaving the channel.
-- Verify sign-out and shutdown clean up resources.
-- Add tests for repeated sign-in/sign-out and channel transitions.
+**Status: remaining P1 work.**
 
-### P1.5 — Error handling and fault boundaries
+P0 moved synchronous WCF polling away from the WPF Dispatcher. One explicit P0 carry-over test is still required: a deliberately delayed WCF call must not prevent the Dispatcher from processing UI work.
 
-**Concept:** Distributed systems fail independently; client and server must handle transport/service failures without corrupting shared state.
+Remaining work:
+- add a deterministic client-side responsiveness test using a delayed/fake WCF operation;
+- prove the Dispatcher can process a UI action while network I/O is delayed;
+- verify only one polling loop exists per active channel view;
+- verify timers/workers stop on channel close/switch/leave/sign-out/shutdown;
+- verify ping/session communication remains independent of channel-view polling;
+- verify repeated sign-in/sign-out does not accumulate timers, workers or subscriptions.
 
-Tasks:
-- Identify expected WCF communication failures and service exceptions.
-- Ensure failed operations do not leave partial membership/session state.
-- Prevent a polling exception from killing the polling lifecycle permanently.
-- Provide deterministic recovery/reconnect behaviour where required.
-- Add fault-injection tests for representative failures.
+**Important:** do not reintroduce polling into the duplex client. The duplex client remains callback-driven.
+
+### P1.5 — Server identity, authorization and fault boundaries
+
+**Status: remaining P1 work.**
+
+Perform a service-operation audit rather than assuming that successful normal-path tests prove authorization.
+
+For every public WCF operation, check:
+
+```text
+authenticated session?
+        ↓
+requested resource owned/visible to caller?
+        ↓
+current channel relationship valid?
+        ↓
+validate input
+        ↓
+mutate/read authoritative state
+```
+
+Remaining work:
+- audit sign-in/sign-out, channel operations, messages, PMs and files;
+- identify operations that accept a caller/user ID supplied by the client and verify the ID corresponds to the current authenticated session;
+- ensure failed operations do not leave partial membership/session/file state;
+- test invalid channel/file/user identifiers;
+- test representative WCF communication failures;
+- improve abnormal duplex disconnect cleanup so failed callbacks remove the affected session safely rather than relying only on later activity.
 
 ### P1.6 — Test and CI hardening
 
-Tasks:
-- Keep unit tests separated from integration tests.
-- Keep integration tests deterministic and independent of execution order.
-- Add explicit regression tests for every P1 defect fixed.
-- Ensure CI returns a non-zero exit code on actual test failure.
-- Ensure successful structured tests return zero and terminate cleanly.
-- Preserve integration artifacts for diagnosis.
+**Status: partially implemented.**
 
-## Implementation order
+The structured test suite now gives meaningful pass/fail output and the integration runner exits cleanly on the current successful path. The next step is to increase coverage around the P1 invariants rather than adding tests merely for line coverage.
 
-1. P1.1 File-sharing correctness
-2. P1.2 Private messaging correctness
-3. P1.3 Polling/duplex parity
-4. P1.4 Client lifecycle/UI robustness
-5. P1.5 Error handling/fault boundaries
-6. P1.6 Test and CI hardening
+Remaining work:
+- add PM authorization/negative tests;
+- add file authorization/download-failure tests;
+- add storage cleanup/failure tests;
+- add callback failure/isolation tests;
+- add repeated lifecycle/concurrency tests where deterministic;
+- add the WPF Dispatcher responsiveness test;
+- keep unit and integration tests independently executable;
+- verify CI returns non-zero on actual failures and zero on successful termination.
 
-Each item should be implemented as a small change, built locally, tested locally, and then committed to this branch.
+## Implementation order from the current state
+
+1. **P1.2 PM authorization audit + negative tests** — small and directly assignment-relevant.
+2. **P1.1 file authorization/storage failure hardening** — complete the file-storage boundary.
+3. **P1.3 polling/duplex parity tests** — prove both transports obey the same server state rules.
+4. **P1.4 delayed-WCF Dispatcher test + lifecycle checks** — close the explicit P0 carry-over.
+5. **P1.5 fault/disconnect handling** — harden abnormal distributed failures.
+6. **P1.6 final regression/CI pass** — only after the above are stable.
+
+Each item follows the project lifecycle: inspect current code → make the smallest change → build → run deterministic tests → inspect failures → correct → repeat → update documentation.
 
 ## P1 acceptance gate
 
-P1 is not complete until:
+P1 is complete only when:
 
-- all existing P0 tests still pass;
-- every new P1 requirement has deterministic coverage;
-- polling remains non-blocking with respect to the WPF Dispatcher;
-- channel/member/file/message lifecycle rules remain correct;
-- PM authorization matches the assignment requirement;
-- duplex and polling clients remain behaviourally consistent;
+- existing P0 tests remain green;
+- file metadata/content separation is preserved;
+- channel file visibility is join-boundary correct;
+- file upload/download authorization is server-enforced;
+- PM same-channel authorization is server-enforced and negatively tested;
+- polling and duplex expose equivalent authorised behaviour;
+- the WPF Dispatcher remains responsive during delayed WCF I/O;
+- polling/view/session resources are cleaned up correctly;
+- representative communication and callback failures do not corrupt authoritative state;
+- deterministic tests cover each P1 defect fixed;
 - CI reliably distinguishes pass/fail and terminates cleanly;
-- no known P0 regression remains.
+- no unrelated framework/architecture changes have been introduced.
+
+## Explicit deferred feature: private-file transfer
+
+The repository currently contains private-file storage support in `FileHandler`, but the public private-file WCF delivery path is **not** treated as complete merely because the UI contains private-file presentation work. Do not claim private-file transfer as implemented until the service contract, authorization, polling/duplex notification paths, download operation, tests and both clients are actually implemented and verified.
 
 ## P0 carry-over TODO
 
