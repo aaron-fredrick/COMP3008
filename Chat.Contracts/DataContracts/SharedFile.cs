@@ -26,12 +26,20 @@ namespace Chat.Contracts.DataContracts
         public DateTime UploadedAt { get; set; }
 
         [DataMember]
+        public DateTime LastUpdatedAt { get; set; }
+
+        [DataMember]
         public string ChannelName { get; set; }
 
         // Null for channel files; populated for a private file share.
         [DataMember]
         public string RecipientId { get; set; }
 
+        // Stable content-store identity. The physical location is derived from this key.
+        [DataMember]
+        public string StorageKey { get; set; }
+
+        // Populated only when an authorized download is requested.
         [DataMember]
         public byte[] FileData { get; set; }
     }
