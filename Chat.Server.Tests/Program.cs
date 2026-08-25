@@ -43,14 +43,14 @@ namespace Chat.Server.Tests
                 if (result == 0)
                 {
                     Console.WriteLine();
-                    Console.WriteLine("[INFO] Starting P1 hardening suite...");
+                    Console.WriteLine("[INFO] Starting authorization hardening suite...");
                     result = P1HardeningIntegrationSuite.Run(pollingUrl, duplexUrl);
                 }
                 if (result == 0)
                 {
                     Console.WriteLine();
-                    Console.WriteLine("[INFO] Starting P1 parity suite...");
-                    result = P1ParityIntegrationSuite.Run(pollingUrl, duplexUrl);
+                    Console.WriteLine("[INFO] Starting polling/duplex parity suite...");
+                    result = PollingDuplexParityIntegrationSuite.Run(pollingUrl, duplexUrl);
                 }
             }
 
