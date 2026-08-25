@@ -115,7 +115,11 @@ namespace Chat.Server.Tests.Integration
         private static void TriggerCallbackRegistration(IChatService client, string probeChannel, TestCallback callback) { CreateChannel(client, probeChannel); WaitUntil(() => callback.RegisteredSignal, 3000, "Duplex callback registration was not observed"); }
         private static void SignInClean(IChatService client, string user) { SignOut(client, user); TestAssert.True(client.SignIn(user), "Sign-in failed for " + user); }
         private static void SignOut(IChatService client, string user) { try { client.SignOut(user); } catch { } }
-        private static void Close(IClientChannel proxy, ICommunicationObject factory) { try { proxy.Close(); } catch { proxy.Abort(); } try { factory.Close(); } catch { factory.Abort(); } }
+        private static void Close(object proxy, ICommunicationObject factory)
+        {
+            try { var channel = proxy as IClientChannel; if (channel != null) channel.Close(); } catch { try { var channel = proxy as IClientChannel; if (channel != null) channel.Abort(); } catch { } }
+            try { factory.Close(); } catch { try { factory.Abort(); } catch { } }
+        }
         private static void WaitUntil(Func<bool> condition, int timeoutMs, string message) { var end = DateTime.UtcNow.AddMilliseconds(timeoutMs); while (DateTime.UtcNow < end) { if (condition()) return; Thread.Sleep(25); } throw new InvalidOperationException(message); }
 
         private sealed class TestCallback : IChatCallback
