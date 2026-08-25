@@ -60,9 +60,17 @@ namespace Chat.Server.Tests.Integration
                 TestAssert.True(a.JoinChannel(aid, channel), "First join failed");
                 a.SendMessage(aid, channel, "p0-before-join");
                 TestAssert.True(b.JoinChannel(bid, channel), "Second join failed");
-                TestAssert.False(b.GetPendingMessages(bid).Any(m => m.Content == "p0-before-join"), "Pre-join message was replayed");
+
+                // GetPendingMessages is destructive: it returns and clears the pending queue.
+                // Perform the pre-join assertion exactly once so a polling retry cannot consume
+                // the subsequent post-join message before the assertion sees it.
+                var beforeJoin = b.GetPendingMessages(bid);
+                TestAssert.False(beforeJoin.Any(m => m.Content == "p0-before-join"), "Pre-join message was replayed");
+
                 a.SendMessage(aid, channel, "p0-after-join");
-                WaitUntil(() => b.GetPendingMessages(bid).Any(m => m.Content == "p0-after-join"), 3000, "Post-join message was not delivered");
+                Thread.Sleep(100);
+                var afterJoin = b.GetPendingMessages(bid);
+                TestAssert.True(afterJoin.Any(m => m.Content == "p0-after-join"), "Post-join message was not delivered");
             }
             finally { SignOut(a, aid); SignOut(b, bid); Abort(a, af); Abort(b, bf); }
         }
