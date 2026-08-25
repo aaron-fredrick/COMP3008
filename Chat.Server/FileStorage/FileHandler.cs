@@ -41,16 +41,34 @@ namespace Chat.Server.FileStorage
         public bool StoreFile(string uploaderId, string channelName, string fileName, FileType fileType, byte[] fileData, out string reason, out SharedFile storedFile)
         {
             reason = null; storedFile = null;
-            string validationReason;
-            if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out validationReason)) { reason = validationReason; return false; }
+            string validationReason = null;
+            if (fileData == null)
+            {
+                reason = "File data cannot be null.";
+                return false;
+            }
+            if (!ValidateFile(fileName, fileData.Length, fileType, out validationReason))
+            {
+                reason = validationReason;
+                return false;
+            }
             return StoreInternal(uploaderId, channelName, null, fileName, fileType, fileData, out reason, out storedFile);
         }
 
         public bool StorePrivateFile(string uploaderId, string recipientId, string fileName, FileType fileType, byte[] fileData, out string reason, out SharedFile storedFile)
         {
             reason = null; storedFile = null;
-            string validationReason;
-            if (fileData == null || !ValidateFile(fileName, fileData == null ? 0 : fileData.Length, fileType, out validationReason)) { reason = validationReason; return false; }
+            string validationReason = null;
+            if (fileData == null)
+            {
+                reason = "File data cannot be null.";
+                return false;
+            }
+            if (!ValidateFile(fileName, fileData.Length, fileType, out validationReason))
+            {
+                reason = validationReason;
+                return false;
+            }
             return StoreInternal(uploaderId, null, recipientId, fileName, fileType, fileData, out reason, out storedFile);
         }
 
@@ -71,8 +89,6 @@ namespace Chat.Server.FileStorage
             }
             catch (Exception ex)
             {
-                // Store() may have created partial content before throwing, so cleanup is
-                // attempted unconditionally. Delete() is idempotent for the filesystem store.
                 try { _contentStore.Delete(fileId); } catch { }
                 reason = $"Exception during file storage: {ex.Message}";
                 return false;
