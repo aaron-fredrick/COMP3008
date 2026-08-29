@@ -51,7 +51,9 @@
     <Compile Include="Converters\StringToRibbonPathConverter.cs" />
     <Compile Include="Helpers\ControlHelper.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
-    <Compile Include="Services\EndpointSettingsDialog.cs" />
+    <Compile Include="Services\EndpointSettingsDialog.xaml.cs">
+      <DependentUpon>EndpointSettingsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Services\ValidationService.cs" />
     <Compile Include="Services\FileHelperService.cs" />
     <Compile Include="Services\ThemeService.cs" />
@@ -87,6 +89,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\ApplicationFooter.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Services\EndpointSettingsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
