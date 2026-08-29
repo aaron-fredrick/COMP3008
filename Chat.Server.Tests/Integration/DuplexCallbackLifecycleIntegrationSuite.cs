@@ -113,7 +113,7 @@ namespace Chat.Server.Tests.Integration
         private static void Close(IChatService proxy, ChannelFactory<IChatService> factory)
         {
             try { ((IClientChannel)proxy).Close(); } catch { try { ((IClientChannel)proxy).Abort(); } catch { } }
-            try { factory.Close(); } catch { try { factory.Abort(); } }
+            try { factory.Close(); } catch { try { factory.Abort(); } catch { } }
         }
 
         private sealed class BlockingThrowingCallback : IChatCallback
