@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Chat.Client.Shared.Services;
 
 namespace Chat.Client.Shared.Controls
 {
@@ -127,8 +128,17 @@ namespace Chat.Client.Shared.Controls
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            // Event will be handled by parent window
-            SettingsClicked?.Invoke(this, EventArgs.Empty);
+            var dialog = new EndpointSettingsDialog
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Endpoint changes invalidate the current WCF client.
+                // The existing parent sign-out path tears down the session and returns to login.
+                SignOutClicked?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public event EventHandler SettingsClicked;
