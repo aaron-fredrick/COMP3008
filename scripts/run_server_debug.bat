@@ -1,3 +1,3 @@
 @echo off
-"%~dp0..\Chat.Server\bin\Debug\Chat.Server.exe"
+"%~dp0..\src\Chat.Server\bin\Debug\Chat.Server.exe"
 pause

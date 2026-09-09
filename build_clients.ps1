@@ -18,7 +18,7 @@ $clients = @(
 $total = $clients.Count
 for ($i = 0; $i -lt $total; $i++) {
     $project = $clients[$i]
-    $projectPath = "$project\$project.csproj"
+    $projectPath = "src\$project\$project.csproj"
 
     Write-Host ""
     Write-Host "[$($i + 1)/$total] Building $project ($Configuration)..." -ForegroundColor Cyan
