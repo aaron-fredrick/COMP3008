@@ -1,10 +1,10 @@
-# Assignment 1A — Project Plan
+# Assignment 1A - Project Plan
 
 ## 1. Assignment Objective
 
 Implement a real-time chat application demonstrating distributed systems concepts from COMP3008 Lectures 1–4. The application must satisfy Sections A (Functional Requirements), B (Server-Side Implementation), and C (Duplex Implementation) of the assignment specification.
 
-## 1.1 Implementation Status — 2026-08-23
+## 1.1 Implementation Status - 2026-08-23
 
 The required client/server architecture is implemented and the full solution builds in Debug configuration. Manual WPF verification is still pending; the implementation must not be represented as a confirmed mark outcome until the Part A scenarios have been demonstrated.
 
