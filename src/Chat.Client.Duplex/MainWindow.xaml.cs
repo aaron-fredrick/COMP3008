@@ -77,7 +77,7 @@ namespace Chat.Client.Duplex
             AppFooter.ConnectionStatus = coordinator.IsConnected ? ConnectionState.Connected : ConnectionState.Disconnected;
         }
 
-        private void SignInButton_Click(object sender, RoutedEventArgs e)
+        private async void SignInButton_Click(object sender, RoutedEventArgs e)
         {
             string username = UsernameTextBox.Text.Trim();
             var coordinator = DuplexSessionCoordinator.Instance;
@@ -89,7 +89,7 @@ namespace Chat.Client.Duplex
             try
             {
                 coordinator.StartSession(Dispatcher);
-                bool success = coordinator.SignIn(username);
+                bool success = await coordinator.SignInAsync(username);
 
                 if (success)
                 {

@@ -49,6 +49,8 @@ namespace Chat.Server.Hosting
                     pollingBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
                     pollingBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
 
+                    pollingBinding.HostNameComparisonMode = System.ServiceModel.HostNameComparisonMode.Exact;
+
                     var pollingEndpoint = _serviceHost.AddServiceEndpoint(
                         typeof(IChatService),
                         pollingBinding,
@@ -65,6 +67,8 @@ namespace Chat.Server.Hosting
                 duplexBinding.ReaderQuotas.MaxArrayLength = 2147483647;
                 duplexBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
                 duplexBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+
+                duplexBinding.HostNameComparisonMode = System.ServiceModel.HostNameComparisonMode.Exact;
 
                 var duplexEndpoint = _serviceHost.AddServiceEndpoint(
                     typeof(IDuplexChatService),

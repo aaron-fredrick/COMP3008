@@ -61,7 +61,7 @@ namespace Chat.Client.Polling.Views
                     return;
                 }
 
-                bool success = _serviceClient.SignIn(username);
+                bool success = await System.Threading.Tasks.Task.Run(() => _serviceClient.SignIn(username));
 
                 if (success)
                 {

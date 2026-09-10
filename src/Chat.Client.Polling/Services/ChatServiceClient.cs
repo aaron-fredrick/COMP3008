@@ -25,7 +25,7 @@ namespace Chat.Client.Polling.Services
             _channelFactory = new ChannelFactory<IChatService>(binding, new EndpointAddress(_serverUrl));
             _proxy = _channelFactory.CreateChannel(); _isConnected = true;
         }
-        public bool SignIn(string userId) { try { lock (_proxyLock) return _proxy.SignIn(userId); } catch (Exception ex) { HandleError(ex); return false; } }
+        public bool SignIn(string userId) { try { lock (_proxyLock) return _proxy.SignIn(userId); } catch (Exception ex) { HandleError(ex); throw; } }
         public void SignOut(string userId) { try { lock (_proxyLock) _proxy.SignOut(userId); } catch (Exception ex) { HandleError(ex); } }
         public System.Collections.Generic.List<Channel> GetChannels() { try { lock (_proxyLock) return _proxy.GetChannels(); } catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<Channel>(); } }
         public bool CreateChannel(string channelName) { try { lock (_proxyLock) return _proxy.CreateChannel(channelName); } catch (Exception ex) { HandleError(ex); return false; } }

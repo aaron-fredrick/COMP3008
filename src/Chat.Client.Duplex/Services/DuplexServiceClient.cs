@@ -19,7 +19,7 @@ namespace Chat.Client.Duplex.Services
         {
             _callback = new ChatCallbackHandler(_dispatcher, this); _instanceContext = new InstanceContext(_callback); var binding = new NetTcpBinding(); binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647; binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647; binding.Security.Mode = SecurityMode.None; _channelFactory = new DuplexChannelFactory<IDuplexChatService>(_instanceContext, binding, new EndpointAddress(_serverUrl)); _proxy = _channelFactory.CreateChannel(); _isConnected = true;
         }
-        public bool SignIn(string userId) { try { bool result = _proxy.SignIn(userId); if (result) _proxy.RegisterCallback(userId); return result; } catch (Exception ex) { HandleError(ex); return false; } }
+        public bool SignIn(string userId) { try { bool result = _proxy.SignIn(userId); if (result) _proxy.RegisterCallback(userId); return result; } catch (Exception ex) { HandleError(ex); throw; } }
         public void SignOut(string userId) { try { _proxy.UnregisterCallback(userId); _proxy.SignOut(userId); } catch (Exception ex) { HandleError(ex); } }
         public System.Collections.Generic.List<Channel> GetChannels() { try { return _proxy.GetChannels(); } catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<Channel>(); } }
         public bool CreateChannel(string channelName) { try { return _proxy.CreateChannel(channelName); } catch (Exception ex) { HandleError(ex); return false; } }
