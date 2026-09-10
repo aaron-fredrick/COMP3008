@@ -28,7 +28,7 @@ namespace Chat.Client.Polling.Services
         private readonly Timer _pollingTimer;
         private readonly Timer _pingTimer;
         private readonly Random _random = new Random();
-        private readonly int _pollingIntervalMs;
+        private int _pollingIntervalMs;
         private readonly object _pollingLock = new object();
         private string _currentUserId;
         private string _currentChannel;
@@ -42,8 +42,7 @@ namespace Chat.Client.Polling.Services
         private PollingSessionCoordinator()
         {
             _dispatcher = Dispatcher.CurrentDispatcher;
-            int pollingIntervalMs = int.Parse(System.Configuration.ConfigurationManager.AppSettings["PollingInterval"] ?? "2000");
-            _pollingIntervalMs = pollingIntervalMs;
+            _pollingIntervalMs = new ConfigurationService().GetSettings().PollingIntervalMs;
             _validationService = new ValidationService();
             _fileHelperService = new FileHelperService();
             _pollingTimer = new Timer(OnPollingTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
@@ -53,6 +52,7 @@ namespace Chat.Client.Polling.Services
         public void StartSession(ChatServiceClient serviceClient)
         {
             _serviceClient = serviceClient ?? throw new ArgumentNullException(nameof(serviceClient));
+            _pollingIntervalMs = new ConfigurationService().GetSettings().PollingIntervalMs;
             // Start the first ping through the ThreadPool timer, not the WPF Dispatcher.
             _pingTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
         }

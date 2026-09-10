@@ -14,14 +14,31 @@ if "%MSBUILD%"=="" (
     exit /b 1
 )
 
-set "PROJECT_PATH=%PROJECT%\%PROJECT%.csproj"
+rem Accept a .sln/.slnx or .csproj path directly, or a bare project name.
+rem Bare project names are looked up under src\ first, then tests\.
+if "%PROJECT:~-4%"==".sln" (
+    set "PROJECT_PATH=%PROJECT%"
+    goto :build
+)
+if "%PROJECT:~-5%"==".slnx" (
+    set "PROJECT_PATH=%PROJECT%"
+    goto :build
+)
+if "%PROJECT:~-7%"==".csproj" (
+    set "PROJECT_PATH=%PROJECT%"
+    goto :build
+)
 
+set "PROJECT_PATH=src\%PROJECT%\%PROJECT%.csproj"
+if not exist "%PROJECT_PATH%" set "PROJECT_PATH=tests\%PROJECT%\%PROJECT%.csproj"
+
+:build
 if not exist "%PROJECT_PATH%" (
     echo Project file not found: %PROJECT_PATH%
     exit /b 1
 )
 
-echo Building %PROJECT% (%CONFIGURATION%)...
+echo Building %PROJECT_PATH% (%CONFIGURATION%)...
 "%MSBUILD%" "%PROJECT_PATH%" /p:Configuration=%CONFIGURATION% /verbosity:minimal
 
 if %ERRORLEVEL% EQU 0 (

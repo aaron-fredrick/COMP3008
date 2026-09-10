@@ -32,7 +32,7 @@ namespace Chat.Server.StateManagement
             foreach (var userId in allUsers)
             {
                 var callback = _userManager.GetCallback(userId);
-                if (callback != null) SafeInvoke(userId, () => callback.OnChannelListChanged());
+                if (callback != null) SafeInvoke(userId, callback, () => callback.OnChannelListChanged());
             }
         }
 
@@ -42,7 +42,7 @@ namespace Chat.Server.StateManagement
             foreach (var memberId in members)
             {
                 var callback = _userManager.GetCallback(memberId);
-                if (callback != null) SafeInvoke(memberId, () => callback.OnChannelMembersChanged(channelName));
+                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnChannelMembersChanged(channelName));
             }
         }
 
@@ -52,14 +52,14 @@ namespace Chat.Server.StateManagement
             foreach (var memberId in members)
             {
                 var callback = _userManager.GetCallback(memberId);
-                if (callback != null) SafeInvoke(memberId, () => callback.OnMessageReceived(message));
+                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnMessageReceived(message));
             }
         }
 
         public void NotifyPrivateMessageReceived(string recipientId, Message message)
         {
             var callback = _userManager.GetCallback(recipientId);
-            if (callback != null) SafeInvoke(recipientId, () => callback.OnPrivateMessageReceived(message));
+            if (callback != null) SafeInvoke(recipientId, callback, () => callback.OnPrivateMessageReceived(message));
         }
 
         public void NotifyFileShared(string channelName, SharedFile file)
@@ -68,14 +68,14 @@ namespace Chat.Server.StateManagement
             foreach (var memberId in members)
             {
                 var callback = _userManager.GetCallback(memberId);
-                if (callback != null) SafeInvoke(memberId, () => callback.OnFileShared(file));
+                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnFileShared(file));
             }
         }
 
         public void NotifyPrivateFileShared(string recipientId, SharedFile file)
         {
             var callback = _userManager.GetCallback(recipientId);
-            if (callback != null) SafeInvoke(recipientId, () => callback.OnPrivateFileShared(file));
+            if (callback != null) SafeInvoke(recipientId, callback, () => callback.OnPrivateFileShared(file));
         }
 
         public void NotifyUserDisconnected(string channelName, string disconnectedUserId)
@@ -85,11 +85,11 @@ namespace Chat.Server.StateManagement
             {
                 if (memberId == disconnectedUserId) continue;
                 var callback = _userManager.GetCallback(memberId);
-                if (callback != null) SafeInvoke(memberId, () => callback.OnUserDisconnected(disconnectedUserId));
+                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnUserDisconnected(disconnectedUserId));
             }
         }
 
-        private void SafeInvoke(string userId, Action callbackAction)
+        private void SafeInvoke(string userId, IChatCallback callback, Action callbackAction)
         {
             try
             {
@@ -98,22 +98,26 @@ namespace Chat.Server.StateManagement
             catch (CommunicationException ex)
             {
                 ServerLogger.Warning("CALLBACK", "INVOKE", $"Callback to {userId} failed: {ex.Message}");
-                CleanupDisconnectedUser(userId);
+                CleanupDisconnectedUser(userId, callback);
             }
             catch (TimeoutException ex)
             {
                 ServerLogger.Warning("CALLBACK", "INVOKE", $"Callback to {userId} timed out: {ex.Message}");
-                CleanupDisconnectedUser(userId);
+                CleanupDisconnectedUser(userId, callback);
             }
             catch (ObjectDisposedException ex)
             {
                 ServerLogger.Warning("CALLBACK", "INVOKE", $"Callback to {userId} was disposed: {ex.Message}");
-                CleanupDisconnectedUser(userId);
+                CleanupDisconnectedUser(userId, callback);
             }
         }
 
-        private void CleanupDisconnectedUser(string userId)
+        private void CleanupDisconnectedUser(string userId, IChatCallback failedCallback)
         {
+            // A callback invocation may overlap a normal sign-out/reconnect. Only clean up
+            // the session if the callback that failed is still the callback registered for it.
+            if (!object.ReferenceEquals(_userManager.GetCallback(userId), failedCallback)) return;
+
             var session = _userManager.GetUserSession(userId);
             if (session == null) return;
 

@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
-$serverPath = Join-Path $PSScriptRoot '..\..\Chat.Server\bin\Debug\Chat.Server.exe'
-$testPath = Join-Path $PSScriptRoot '..\..\Chat.Server.Tests\bin\Debug\Chat.Server.Tests.exe'
+$serverPath = Join-Path $PSScriptRoot '..\..\src\Chat.Server\bin\Debug\Chat.Server.exe'
+$testPath = Join-Path $PSScriptRoot '..\..\tests\Chat.Server.Tests\bin\Debug\Chat.Server.Tests.exe'
 $artifactDir = Join-Path $PSScriptRoot '..\..\artifacts\integration'
 $serverLog = Join-Path $artifactDir 'server.log'
 $serverErrorLog = Join-Path $artifactDir 'server-error.log'

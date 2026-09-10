@@ -29,14 +29,15 @@
     <Compile Include="Integration\AuthorizationHardeningIntegrationSuite.cs" />
     <Compile Include="Integration\PollingDuplexParityIntegrationSuite.cs" />
     <Compile Include="Integration\DuplexDisconnectCleanupIntegrationSuite.cs" />
+    <Compile Include="Integration\DuplexCallbackLifecycleIntegrationSuite.cs" />
     <Compile Include="Unit\UserManagerTests.cs" />
     <Compile Include="Unit\ChannelManagerTests.cs" />
     <Compile Include="Unit\FileStorageTests.cs" />
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Chat.Contracts\Chat.Contracts.csproj"><Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project><Name>Chat.Contracts</Name></ProjectReference>
-    <ProjectReference Include="..\Chat.Server\Chat.Server.csproj"><Project>{C3D4E5F6-A7B8-4901-C234-56789012CDEF}</Project><Name>Chat.Server</Name></ProjectReference>
+    <ProjectReference Include="..\..\src\Chat.Contracts\Chat.Contracts.csproj"><Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project><Name>Chat.Contracts</Name></ProjectReference>
+    <ProjectReference Include="..\..\src\Chat.Server\Chat.Server.csproj"><Project>{C3D4E5F6-A7B8-4901-C234-56789012CDEF}</Project><Name>Chat.Server</Name></ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

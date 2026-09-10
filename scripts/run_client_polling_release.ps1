@@ -1,2 +1,2 @@
-& "$PSScriptRoot\..\Chat.Client.Polling\bin\Release\Chat.Client.Polling.exe"
+& "$PSScriptRoot\..\src\Chat.Client.Polling\bin\Release\Chat.Client.Polling.exe"
 Read-Host -Prompt "Press Enter to close"
