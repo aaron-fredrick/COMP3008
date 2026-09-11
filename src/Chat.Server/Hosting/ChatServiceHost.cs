@@ -59,6 +59,7 @@ namespace Chat.Server.Hosting
                 }
 
                 var duplexBinding = new System.ServiceModel.NetTcpBinding();
+                duplexBinding.Security.Mode = System.ServiceModel.SecurityMode.None;
                 duplexBinding.MaxBufferSize = 2147483647;
                 duplexBinding.MaxReceivedMessageSize = 2147483647;
                 duplexBinding.MaxBufferPoolSize = 2147483647;
