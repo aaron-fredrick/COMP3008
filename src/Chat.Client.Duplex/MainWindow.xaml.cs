@@ -180,19 +180,17 @@ namespace Chat.Client.Duplex
 
         // ── Channel list event handlers ────────────────────────────────────────
 
-        private void OnJoinChannelRequested(object sender, string channelName)
+        private async void OnJoinChannelRequested(object sender, string channelName)
         {
-            bool success = DuplexSessionCoordinator.Instance.JoinChannel(channelName);
+            bool success = await DuplexSessionCoordinator.Instance.JoinChannelAsync(channelName);
             if (success)
                 ShowConversationView(channelName);
         }
 
-        private void OnCreateChannelRequested(object sender, string channelName)
+        private async void OnCreateChannelRequested(object sender, string channelName)
         {
-            bool success = DuplexSessionCoordinator.Instance.CreateChannel(channelName);
-            if (success)
-                DuplexSessionCoordinator.Instance.RefreshChannels();
-            else
+            bool success = await DuplexSessionCoordinator.Instance.CreateChannelAsync(channelName);
+            if (!success)
                 MessageBox.Show("Channel already exists or creation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
