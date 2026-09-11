@@ -1,0 +1,13 @@
+{
+  "solution": {
+    "path": "COMP3008.slnx",
+    "projects": [
+      "src/Chat.Contracts/Chat.Contracts.csproj",
+      "src/Chat.Server/Chat.Server.csproj",
+      "src/Chat.Contracts/Chat.Contracts.csproj",
+      "src/Chat.Client.Shared/Chat.Client.Shared.csproj",
+      "src/Chat.Client.Polling/Chat.Client.Polling.csproj",
+      "src/Chat.Client.Duplex/Chat.Client.Duplex.csproj"
+    ]
+  }
+}
