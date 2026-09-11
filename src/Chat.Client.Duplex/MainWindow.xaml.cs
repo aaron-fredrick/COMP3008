@@ -49,7 +49,6 @@ namespace Chat.Client.Duplex
 
         private void InitializeFooter()
         {
-            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
             AppFooter.SignOutClicked += (s, e) => SignOut();
             AppFooter.IsLoggedIn = false;
             AppFooter.ConnectionStatus = ConnectionState.Disconnected;
@@ -400,9 +399,6 @@ namespace Chat.Client.Duplex
         }
 
         // ── Footer ────────────────────────────────────────────────────────────
-
-        private void AppFooter_SettingsClicked(object sender, EventArgs e) =>
-            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
 
         // ── Window lifecycle ──────────────────────────────────────────────────
 

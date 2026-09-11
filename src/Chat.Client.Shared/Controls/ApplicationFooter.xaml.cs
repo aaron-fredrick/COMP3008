@@ -141,7 +141,7 @@ namespace Chat.Client.Shared.Controls
             }
         }
 
-        public event EventHandler SettingsClicked;
+
         public event EventHandler SignOutClicked;
 
         private void SignOutButton_Click(object sender, RoutedEventArgs e)
