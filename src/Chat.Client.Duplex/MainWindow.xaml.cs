@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Windows;
 using Chat.Client.Duplex.Services;
 using Chat.Client.Duplex.Views;
@@ -17,107 +16,134 @@ namespace Chat.Client.Duplex
         private readonly Dictionary<string, PrivateMessageView> _privateMessageViews;
         private readonly Dictionary<string, List<Message>> _privateMessageHistory;
         private readonly Dictionary<string, List<SharedFile>> _privateFileHistory = new Dictionary<string, List<SharedFile>>();
-        private bool _isSigningOut = false;
-        private bool _channelListClosing = false;
-        private bool _conversationClosing = false;
+        private Chat.Client.Shared.Controls.WindowResizer _windowResizer;
 
         public MainWindow()
         {
             InitializeComponent();
             _privateMessageViews = new Dictionary<string, PrivateMessageView>();
             _privateMessageHistory = new Dictionary<string, List<Message>>();
-            InitializeFooter();
-            
-            // Subscribe to global session coordinator events
+            _windowResizer = new Chat.Client.Shared.Controls.WindowResizer(this);
+
             SubscribeCoordinatorEvents();
+
+            InitializeFooter();
+            ShowSignInView();
         }
+
+        // ── Initialisation ───────────────────────────────────────────────────
 
         private void SubscribeCoordinatorEvents()
         {
             var coordinator = DuplexSessionCoordinator.Instance;
-            
-            coordinator.ChannelsUpdated += Coordinator_ChannelsUpdated;
-            coordinator.ChannelMembersUpdated += Coordinator_ChannelMembersUpdated;
-            coordinator.ChannelFilesUpdated += Coordinator_ChannelFilesUpdated;
-            coordinator.PublicMessageReceived += Coordinator_PublicMessageReceived;
-            coordinator.PrivateMessageReceived += Coordinator_PrivateMessageReceived;
-            coordinator.PrivateFileReceived += Coordinator_PrivateFileReceived;
-            coordinator.ConnectionStateChanged += Coordinator_ConnectionStateChanged;
-            coordinator.UserDisconnected += Coordinator_UserDisconnected;
-            coordinator.SystemMessageReceived += Coordinator_SystemMessageReceived;
+            coordinator.ChannelsUpdated += OnChannelsUpdated;
+            coordinator.ChannelMembersUpdated += OnChannelMembersUpdated;
+            coordinator.ChannelFilesUpdated += OnChannelFilesUpdated;
+            coordinator.PublicMessageReceived += OnPublicMessageReceived;
+            coordinator.PrivateMessageReceived += OnPrivateMessageReceived;
+            coordinator.PrivateFileReceived += OnPrivateFileReceived;
+            coordinator.ConnectionStateChanged += OnConnectionStateChanged;
+            coordinator.UserDisconnected += OnUserDisconnected;
+            coordinator.SystemMessageReceived += OnSystemMessageReceived;
         }
 
         private void InitializeFooter()
         {
             AppFooter.SettingsClicked += AppFooter_SettingsClicked;
             AppFooter.SignOutClicked += (s, e) => SignOut();
-            UpdateFooterState();
+            AppFooter.IsLoggedIn = false;
+            AppFooter.ConnectionStatus = ConnectionState.Disconnected;
         }
 
-        private void AppFooter_SettingsClicked(object sender, EventArgs e)
+        private void ShowSignInView()
         {
-            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            var signInView = new SignInView();
+            signInView.SignInSuccess += OnSignInSuccess;
+            signInView.SignInFailed += OnSignInFailed;
+            MainContent.Content = signInView;
         }
 
-        private void UpdateFooterState()
+        // ── Coordinator event handlers ────────────────────────────────────────
+
+        private void OnChannelsUpdated(object sender, List<Channel> channels) =>
+            _channelListView?.UpdateChannels(channels);
+
+        private void OnChannelMembersUpdated(object sender, List<string> members)
         {
-            var coordinator = DuplexSessionCoordinator.Instance;
-
-            if (coordinator.IsSignedIn)
-            {
-                AppFooter.CurrentUser = coordinator.CurrentUserId;
-                AppFooter.IsLoggedIn = true;
-            }
-            else
-            {
-                AppFooter.CurrentUser = string.Empty;
-                AppFooter.IsLoggedIn = false;
-            }
-
-            AppFooter.ConnectionStatus = coordinator.IsConnected ? ConnectionState.Connected : ConnectionState.Disconnected;
+            _conversationView?.UpdateMembers(members);
+            ClosePrivateMessageViewsForUnavailableMembers(members);
         }
 
-        private async void SignInButton_Click(object sender, RoutedEventArgs e)
+        private void OnChannelFilesUpdated(object sender, List<SharedFile> files) =>
+            _conversationView?.UpdateFiles(files);
+
+        private void OnPublicMessageReceived(object sender, Message message) =>
+            _conversationView?.AddMessage(message);
+
+        private void OnPrivateMessageReceived(object sender, (string OtherUserId, Message Message) args)
         {
-            string username = UsernameTextBox.Text.Trim();
-            var coordinator = DuplexSessionCoordinator.Instance;
+            if (!_privateMessageHistory.ContainsKey(args.OtherUserId))
+                _privateMessageHistory[args.OtherUserId] = new List<Message>();
+            _privateMessageHistory[args.OtherUserId].Add(args.Message);
 
-            LoginStatusText.Text = "Connecting to server...";
-            AppFooter.ConnectionStatus = ConnectionState.Connecting;
-            SignInButton.IsEnabled = false;
+            if (!_privateMessageViews.ContainsKey(args.OtherUserId))
+                OpenPrivateMessageView(args.OtherUserId);
 
-            try
-            {
-                coordinator.StartSession(Dispatcher);
-                bool success = await coordinator.SignInAsync(username);
-
-                if (success)
-                {
-                    UpdateFooterState();
-                    ShowChannelListView();
-                }
-                else
-                {
-                    LoginStatusText.Text = "Sign in failed. Username may already be in use or invalid.";
-                    AppFooter.ConnectionStatus = ConnectionState.Disconnected;
-                    SignInButton.IsEnabled = true;
-                }
-            }
-            catch (Exception)
-            {
-                LoginStatusText.Text = "Server not responding. Please check if the server is running.";
-                AppFooter.ConnectionStatus = ConnectionState.Disconnected;
-                SignInButton.IsEnabled = true;
-            }
+            _privateMessageViews[args.OtherUserId].AddMessage(args.Message);
         }
 
-        private void UsernameTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void OnPrivateFileReceived(object sender, (string OtherUserId, SharedFile File) args)
         {
-            if (e.Key == System.Windows.Input.Key.Enter)
+            if (!_privateFileHistory.ContainsKey(args.OtherUserId)) _privateFileHistory[args.OtherUserId] = new List<SharedFile>();
+            if (!_privateFileHistory[args.OtherUserId].Exists(file => file.FileId == args.File.FileId)) _privateFileHistory[args.OtherUserId].Add(args.File);
+            if (!_privateMessageViews.ContainsKey(args.OtherUserId)) OpenPrivateMessageView(args.OtherUserId);
+            _privateMessageViews[args.OtherUserId].AddPendingFile(args.File);
+        }
+
+        private void OnConnectionStateChanged(object sender, ConnectionState state)
+        {
+            AppFooter.ConnectionStatus = state;
+
+            if (state == ConnectionState.Disconnected && DuplexSessionCoordinator.Instance.CurrentUserId != null)
             {
-                SignInButton_Click(sender, e);
+                MessageBox.Show("Connection to the server was lost. You have been signed out.", "Connection Lost", MessageBoxButton.OK, MessageBoxImage.Error);
+                SignOut();
             }
         }
+
+        private void OnUserDisconnected(object sender, string userId) =>
+            ClosePrivateMessageView(userId);
+
+        private void OnSystemMessageReceived(object sender, string message) =>
+            _conversationView?.AddSystemMessage(message);
+
+        // ── Sign in / out ─────────────────────────────────────────────────────
+
+        private void OnSignInSuccess(object sender, string username)
+        {
+            AppFooter.CurrentUser = username;
+            AppFooter.IsLoggedIn = true;
+            AppFooter.ConnectionStatus = ConnectionState.Connected;
+            ShowChannelListView();
+        }
+
+        private void OnSignInFailed(object sender, string username) =>
+            AppFooter.ConnectionStatus = ConnectionState.Disconnected;
+
+        private void SignOut()
+        {
+            ClearPrivateMessageState();
+            DuplexSessionCoordinator.Instance.SignOut();
+
+            AppFooter.CurrentUser = string.Empty;
+            AppFooter.IsLoggedIn = false;
+            _channelListView = null;
+            _conversationView = null;
+
+            ShowSignInView();
+        }
+
+        // ── View navigation ───────────────────────────────────────────────────
 
         private void ShowChannelListView()
         {
@@ -125,15 +151,12 @@ namespace Chat.Client.Duplex
 
             _channelListView = new ChannelListView();
             _channelListView.SetWelcomeText(coordinator.CurrentUserId);
-            _channelListView.SetConnectionStatus(coordinator.IsConnected);
-            _channelListView.JoinChannelRequested += ChannelListView_JoinChannelRequested;
-            _channelListView.CreateChannelRequested += ChannelListView_CreateChannelRequested;
-            _channelListView.SignOutRequested += ChannelListView_SignOutRequested;
-            _channelListView.Closing += ChannelListView_Closing;
-            
+            _channelListView.JoinChannelRequested += OnJoinChannelRequested;
+            _channelListView.CreateChannelRequested += OnCreateChannelRequested;
+            _channelListView.SignOutRequested += OnSignOutRequested;
+
             coordinator.RefreshChannels();
-            _channelListView.Show();
-            this.Hide();
+            MainContent.Content = _channelListView;
         }
 
         private void ShowConversationView(string channelName)
@@ -143,79 +166,54 @@ namespace Chat.Client.Duplex
             _conversationView = new ConversationView();
             _conversationView.SetChannelName(channelName);
             _conversationView.SetCurrentUserId(coordinator.CurrentUserId);
-            _conversationView.SendMessageRequested += ConversationView_SendMessageRequested;
-            _conversationView.LeaveChannelRequested += ConversationView_LeaveChannelRequested;
-            _conversationView.FileDownloadRequested += ConversationView_FileDownloadRequested;
-            _conversationView.FileMessageDownloadRequested += ConversationView_FileMessageDownloadRequested;
-            _conversationView.PrivateMessageRequested += ConversationView_PrivateMessageRequested;
-            _conversationView.FileShareRequested += ConversationView_FileShareRequested;
-            _conversationView.SignOutRequested += (s, e) => SignOut();
-            _conversationView.Closing += ConversationView_Closing;
+            _conversationView.SendMessageRequested += OnSendMessageRequested;
+            _conversationView.LeaveChannelRequested += OnLeaveChannelRequested;
+            _conversationView.FileDownloadRequested += OnFileDownloadRequested;
+            _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
+            _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
+            _conversationView.FileShareRequested += OnFileShareRequested;
 
             coordinator.RefreshChannelMembers();
             coordinator.RefreshChannelFiles();
-            
-            _conversationView.Show();
-            _channelListView.Hide();
+            MainContent.Content = _conversationView;
         }
 
-        private void ChannelListView_Closing(object sender, CancelEventArgs e)
-        {
-            if (_isSigningOut) return;
-            _channelListClosing = true;
-            SignOut();
-        }
+        // ── Channel list event handlers ────────────────────────────────────────
 
-        private void ConversationView_Closing(object sender, CancelEventArgs e)
-        {
-            if (_isSigningOut) return;
-            _conversationClosing = true;
-            SignOut();
-        }
-
-        private void ChannelListView_JoinChannelRequested(object sender, string channelName)
+        private void OnJoinChannelRequested(object sender, string channelName)
         {
             bool success = DuplexSessionCoordinator.Instance.JoinChannel(channelName);
             if (success)
-            {
                 ShowConversationView(channelName);
-            }
         }
 
-        private void ChannelListView_CreateChannelRequested(object sender, string channelName)
+        private void OnCreateChannelRequested(object sender, string channelName)
         {
             bool success = DuplexSessionCoordinator.Instance.CreateChannel(channelName);
             if (success)
-            {
                 DuplexSessionCoordinator.Instance.RefreshChannels();
-            }
             else
-            {
                 MessageBox.Show("Channel already exists or creation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
-        private void ChannelListView_SignOutRequested(object sender, EventArgs e) => SignOut();
+        private void OnSignOutRequested(object sender, EventArgs e) => SignOut();
 
-        private void ConversationView_SendMessageRequested(object sender, string message) =>
-            DuplexSessionCoordinator.Instance.SendPublicMessage(message);
+        // ── Conversation view event handlers ──────────────────────────────────
 
-        private void ConversationView_LeaveChannelRequested(object sender, EventArgs e)
+        private void OnSendMessageRequested(object sender, string content) =>
+            DuplexSessionCoordinator.Instance.SendPublicMessage(content);
+
+        private void OnLeaveChannelRequested(object sender, EventArgs e)
         {
             DuplexSessionCoordinator.Instance.LeaveChannel();
-
-            // Private messaging is valid only while both users remain in the channel.
             CloseAllPrivateMessageViews();
-
-            _conversationView.Close();
-            _channelListView.Show();
-            DuplexSessionCoordinator.Instance.RefreshChannels();
+            ShowChannelListView();
         }
 
-        private void ConversationView_FileDownloadRequested(object sender, SharedFile file) =>
+        private void OnFileDownloadRequested(object sender, SharedFile file) =>
             DuplexSessionCoordinator.Instance.DownloadAndOpenFile(file);
 
-        private void ConversationView_FileMessageDownloadRequested(object sender, Message message)
+        private void OnFileMessageDownloadRequested(object sender, Message message)
         {
             if (!message.FileId.HasValue)
                 return;
@@ -227,112 +225,103 @@ namespace Chat.Client.Duplex
             });
         }
 
-        private void ConversationView_FileShareRequested(object sender, EventArgs e)
+        private void OnFileShareRequested(object sender, EventArgs e)
         {
-            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Select a file to share",
                 Filter = "All files (*.*)|*.*"
             };
 
-            if (openFileDialog.ShowDialog() == true)
+            if (dialog.ShowDialog() != true)
+                return;
+
+            string filePath = dialog.FileName;
+            var coordinator = DuplexSessionCoordinator.Instance;
+
+            var validationResult = coordinator.ValidateFile(filePath);
+            if (!validationResult.IsValid)
             {
-                string filePath = openFileDialog.FileName;
-                var coordinator = DuplexSessionCoordinator.Instance;
-                
-                var validationResult = coordinator.ValidateFile(filePath);
-                if (!validationResult.IsValid)
-                {
-                    MessageBox.Show(validationResult.ErrorMessage, "File Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                string fileName = coordinator.GetFileName(filePath);
-                byte[] fileData = coordinator.ReadFile(filePath);
-                FileType fileType = coordinator.DetermineFileType(fileName);
-
-                bool success = coordinator.ShareFile(fileName, fileType, fileData);
-                if (success)
-                {
-                    coordinator.RefreshChannelFiles();
-                }
+                MessageBox.Show(validationResult.ErrorMessage, "File Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
+
+            string fileName = coordinator.GetFileName(filePath);
+            byte[] fileData = coordinator.ReadFile(filePath);
+            FileType fileType = coordinator.DetermineFileType(fileName);
+
+            // Duplex: file-shared notification arrives via callback — no manual refresh needed.
+            coordinator.ShareFile(fileName, fileType, fileData);
         }
 
-        private void ConversationView_PrivateMessageRequested(object sender, string recipientId)
+        private void OnPrivateMessageRequested(object sender, string recipientId)
         {
-            var coordinator = DuplexSessionCoordinator.Instance;
-            if (recipientId == coordinator.CurrentUserId) return;
+            if (string.Equals(recipientId, DuplexSessionCoordinator.Instance.CurrentUserId, StringComparison.OrdinalIgnoreCase))
+                return;
 
             if (!_privateMessageViews.ContainsKey(recipientId))
-            {
                 OpenPrivateMessageView(recipientId);
-            }
             else
-            {
                 _privateMessageViews[recipientId].Focus();
-            }
         }
+
+        // ── Private message view management ──────────────────────────────────
 
         private void OpenPrivateMessageView(string recipientId)
         {
-            var privateMessageView = new PrivateMessageView(recipientId);
-            privateMessageView.CurrentUserId = DuplexSessionCoordinator.Instance.CurrentUserId;
-            privateMessageView.SendMessageRequested += PrivateMessageView_SendMessageRequested;
-            privateMessageView.FileUploadRequested += DuplexPrivateMessageFileUploadRequested;
-            privateMessageView.FileDownloadRequested += DuplexPrivateMessageFileDownloadRequested;
-            privateMessageView.Closing += PrivateMessageView_Closing;
-            privateMessageView.Owner = _conversationView;
+            var view = new PrivateMessageView(recipientId);
+            view.CurrentUserId = DuplexSessionCoordinator.Instance.CurrentUserId;
+            view.SendMessageRequested += OnPrivateMessageSendRequested;
+            view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
+            view.FileDownloadRequested += OnPrivateMessageFileDownloadRequested;
+            view.Closing += OnPrivateMessageViewClosing;
+            view.Owner = this;
+            _privateMessageViews[recipientId] = view;
 
-            _privateMessageViews[recipientId] = privateMessageView;
-
-            // Restore message history if available
             if (_privateMessageHistory.ContainsKey(recipientId))
             {
                 foreach (var message in _privateMessageHistory[recipientId])
-                {
-                    privateMessageView.AddMessage(message);
-                }
+                    view.AddMessage(message);
             }
             if (_privateFileHistory.ContainsKey(recipientId))
-                foreach (var file in _privateFileHistory[recipientId]) privateMessageView.AddPendingFile(file);
+                foreach (var file in _privateFileHistory[recipientId]) view.AddPendingFile(file);
 
-            privateMessageView.Show();
+            view.Show();
         }
 
-        private void PrivateMessageView_SendMessageRequested(object sender, string message)
+        private void OnPrivateMessageSendRequested(object sender, string content)
         {
-            if (sender is PrivateMessageView view)
+            var view = sender as PrivateMessageView;
+            if (view == null)
+                return;
+
+            var coordinator = DuplexSessionCoordinator.Instance;
+            if (!coordinator.SendPrivateMessage(view.RecipientId, content))
             {
-                if (!DuplexSessionCoordinator.Instance.SendPrivateMessage(view.RecipientId, message))
-                {
-                    MessageBox.Show("Private message could not be sent. The recipient may no longer be in this channel.",
-                        "Private Message", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // Add own message directly to view
-                var ownMessage = new Message
-                {
-                    SenderId = DuplexSessionCoordinator.Instance.CurrentUserId,
-                    Content = message,
-                    Timestamp = DateTime.UtcNow,
-                    Type = MessageType.Private,
-                    RecipientId = view.RecipientId,
-                    IsCurrentUser = true
-                };
-
-                // Store sent message in history
-                if (!_privateMessageHistory.ContainsKey(view.RecipientId))
-                    _privateMessageHistory[view.RecipientId] = new List<Message>();
-                _privateMessageHistory[view.RecipientId].Add(ownMessage);
-
-                view.AddMessage(ownMessage);
-                view.ClearMessageInput();
+                MessageBox.Show("Private message could not be sent. The recipient may no longer be in this channel.",
+                    "Private Message", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
+
+            var ownMessage = new Message
+            {
+                SenderId = coordinator.CurrentUserId,
+                Content = content,
+                Timestamp = DateTime.UtcNow,
+                Type = MessageType.Private,
+                RecipientId = view.RecipientId,
+                IsCurrentUser = true
+            };
+
+            if (!_privateMessageHistory.ContainsKey(view.RecipientId))
+                _privateMessageHistory[view.RecipientId] = new List<Message>();
+            _privateMessageHistory[view.RecipientId].Add(ownMessage);
+
+            view.AddMessage(ownMessage);
+            view.ClearMessageInput();
         }
 
-        private void DuplexPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
             if (!(sender is PrivateMessageView view))
                 return;
@@ -360,115 +349,33 @@ namespace Chat.Client.Duplex
             _privateFileHistory[view.RecipientId].Add(sharedFile);
         }
 
-        private void DuplexPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        private void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
         {
             if (!DuplexSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
                 MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        private void PrivateMessageView_Closing(object sender, CancelEventArgs e)
+        private void OnPrivateMessageViewClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (sender is PrivateMessageView view)
-            {
+            var view = sender as PrivateMessageView;
+            if (view != null)
                 _privateMessageViews.Remove(view.RecipientId);
-            }
-        }
-
-        // ── Coordinator Event Handlers ────────────────────────────────────────
-
-        private void Coordinator_ChannelsUpdated(object sender, List<Channel> channels) =>
-            _channelListView?.UpdateChannels(channels);
-
-        private void Coordinator_ChannelMembersUpdated(object sender, List<string> members)
-        {
-            _conversationView?.UpdateMembers(members);
-            ClosePrivateMessageViewsForUnavailableMembers(members);
-        }
-
-        private void Coordinator_ChannelFilesUpdated(object sender, List<SharedFile> files) =>
-            _conversationView?.UpdateFiles(files);
-
-        private void Coordinator_PublicMessageReceived(object sender, Message message) =>
-            _conversationView?.AddMessage(message);
-
-        private void Coordinator_PrivateMessageReceived(object sender, (string OtherUserId, Message Message) args)
-        {
-            // Store message in history
-            if (!_privateMessageHistory.ContainsKey(args.OtherUserId))
-                _privateMessageHistory[args.OtherUserId] = new List<Message>();
-            _privateMessageHistory[args.OtherUserId].Add(args.Message);
-
-            if (!_privateMessageViews.ContainsKey(args.OtherUserId))
-            {
-                OpenPrivateMessageView(args.OtherUserId);
-            }
-            _privateMessageViews[args.OtherUserId].AddMessage(args.Message);
-        }
-
-        private void Coordinator_PrivateFileReceived(object sender, (string OtherUserId, SharedFile File) args)
-        {
-            if (!_privateFileHistory.ContainsKey(args.OtherUserId)) _privateFileHistory[args.OtherUserId] = new List<SharedFile>();
-            if (!_privateFileHistory[args.OtherUserId].Exists(file => file.FileId == args.File.FileId)) _privateFileHistory[args.OtherUserId].Add(args.File);
-            if (!_privateMessageViews.ContainsKey(args.OtherUserId)) OpenPrivateMessageView(args.OtherUserId);
-            _privateMessageViews[args.OtherUserId].AddPendingFile(args.File);
-        }
-
-        private void Coordinator_UserDisconnected(object sender, string userId)
-        {
-            ClosePrivateMessageView(userId);
-        }
-
-        private void Coordinator_SystemMessageReceived(object sender, string message) =>
-            _conversationView?.AddSystemMessage(message);
-
-        private void Coordinator_ConnectionStateChanged(object sender, ConnectionState state)
-        {
-            UpdateFooterState();
-            
-            if (state == ConnectionState.Disconnected && !_isSigningOut && DuplexSessionCoordinator.Instance.CurrentUserId != null)
-            {
-                MessageBox.Show("Connection to the server was lost. You have been signed out.", "Connection Lost", MessageBoxButton.OK, MessageBoxImage.Error);
-                SignOut();
-            }
-        }
-
-        private void SignOut()
-        {
-            if (_isSigningOut) return;
-            _isSigningOut = true;
-
-            DuplexSessionCoordinator.Instance.SignOut();
-
-            ClearPrivateMessageState();
-
-            if (!_channelListClosing) _channelListView?.Close();
-            if (!_conversationClosing) _conversationView?.Close();
-
-            this.Show();
-            LoginStatusText.Text = "";
-            UsernameTextBox.Text = "";
-            UpdateFooterState();
-            SignInButton.IsEnabled = true;
-
-            _channelListClosing = false;
-            _conversationClosing = false;
-            _isSigningOut = false;
         }
 
         private void ClosePrivateMessageView(string recipientId)
         {
-            if (!_privateMessageViews.TryGetValue(recipientId, out var privateMessageView))
+            if (!_privateMessageViews.TryGetValue(recipientId, out var view))
                 return;
 
-            privateMessageView.Close();
+            view.Close();
             _privateMessageViews.Remove(recipientId);
         }
 
         private void CloseAllPrivateMessageViews()
         {
-            var privateMessageViews = new List<PrivateMessageView>(_privateMessageViews.Values);
-            foreach (var privateMessageView in privateMessageViews)
-                privateMessageView.Close();
+            var views = new List<PrivateMessageView>(_privateMessageViews.Values);
+            foreach (var view in views)
+                view.Close();
             _privateMessageViews.Clear();
         }
 
@@ -477,10 +384,10 @@ namespace Chat.Client.Duplex
             var availableMemberIds = new HashSet<string>(members);
             var unavailableRecipientIds = new List<string>();
 
-            foreach (var privateMessageView in _privateMessageViews)
+            foreach (var kvp in _privateMessageViews)
             {
-                if (!availableMemberIds.Contains(privateMessageView.Key))
-                    unavailableRecipientIds.Add(privateMessageView.Key);
+                if (!availableMemberIds.Contains(kvp.Key))
+                    unavailableRecipientIds.Add(kvp.Key);
             }
 
             foreach (var recipientId in unavailableRecipientIds)
@@ -494,13 +401,17 @@ namespace Chat.Client.Duplex
             _privateFileHistory.Clear();
         }
 
+        // ── Footer ────────────────────────────────────────────────────────────
+
+        private void AppFooter_SettingsClicked(object sender, EventArgs e) =>
+            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+
+        // ── Window lifecycle ──────────────────────────────────────────────────
+
         protected override void OnClosed(EventArgs e)
         {
             DuplexSessionCoordinator.Instance.Dispose();
-            
-            _channelListView?.Close();
-            _conversationView?.Close();
-            
+            _windowResizer?.Dispose();
             Application.Current.Shutdown();
             base.OnClosed(e);
         }
