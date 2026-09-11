@@ -63,10 +63,10 @@
 
                 <TextBlock Text="CHANNEL" FontSize="11" 
                            Foreground="{StaticResource MessageMetadataBrush}" FontWeight="Bold" Margin="0,20,0,8"/>
-                <Button Content="⚙ Channel settings" Background="Transparent" BorderThickness="0" 
-                        Foreground="{StaticResource ForegroundBrush}" HorizontalAlignment="Left" Padding="8" Margin="0,0,0,8"/>
                 <Button x:Name="LeaveChannelSidebarButton" Content="↩ Leave channel" Background="Transparent" BorderThickness="0" 
                         Foreground="{StaticResource ForegroundBrush}" HorizontalAlignment="Left" Padding="8" Click="LeaveButton_Click"/>
+                <Button x:Name="ExportChatButton" Content="↓ Export chat" Background="Transparent" BorderThickness="0"
+                        Foreground="{StaticResource ForegroundBrush}" HorizontalAlignment="Left" Padding="8" Margin="0,2,0,0" Click="ExportChatButton_Click"/>
             </StackPanel>
         </Border>
 

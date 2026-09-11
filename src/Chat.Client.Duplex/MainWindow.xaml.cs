@@ -155,8 +155,8 @@ namespace Chat.Client.Duplex
             _channelListView.CreateChannelRequested += OnCreateChannelRequested;
             _channelListView.SignOutRequested += OnSignOutRequested;
 
-            coordinator.RefreshChannels();
             MainContent.Content = _channelListView;
+            _ = coordinator.RefreshChannelsAsync();
         }
 
         private void ShowConversationView(string channelName)
@@ -173,9 +173,9 @@ namespace Chat.Client.Duplex
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
 
-            coordinator.RefreshChannelMembers();
-            coordinator.RefreshChannelFiles();
             MainContent.Content = _conversationView;
+            _ = coordinator.RefreshChannelMembersAsync();
+            _ = coordinator.RefreshChannelFilesAsync();
         }
 
         // ── Channel list event handlers ────────────────────────────────────────
@@ -201,9 +201,9 @@ namespace Chat.Client.Duplex
         private void OnSendMessageRequested(object sender, string content) =>
             DuplexSessionCoordinator.Instance.SendPublicMessage(content);
 
-        private void OnLeaveChannelRequested(object sender, EventArgs e)
+        private async void OnLeaveChannelRequested(object sender, EventArgs e)
         {
-            DuplexSessionCoordinator.Instance.LeaveChannel();
+            await DuplexSessionCoordinator.Instance.LeaveChannelAsync();
             CloseAllPrivateMessageViews();
             ShowChannelListView();
         }

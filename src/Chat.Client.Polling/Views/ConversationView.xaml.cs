@@ -153,5 +153,39 @@ namespace Chat.Client.Polling.Views
         {
             FileShareRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        private void ExportChatButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_messages.Count == 0)
+            {
+                MessageBox.Show("There are no messages to export.", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export Chat",
+                Filter = "Text file (*.txt)|*.txt",
+                FileName = $"chat-{ChannelNameText.Text}-{DateTime.Now:yyyyMMdd-HHmm}.txt"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var lines = new System.Text.StringBuilder();
+            lines.AppendLine($"Chat export — #{ChannelNameText.Text}");
+            lines.AppendLine($"Exported on {DateTime.Now:yyyy-MM-dd HH:mm}");
+            lines.AppendLine(new string('─', 48));
+            lines.AppendLine();
+
+            foreach (var message in _messages)
+            {
+                string timestamp = message.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+                lines.AppendLine($"[{timestamp}] {message.SenderId}: {message.Content}");
+            }
+
+            System.IO.File.WriteAllText(dialog.FileName, lines.ToString(), System.Text.Encoding.UTF8);
+            MessageBox.Show($"Chat exported to:\n{dialog.FileName}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 }
