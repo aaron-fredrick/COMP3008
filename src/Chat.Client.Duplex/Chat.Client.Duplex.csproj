@@ -4,7 +4,6 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{E5F6A7B8-C9D0-4903-E456-78901234EF01}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>Chat.Client.Duplex</RootNamespace>
     <AssemblyName>Chat.Client.Duplex</AssemblyName>
