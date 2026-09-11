@@ -112,7 +112,7 @@
 
             <!-- Messages -->
             <ListBox x:Name="MessagesListBox" Grid.Row="1" Background="{StaticResource BackgroundBrush}"
-                     Foreground="{StaticResource ForegroundBrush}" BorderThickness="0" Padding="22,24"
+                     Foreground="{StaticResource ForegroundBrush}" BorderThickness="0" Padding="22,24,22,4"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
