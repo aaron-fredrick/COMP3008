@@ -16,6 +16,7 @@ bld/
 
 # Visual Studio cache/options directory
 .vs/
+.vscode/
 
 # User-specific files
 *.rsuser
@@ -129,3 +130,5 @@ Thumbs.db
 .gemini/
 .claude/
 .cursor/
+
+.codegraph/

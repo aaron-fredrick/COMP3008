@@ -13,17 +13,17 @@ if "%MSBUILD%"=="" (
 
 echo.
 echo [1/3] Building Chat.Client.Shared (%CONFIGURATION%)...
-"%MSBUILD%" "Chat.Client.Shared\Chat.Client.Shared.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
+"%MSBUILD%" "src\Chat.Client.Shared\Chat.Client.Shared.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
 if %ERRORLEVEL% NEQ 0 ( echo Build failed at Chat.Client.Shared! & exit /b 1 )
 
 echo.
 echo [2/3] Building Chat.Client.Polling (%CONFIGURATION%)...
-"%MSBUILD%" "Chat.Client.Polling\Chat.Client.Polling.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
+"%MSBUILD%" "src\Chat.Client.Polling\Chat.Client.Polling.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
 if %ERRORLEVEL% NEQ 0 ( echo Build failed at Chat.Client.Polling! & exit /b 1 )
 
 echo.
 echo [3/3] Building Chat.Client.Duplex (%CONFIGURATION%)...
-"%MSBUILD%" "Chat.Client.Duplex\Chat.Client.Duplex.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
+"%MSBUILD%" "src\Chat.Client.Duplex\Chat.Client.Duplex.csproj" /p:Configuration=%CONFIGURATION% /verbosity:minimal
 if %ERRORLEVEL% NEQ 0 ( echo Build failed at Chat.Client.Duplex! & exit /b 1 )
 
 echo.

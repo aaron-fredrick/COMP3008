@@ -1,7 +1,59 @@
-<Solution>
-  <Project Path="Chat.Client.Duplex/Chat.Client.Duplex.csproj" Id="e5f6a7b8-c9d0-4903-e456-78901234ef01" />
-  <Project Path="Chat.Client.Polling/Chat.Client.Polling.csproj" Id="d4e5f6a7-b8c9-4902-d345-67890123def0" />
-  <Project Path="Chat.Client.Shared/Chat.Client.Shared.csproj" Id="b2c3d4e5-f6a7-4890-b123-45678901bcde" />
-  <Project Path="Chat.Contracts/Chat.Contracts.csproj" Id="a1b2c3d4-e5f6-4789-a012-34567890abcd" />
-  <Project Path="Chat.Server/Chat.Server.csproj" Id="c3d4e5f6-a7b8-4901-c234-56789012cdef" />
+<Solution Description="Chat Application"
+  Version="1.0.0">
+
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Any CPU" />
+  </Configurations>
+
+  <Folder Name="/Source/">
+
+    <Project
+      Path="src/Chat.Contracts/Chat.Contracts.csproj"
+      DisplayName="Chat Contracts" />
+
+    <Project
+      Path="src/Chat.Server/Chat.Server.csproj"
+      DisplayName="Chat Server">
+
+      <BuildDependency Project="src/Chat.Contracts/Chat.Contracts.csproj" />
+
+    </Project>
+
+    <Project
+      Path="src/Chat.Client.Shared/Chat.Client.Shared.csproj"
+      DisplayName="Chat Client (Shared)">
+
+      <BuildDependency Project="src/Chat.Contracts/Chat.Contracts.csproj" />
+
+    </Project>
+
+    <Project
+      Path="src/Chat.Client.Duplex/Chat.Client.Duplex.csproj"
+      DisplayName="Chat Client (Duplex)">
+
+      <BuildDependency Project="src/Chat.Contracts/Chat.Contracts.csproj" />
+      <BuildDependency Project="src/Chat.Client.Shared/Chat.Client.Shared.csproj" />
+
+    </Project>
+
+    <Project
+      Path="src/Chat.Client.Polling/Chat.Client.Polling.csproj"
+      DisplayName="Chat Client (Polling)">
+
+      <BuildDependency Project="src/Chat.Contracts/Chat.Contracts.csproj" />
+
+    </Project>
+
+  </Folder>
+
+  <Folder Name="/Tests/">
+
+    <Project
+      Path="tests/Chat.Server.Tests/Chat.Server.Tests.csproj"
+      DisplayName="Chat Server Tests" />
+
+  </Folder>
+
 </Solution>

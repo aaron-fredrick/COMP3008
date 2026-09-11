@@ -1,5 +1,5 @@
 param(
-    [string]$Target = "COMP3008.sln",
+    [string]$Target = "COMP3008.slnx",
     [string]$Configuration = "Debug"
 )
 
@@ -10,11 +10,20 @@ if (-not $msbuildPath) {
     exit 1
 }
 
-# Accept either a .sln, a project name (Chat.Server -> Chat.Server\Chat.Server.csproj), or a direct path.
-if ($Target -match '\.(sln|csproj)$') {
+# Accept either a .sln/.csproj path, a bare project name, or the default solution.
+if ($Target -match '\.(sln|slnx|csproj)$') {
     $targetPath = $Target
 } else {
-    $targetPath = "$Target\$Target.csproj"
+    # Bare project name: look under src\ first, then tests\.
+    $srcPath = "src\$Target\$Target.csproj"
+    $testsPath = "tests\$Target\$Target.csproj"
+    if (Test-Path $srcPath) {
+        $targetPath = $srcPath
+    } elseif (Test-Path $testsPath) {
+        $targetPath = $testsPath
+    } else {
+        $targetPath = $srcPath  # let the existence check below produce a clear error
+    }
 }
 
 if (-not (Test-Path $targetPath)) {
