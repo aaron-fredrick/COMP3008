@@ -238,7 +238,7 @@ namespace Chat.Client.Polling
             });
         }
 
-        private void OnFileShareRequested(object sender, EventArgs e)
+        private async void OnFileShareRequested(object sender, EventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -263,7 +263,7 @@ namespace Chat.Client.Polling
 
             byte[] file_data = coordinator.ReadFile(file_path);
             FileType file_type = coordinator.DetermineFileType(file_name);
-            bool success = coordinator.ShareFile(file_name, file_type, file_data);
+            bool success = await System.Threading.Tasks.Task.Run(() => coordinator.ShareFile(file_name, file_type, file_data));
 
             if (!success)
                 return;
@@ -369,7 +369,7 @@ namespace Chat.Client.Polling
             view.ClearMessageInput();
         }
 
-        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        private async void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
             if (!(sender is PrivateMessageView view))
                 return;
@@ -386,7 +386,7 @@ namespace Chat.Client.Polling
                 return;
             }
 
-            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            var sharedFile = await System.Threading.Tasks.Task.Run(() => coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName)));
             if (sharedFile == null)
             {
                 MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
