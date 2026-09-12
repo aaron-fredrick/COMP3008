@@ -13,6 +13,7 @@ namespace Chat.Client.Polling.Views
         public event EventHandler<string> SendMessageRequested;
         public event EventHandler FileUploadRequested;
         public event EventHandler<SharedFile> FileDownloadRequested;
+        public event EventHandler<string> ExportChatRequested;
 
         public ObservableCollection<SharedFile> PendingFiles { get; } = new ObservableCollection<SharedFile>();
 
@@ -84,6 +85,22 @@ namespace Chat.Client.Polling.Views
         {
             FileUploadRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        private void ExportChatButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export DM Chat",
+                FileName = $"Chat with {RecipientId}",
+                DefaultExt = ".zip",
+                Filter = "ZIP archive|*.zip"
+            };
+
+            if (dialog.ShowDialog() == true)
+                ExportChatRequested?.Invoke(this, dialog.FileName);
+        }
+
+        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
 
         private void RefreshMessages()
         {

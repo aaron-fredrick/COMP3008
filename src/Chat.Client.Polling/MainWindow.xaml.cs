@@ -318,6 +318,7 @@ namespace Chat.Client.Polling
             view.SendMessageRequested += OnPrivateMessageSendRequested;
             view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
             view.FileDownloadRequested += OnPrivateMessageFileDownloadRequested;
+            view.ExportChatRequested += OnPrivateMessageExportChatRequested;
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipient_id] = view;
@@ -408,6 +409,23 @@ namespace Chat.Client.Polling
             var view = sender as PrivateMessageView;
             if (view != null)
                 _privateMessageViews.Remove(view.RecipientId);
+        }
+
+        private void OnPrivateMessageExportChatRequested(object sender, string zipFilePath)
+        {
+            var view = sender as PrivateMessageView;
+            if (view == null) return;
+            try
+            {
+                var messages = view.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void CloseAllPrivateMessageViews()
