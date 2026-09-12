@@ -1,6 +1,7 @@
 using System;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Contracts.CallbackContracts;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.ServiceContracts;
@@ -8,7 +9,8 @@ using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Integration
 {
-    internal static class DuplexDisconnectCleanupIntegrationSuite
+    [TestClass]
+    public class DuplexDisconnectCleanupIntegrationSuite
     {
         public static int Run(string pollingUrl, string duplexUrl)
         {
@@ -25,6 +27,10 @@ namespace Chat.Server.Tests.Integration
             catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); }
         }
 
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_AbnormalDisconnectCleanup() => AbnormalDisconnectCleanup(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
         private static void AbnormalDisconnectCleanup(string pollingUrl, string duplexUrl)
         {
             const string channel = "duplex_disconnect_cleanup";
@@ -36,7 +42,7 @@ namespace Chat.Server.Tests.Integration
             ChannelFactory<IChatService> setupFactory = CreatePollingFactory(pollingUrl);
             IChatService setup = setupFactory.CreateChannel();
             var callback = new TestCallback();
-            var duplexFactory = new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), new NetTcpBinding(), new EndpointAddress(duplexUrl));
+            var duplexFactory = new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), TestServerFixture.CreateDuplexBinding(), new EndpointAddress(duplexUrl));
             IDuplexChatService duplex = duplexFactory.CreateChannel();
 
             try

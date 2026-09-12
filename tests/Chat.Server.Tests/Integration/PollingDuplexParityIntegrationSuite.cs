@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Contracts.CallbackContracts;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.ServiceContracts;
@@ -10,7 +11,8 @@ using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Integration
 {
-    internal static class PollingDuplexParityIntegrationSuite
+    [TestClass]
+    public class PollingDuplexParityIntegrationSuite
     {
         public static int Run(string pollingUrl, string duplexUrl)
         {
@@ -22,6 +24,28 @@ namespace Chat.Server.Tests.Integration
             Console.WriteLine($"Polling/Duplex parity tests: {passed} passed, {failed} failed");
             return failed == 0 ? 0 : 1;
         }
+
+        private static void RunTest(string name, Action test, ref int passed, ref int failed)
+        {
+            try { test(); passed++; Console.WriteLine($"[PASS] {name}"); }
+            catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); }
+        }
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_PublicMessageParity() => PublicMessageParity(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_PrivateMessageParity() => PrivateMessageParity(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_ChannelFileParity() => ChannelFileParity(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_ChannelMembershipParity() => ChannelMembershipParity(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
 
         private static void PublicMessageParity(string pollingUrl, string duplexUrl)
         {
@@ -118,9 +142,8 @@ namespace Chat.Server.Tests.Integration
             finally { SignOut(p, pollUser); SignOut(p, duplexObserver); SignOut(d, duplexUser); Close(p, pf); Close(d, df); }
         }
 
-        private static void RunTest(string name, Action test, ref int passed, ref int failed) { try { test(); passed++; Console.WriteLine($"[PASS] {name}"); } catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); } }
         private static ChannelFactory<IChatService> PollingFactory(string url) => new ChannelFactory<IChatService>(new BasicHttpBinding(), new EndpointAddress(url));
-        private static DuplexChannelFactory<IDuplexChatService> DuplexFactory(string url, TestCallback callback) => new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), new NetTcpBinding(), new EndpointAddress(url));
+        private static DuplexChannelFactory<IDuplexChatService> DuplexFactory(string url, TestCallback callback) => new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), TestServerFixture.CreateDuplexBinding(), new EndpointAddress(url));
         private static void CreateChannel(IChatService client, string channel) { TestAssert.True(client.CreateChannel(channel), "Test channel creation failed: " + channel); }
         private static void Join(IChatService client, string user, string channel) { TestAssert.True(client.JoinChannel(user, channel), "Test join failed: " + channel); }
         private static void TriggerCallbackRegistration(IChatService client, string probeChannel, TestCallback callback) { CreateChannel(client, probeChannel); WaitUntil(() => callback.RegisteredSignal, 3000, "Duplex callback registration was not observed"); }

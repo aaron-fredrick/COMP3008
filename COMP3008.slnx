@@ -54,6 +54,10 @@
       Path="tests/Chat.Server.Tests/Chat.Server.Tests.csproj"
       DisplayName="Chat Server Tests" />
 
+    <Project
+      Path="tests/Chat.Client.Tests/Chat.Client.Tests.csproj"
+      DisplayName="Chat Client Tests" />
+
   </Folder>
 
 </Solution>

@@ -1,19 +1,24 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Server.StateManagement;
 using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Unit
 {
-    internal static class UserManagerTests
+    [TestClass]
+    public class UserManagerTests
     {
         public static void Run()
         {
-            SignInAndDuplicateId();
-            SignOutReleasesId();
-            ChannelStateIsTracked();
-            PrivateMessageQueueIsConsumedAtomically();
+            var suite = new UserManagerTests();
+            suite.SignInAndDuplicateId();
+            suite.SignOutReleasesId();
+            suite.ChannelStateIsTracked();
+            suite.PrivateMessageQueueIsConsumedAtomically();
         }
 
-        private static void SignInAndDuplicateId()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void SignInAndDuplicateId()
         {
             var manager = new UserManager();
             string reason;
@@ -22,7 +27,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.True(manager.IsUserSignedIn("unit-user"), "Signed-in user should exist");
         }
 
-        private static void SignOutReleasesId()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void SignOutReleasesId()
         {
             var manager = new UserManager();
             string reason;
@@ -32,7 +39,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.True(manager.TrySignIn("unit-reuse", out reason), "Signed-out ID should be reusable");
         }
 
-        private static void ChannelStateIsTracked()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void ChannelStateIsTracked()
         {
             var manager = new UserManager();
             string reason;
@@ -42,7 +51,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.True(manager.GetChannelMembers("general").Contains("unit-channel"), "Channel member lookup is incorrect");
         }
 
-        private static void PrivateMessageQueueIsConsumedAtomically()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void PrivateMessageQueueIsConsumedAtomically()
         {
             var manager = new UserManager();
             string reason;

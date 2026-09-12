@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Contracts.CallbackContracts;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.ServiceContracts;
@@ -10,7 +11,8 @@ using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Integration
 {
-    internal static class AuthorizationHardeningIntegrationSuite
+    [TestClass]
+    public class AuthorizationHardeningIntegrationSuite
     {
         public static int Run(string pollingUrl, string duplexUrl)
         {
@@ -30,6 +32,26 @@ namespace Chat.Server.Tests.Integration
             catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); }
         }
 
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_ChannelFileDownloadAuthorization() => ChannelFileDownloadAuthorization(TestServerFixture.PollingUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_PrivateMessageSameChannelAuthorization() => PrivateMessageSameChannelAuthorization(TestServerFixture.PollingUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_PrivateFileSameChannelAuthorization() => PrivateFileSameChannelAuthorization(TestServerFixture.PollingUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_PrivateFilePendingDelivery() => PrivateFilePendingDelivery(TestServerFixture.PollingUrl);
+
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_DuplexFileNotification() => DuplexFileNotification(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
         private static void ChannelFileDownloadAuthorization(string url)
         {
             var af = PollingFactory(url); var bf = PollingFactory(url); var nf = PollingFactory(url);
@@ -38,6 +60,7 @@ namespace Chat.Server.Tests.Integration
             try
             {
                 SignInClean(a, aid); SignInClean(b, bid); SignInClean(n, nid);
+                CreateChannel(a, channel);
                 TestAssert.True(a.JoinChannel(aid, channel), "Sender join failed");
                 TestAssert.True(b.JoinChannel(bid, channel), "Member join failed");
                 byte[] payload = { 7, 8, 9 };
@@ -126,8 +149,9 @@ namespace Chat.Server.Tests.Integration
         {
             var pf = PollingFactory(pollingUrl); var polling = pf.CreateChannel();
             var callback = new TestCallback();
-            var df = new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), new NetTcpBinding(), new EndpointAddress(duplexUrl));
-            var duplex = df.CreateChannel(); const string id = "duplex_file", channel = "duplex-file";
+            var df = new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), TestServerFixture.CreateDuplexBinding(), new EndpointAddress(duplexUrl));
+            var duplex = df.CreateChannel(); const string id = "duplex_file";
+            string channel = "duplex-file_" + Guid.NewGuid().ToString("N");
             try
             {
                 SignOut(polling, id);
@@ -135,6 +159,7 @@ namespace Chat.Server.Tests.Integration
                 CreateChannel(polling, channel);
                 TestAssert.True(polling.JoinChannel(id, channel), "Duplex file test join failed");
                 duplex.RegisterCallback(id);
+                System.Threading.Thread.Sleep(100); // Wait for OneWay RegisterCallback to process
                 TestAssert.True(polling.ShareFile(id, channel, "duplex.txt", FileType.Txt, new byte[] { 20, 21 }), "Duplex file share failed");
                 WaitUntil(() => callback.LastFile != null, 3000, "Duplex client did not receive file notification");
                 TestAssert.Equal("duplex.txt", callback.LastFile.FileName, "Duplex file notification contained the wrong filename");

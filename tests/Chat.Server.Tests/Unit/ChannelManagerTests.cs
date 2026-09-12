@@ -1,21 +1,26 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Contracts.DataContracts;
 using Chat.Server.StateManagement;
 using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Unit
 {
-    internal static class ChannelManagerTests
+    [TestClass]
+    public class ChannelManagerTests
     {
         public static void Run()
         {
-            CreateAndRejectDuplicateChannel();
-            MembershipIsIdempotent();
-            MessageHistoryExcludesSenderAndHonorsMembership();
-            MessageHistoryIsBounded();
+            var suite = new ChannelManagerTests();
+            suite.CreateAndRejectDuplicateChannel();
+            suite.MembershipIsIdempotent();
+            suite.MessageHistoryExcludesSenderAndHonorsMembership();
+            suite.MessageHistoryIsBounded();
         }
 
-        private static void CreateAndRejectDuplicateChannel()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void CreateAndRejectDuplicateChannel()
         {
             var manager = new ChannelManager();
             string reason;
@@ -23,7 +28,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.False(manager.TryCreateChannel("unit-channel", out reason), "Duplicate channel creation should fail");
         }
 
-        private static void MembershipIsIdempotent()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void MembershipIsIdempotent()
         {
             var manager = new ChannelManager();
             string reason;
@@ -36,7 +43,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.Equal(0, manager.GetChannelMembers("unit-members").Count, "Leave did not remove membership");
         }
 
-        private static void MessageHistoryExcludesSenderAndHonorsMembership()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void MessageHistoryExcludesSenderAndHonorsMembership()
         {
             var manager = new ChannelManager();
             string reason;
@@ -56,7 +65,9 @@ namespace Chat.Server.Tests.Unit
             TestAssert.Equal(0, manager.GetMessagesSince("unit-history", DateTime.MinValue, "outsider").Count, "Non-member should not receive channel history");
         }
 
-        private static void MessageHistoryIsBounded()
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void MessageHistoryIsBounded()
         {
             var manager = new ChannelManager(2);
             string reason;
