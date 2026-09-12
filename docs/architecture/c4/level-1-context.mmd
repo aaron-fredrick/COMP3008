@@ -1,0 +1,10 @@
+C4Context
+    title System Context Diagram for Distributed Chat System
+
+    Person(pollingUser, "Polling User", "Participant using HTTP polling client")
+    Person(duplexUser, "Duplex User", "Participant using NetTcp duplex push client")
+
+    System(chatSystem, "Distributed Chat Application", "Self-hosted WCF server managing in-memory sessions, channels, messages, and files")
+
+    Rel_D(pollingUser, chatSystem, "Polls updates & sends messages", "HTTP / BasicHttpBinding (Port 9000)")
+    Rel_D(duplexUser, chatSystem, "Pushes messages & receives callbacks", "NetTcp / NetTcpBinding (Port 8081)")

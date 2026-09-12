@@ -1,0 +1,36 @@
+C4Component
+    title Component Diagram — Chat.Client.Duplex
+
+    Container_Boundary(duplexBoundary, "Chat.Client.Duplex") {
+        Component(mainWindow, "MainWindow", "WPF Window", "Main shell coordinating view switching & event dispatch")
+
+        Component(signInView, "SignInView", "UserControl", "User ID input & sign-in")
+        Component(channelListView, "ChannelListView", "UserControl", "Channel list & creation")
+        Component(conversationView, "ConversationView", "UserControl", "Public messaging & live members")
+        Component(privateMessageView, "PrivateMessageView", "Window", "1-on-1 private messaging popup")
+
+        Component(serviceClient, "DuplexServiceClient", "WCF Duplex Proxy", "Manages DuplexChannelFactory & proxy state")
+        Component(callbackHandler, "ChatCallbackHandler", "IChatCallback", "Marshals incoming push events onto WPF UI Dispatcher")
+    }
+
+    Container_Ext(sharedLib, "Chat.Client.Shared", "Class Library", "ChatExportService, ThemeService, Custom Chrome")
+    Container_Ext(serverHost, "Chat.Server", "WCF Service", "NetTcpBinding Endpoint (Port 8081)")
+
+    Rel_D(mainWindow, signInView, "Displays on startup")
+    Rel_D(mainWindow, channelListView, "Switches to on sign-in")
+    Rel_D(mainWindow, conversationView, "Switches to on channel join")
+    Rel_R(conversationView, privateMessageView, "Opens 1-on-1 private chat")
+
+    Rel_D(signInView, serviceClient, "SignIn() & RegisterCallback()")
+    Rel_D(channelListView, serviceClient, "GetChannels(), CreateChannel(), JoinChannel()")
+    Rel_D(conversationView, serviceClient, "SendMessage(), ShareFile(), LeaveChannel()")
+    Rel_D(privateMessageView, serviceClient, "SendPrivateMessage()")
+
+    BiRel(serviceClient, serverHost, "Duplex TCP & Callbacks", "NetTcpBinding / 8081")
+    Rel_U(serverHost, callbackHandler, "Invokes IChatCallback", "WCF Callback")
+
+    Rel_U(callbackHandler, serviceClient, "Raises .NET events on UI Dispatcher")
+    Rel_U(serviceClient, conversationView, "Dispatches messages & member updates")
+    Rel_U(serviceClient, channelListView, "Dispatches channel updates")
+
+    Rel_R(conversationView, sharedLib, "Uses export, themes & helpers")

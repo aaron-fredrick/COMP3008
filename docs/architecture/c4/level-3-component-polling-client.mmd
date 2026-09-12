@@ -1,0 +1,34 @@
+C4Component
+    title Component Diagram — Chat.Client.Polling
+
+    Container_Boundary(pollingBoundary, "Chat.Client.Polling") {
+        Component(mainWindow, "MainWindow", "WPF Window", "Main shell coordinating view switching & custom chrome")
+
+        Component(signInView, "SignInView", "UserControl", "User ID validation & sign-in")
+        Component(channelListView, "ChannelListView", "UserControl", "Channel browsing, creation & join")
+        Component(conversationView, "ConversationView", "UserControl", "Public messaging, file sharing & members")
+        Component(privateMessageView, "PrivateMessageView", "Window", "1-on-1 private messaging popup")
+
+        Component(serviceClient, "ChatServiceClient", "WCF Client Proxy", "Thread-safe ChannelFactory wrapper executing IChatService")
+        Component(pollingCoordinator, "Polling Coordinator", "DispatcherTimer", "Background periodic timer querying server updates")
+    }
+
+    Container_Ext(sharedLib, "Chat.Client.Shared", "Class Library", "ChatExportService, ThemeService, FileHelperService")
+    Container_Ext(serverHost, "Chat.Server", "WCF Service", "BasicHttpBinding Endpoint (Port 9000)")
+
+    Rel_D(mainWindow, signInView, "Displays on startup")
+    Rel_D(mainWindow, channelListView, "Switches to on sign-in")
+    Rel_D(mainWindow, conversationView, "Switches to on channel join")
+    Rel_R(conversationView, privateMessageView, "Opens 1-on-1 private chat")
+
+    Rel_D(signInView, serviceClient, "SignIn()")
+    Rel_D(channelListView, serviceClient, "GetChannels(), CreateChannel(), JoinChannel()")
+    Rel_D(conversationView, serviceClient, "SendMessage(), ShareFile(), LeaveChannel()")
+    Rel_D(privateMessageView, serviceClient, "SendPrivateMessage()")
+
+    Rel_L(pollingCoordinator, serviceClient, "Polls pending messages & lists")
+    Rel_U(pollingCoordinator, conversationView, "Pushes polled updates")
+    Rel_U(pollingCoordinator, channelListView, "Pushes polled updates")
+
+    Rel_D(serviceClient, serverHost, "HTTP Requests", "BasicHttpBinding / 9000")
+    Rel_R(conversationView, sharedLib, "Uses export, themes & helpers")
