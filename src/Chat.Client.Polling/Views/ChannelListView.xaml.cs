@@ -29,7 +29,6 @@ namespace Chat.Client.Polling.Views
         public void SetServiceClient(ChatServiceClient serviceClient)
         {
             _serviceClient = serviceClient;
-            LoadChannels();
         }
 
         public void UpdateChannels(System.Collections.Generic.List<Channel> channels)
@@ -49,15 +48,6 @@ namespace Chat.Client.Polling.Views
             {
                 ChannelsGrid.ItemsSource = channels;
                 ChannelsList.ItemsSource = channels;
-            }
-        }
-
-        private void LoadChannels()
-        {
-            if (_serviceClient != null)
-            {
-                var channels = _serviceClient.GetChannels();
-                UpdateChannels(channels);
             }
         }
 

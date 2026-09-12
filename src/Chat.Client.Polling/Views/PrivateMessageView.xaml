@@ -141,21 +141,44 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock
-                                                FontSize="13"
-                                                Foreground="{StaticResource MessageTextOtherBrush}"
-                                                Text="{Binding Content}"
-                                                TextWrapping="Wrap">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
-                                                                <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                            <StackPanel>
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Foreground="{StaticResource MessageTextOtherBrush}"
+                                                    Text="{Binding Content}"
+                                                    TextWrapping="Wrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCurrentUser}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource MessageTextOwnBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <Border
+                                                    Visibility="{Binding Type, Converter={StaticResource FileTypeVisibilityConverter}}"
+                                                    Margin="0,8,0,0"
+                                                    Padding="10,12"
+                                                    CornerRadius="10"
+                                                    BorderBrush="{StaticResource LightBorderBrush}"
+                                                    BorderThickness="1"
+                                                    Background="{StaticResource BackgroundBrush}"
+                                                    MinWidth="220"
+                                                    Cursor="Hand"
+                                                    MouseLeftButtonUp="FileMessage_MouseLeftButtonUp">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource FileIconBackgroundBrush}" Margin="0,0,10,0">
+                                                            <TextBlock Text="{Binding Type, Converter={StaticResource MessageTypeToFileTypeConverter}}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AvatarTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                        <StackPanel VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Content, Converter={StaticResource FileNameExtractorConverter}}" FontWeight="650" FontSize="12" Foreground="{StaticResource ForegroundBrush}" />
+                                                            <TextBlock Text="Shared file" FontSize="10" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
                                         </Border>
                                     </StackPanel>
                                 </Grid>

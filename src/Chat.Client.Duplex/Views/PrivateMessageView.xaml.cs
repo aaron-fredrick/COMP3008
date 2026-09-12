@@ -81,6 +81,15 @@ namespace Chat.Client.Duplex.Views
             if (file != null && file.FileId != Guid.Empty) FileDownloadRequested?.Invoke(this, file);
         }
 
+        private void FileMessage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is Chat.Client.Shared.ViewModels.MessageViewModel viewModel &&
+                viewModel.Message.FileId.HasValue)
+            {
+                FileDownloadRequested?.Invoke(this, new SharedFile { FileId = viewModel.Message.FileId.Value, FileName = viewModel.Content.Replace("Shared file: ", string.Empty) });
+            }
+        }
+
         private void UploadFileButton_Click(object sender, RoutedEventArgs e)
         {
             FileUploadRequested?.Invoke(this, EventArgs.Empty);

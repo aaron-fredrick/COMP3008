@@ -218,6 +218,17 @@ namespace Chat.Server.Services
             if (!_fileHandler.StorePrivateFile(senderId, recipientId, fileName, fileType, fileData, out string reason, out SharedFile storedFile))
             { ServerLogger.Warning(clientType, "PRIVATE FILE", $"Share failed: {reason}"); return null; }
             var metadata = ToFileMetadata(storedFile);
+            var fileMessage = new ContractMessage
+            {
+                SenderId = senderId,
+                Content = $"Shared file: {fileName}",
+                Timestamp = DateTime.UtcNow,
+                Type = MessageType.File,
+                ChannelName = null,
+                RecipientId = recipientId,
+                FileId = storedFile.FileId
+            };
+            _messageRouter.RoutePrivateMessage(fileMessage, true, out string _);
             _userManager.AddPendingPrivateFile(recipientId, metadata);
             _callbackManager.NotifyPrivateFileShared(recipientId, metadata);
             ServerLogger.Success(clientType, "PRIVATE FILE", $"{senderId} shared {fileName} with {recipientId}");
