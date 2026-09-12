@@ -33,6 +33,7 @@ namespace Chat.Client.Polling.Services
         private string _currentUserId;
         private string _currentChannel;
         private bool _isPolling;
+        private bool _isChannelListPolling;
         private bool _isDisposed;
         public string CurrentUserId => _currentUserId;
         public string CurrentChannel => _currentChannel;
@@ -65,6 +66,7 @@ namespace Chat.Client.Polling.Services
 
         public void SignOut()
         {
+            StopChannelListPolling();
             StopPolling();
             if (_serviceClient == null) return;
             try
@@ -89,6 +91,7 @@ namespace Chat.Client.Polling.Services
             bool success = _serviceClient.JoinChannel(_currentUserId, channelName);
             if (success)
             {
+                StopChannelListPolling();
                 _currentChannel = channelName;
                 StartPolling();
             }
@@ -106,8 +109,7 @@ namespace Chat.Client.Polling.Services
 
         public void RefreshChannels()
         {
-            var channels = _serviceClient.GetChannels();
-            RaiseOnUiThread(ChannelsUpdated, channels);
+            StartChannelListPolling();
         }
 
         public void RefreshChannelMembers()
@@ -168,19 +170,48 @@ namespace Chat.Client.Polling.Services
         private void StartPolling()
         {
             if (_isDisposed || !IsSignedIn || string.IsNullOrEmpty(_currentChannel)) return;
+            _isChannelListPolling = false;
             _pollingTimer.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(_pollingIntervalMs));
         }
 
         private void StopPolling() => _pollingTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
+        public void StartChannelListPolling()
+        {
+            if (_isDisposed || !IsSignedIn || !string.IsNullOrEmpty(_currentChannel)) return;
+            _isChannelListPolling = true;
+            _pollingTimer.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(_pollingIntervalMs));
+        }
+
+        public void StopChannelListPolling()
+        {
+            _isChannelListPolling = false;
+            if (string.IsNullOrEmpty(_currentChannel))
+                _pollingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
         private void OnPollingTimerElapsed(object state)
         {
+            bool pollChannelList;
             lock (_pollingLock)
             {
-                if (_isPolling || !IsSignedIn || string.IsNullOrEmpty(_currentChannel) || _isDisposed) return;
+                if (_isPolling || !IsSignedIn || _isDisposed) return;
+                pollChannelList = _isChannelListPolling;
+                if (pollChannelList != string.IsNullOrEmpty(_currentChannel)) return;
                 _isPolling = true;
             }
-            try { PollOnce(); }
+            try
+            {
+                if (pollChannelList)
+                {
+                    var channels = _serviceClient.GetChannels();
+                    RaiseOnUiThread(ChannelsUpdated, channels);
+                }
+                else
+                {
+                    PollOnce();
+                }
+            }
             catch (System.ServiceModel.CommunicationException) { RaiseConnectionState(ConnectionState.Disconnected); }
             catch (TimeoutException) { RaiseConnectionState(ConnectionState.Disconnected); }
             finally { lock (_pollingLock) { _isPolling = false; } }
@@ -271,6 +302,7 @@ namespace Chat.Client.Polling.Services
         public void Dispose()
         {
             if (_isDisposed) return;
+            StopChannelListPolling();
             StopPolling();
             _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
             if (IsSignedIn) SignOut();

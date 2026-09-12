@@ -146,17 +146,20 @@ namespace Chat.Client.Polling
 
         private void ShowChannelListView()
         {
+            var coordinator = PollingSessionCoordinator.Instance;
             _channelListView = new ChannelListView();
             _channelListView.SetServiceClient(_serviceClient);
             _channelListView.JoinChannelRequested += OnJoinChannelRequested;
             _channelListView.CreateChannelRequested += OnCreateChannelRequested;
             _channelListView.SignOutRequested += OnSignOutRequested;
             MainContent.Content = _channelListView;
+            coordinator.StartChannelListPolling();
         }
 
         private void ShowConversationView(string channel_name)
         {
             var coordinator = PollingSessionCoordinator.Instance;
+            coordinator.StopChannelListPolling();
             
             _conversationView = new ConversationView();
             _conversationView.SetChannelName(channel_name);
