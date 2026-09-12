@@ -1,0 +1,33 @@
+C4Component
+    title Component Diagram — Chat.Server
+
+    Container_Ext(pollingClient, "Chat.Client.Polling", "WPF Client", "HTTP Polling")
+    Container_Ext(duplexClient, "Chat.Client.Duplex", "WPF Client", "NetTcp Duplex")
+
+    Container_Boundary(serverBoundary, "Chat.Server") {
+        Component(chatHost, "ChatServiceHost", "ServiceHost", "Configures & hosts WCF endpoints (HTTP:9000 / TCP:8081)")
+        Component(chatService, "ChatService", "WCF Service", "Central facade implementing IChatService and IDuplexChatService")
+
+        Component(userManager, "UserManager", "State Manager", "Active sessions, username uniqueness & pending queues")
+        Component(channelManager, "ChannelManager", "State Manager", "Channel registry, memberships & bounded message history")
+        Component(messageRouter, "MessageRouter", "Routing Engine", "Routes public/private messages with co-channel checks")
+        Component(callbackManager, "CallbackManager", "Duplex Engine", "Thread-safe callback registry & dead-client detection")
+        Component(fileHandler, "FileHandler", "File Engine", "In-memory file storage & size/type validation")
+        Component(serverLogger, "ServerLogger", "Diagnostics", "Structured colored console logging")
+    }
+
+    Rel_D(pollingClient, chatHost, "Calls IChatService", "BasicHttpBinding / 9000")
+    BiRel(duplexClient, chatHost, "Duplex TCP & Callbacks", "NetTcpBinding / 8081")
+
+    Rel_D(chatHost, chatService, "Instantiates & routes calls")
+
+    Rel_D(chatService, userManager, "Sessions & sign-in/out")
+    Rel_D(chatService, channelManager, "Channels & members")
+    Rel_D(chatService, messageRouter, "Message dispatch")
+    Rel_D(chatService, callbackManager, "Callback lifecycle")
+    Rel_D(chatService, fileHandler, "File transfer operations")
+    Rel_R(chatService, serverLogger, "Logs operations")
+
+    Rel_D(messageRouter, userManager, "Validates sender/recipient")
+    Rel_D(messageRouter, channelManager, "Verifies channel membership")
+    Rel_D(messageRouter, callbackManager, "Dispatches duplex events")

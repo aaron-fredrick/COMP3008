@@ -1,0 +1,86 @@
+classDiagram
+    direction TB
+
+    class IChatService {
+        <<interface>>
+        +SignIn(userId: string) bool
+        +SignOut(userId: string) void
+        +GetChannels() List~Channel~
+        +CreateChannel(channelName: string) bool
+        +JoinChannel(userId: string, channelName: string) bool
+        +LeaveChannel(userId: string) void
+        +GetChannelMembers(channelName: string) List~string~
+        +SendMessage(senderId: string, channelName: string, content: string) void
+        +SendPrivateMessage(senderId: string, recipientId: string, content: string) bool
+        +GetPendingMessages(userId: string) List~Message~
+        +GetPendingPrivateMessages(userId: string) List~Message~
+        +ShareFile(...) bool
+        +GetFile(...) SharedFile
+    }
+
+    class IDuplexChatService {
+        <<interface>>
+        +RegisterCallback(userId: string) void
+        +UnregisterCallback(userId: string) void
+    }
+
+    class IChatCallback {
+        <<interface>>
+        +OnMessageReceived(message: Message) void
+        +OnPrivateMessageReceived(message: Message) void
+        +OnFileShared(file: SharedFile) void
+        +OnPrivateFileShared(file: SharedFile) void
+        +OnChannelListChanged() void
+        +OnChannelMembersChanged(channelName: string) void
+        +OnUserDisconnected(userId: string) void
+    }
+
+    class ChatService {
+        -UserManager _userManager
+        -ChannelManager _channelManager
+        -MessageRouter _messageRouter
+        -CallbackManager _callbackManager
+        -FileHandler _fileHandler
+    }
+
+    class UserManager {
+        -Dictionary~string, User~ _users
+        -Dictionary~string, Queue~ _pendingPublic
+        -Dictionary~string, Queue~ _pendingPrivate
+        +TrySignIn(userId: string) bool
+        +SignOut(userId: string) void
+    }
+
+    class ChannelManager {
+        -Dictionary~string, Channel~ _channels
+        -int _maxMessages
+        +CreateChannel(name: string) bool
+        +JoinChannel(userId: string, channel: string) bool
+        +LeaveChannel(userId: string) void
+    }
+
+    class MessageRouter {
+        +RoutePublicMessage(...) bool
+        +RoutePrivateMessage(...) bool
+    }
+
+    class CallbackManager {
+        -Dictionary~string, IChatCallback~ _callbacks
+        +RegisterCallback(userId: string, callback: IChatCallback) void
+        +NotifyChannelMessage(channel: string, msg: Message) void
+    }
+
+    class FileHandler {
+        -Dictionary~Guid, SharedFile~ _files
+        +StoreFile(...) SharedFile
+        +GetFile(...) SharedFile
+    }
+
+    IChatService <|.. ChatService
+    IDuplexChatService <|-- IChatService
+    ChatService *-- UserManager
+    ChatService *-- ChannelManager
+    ChatService *-- MessageRouter
+    ChatService *-- CallbackManager
+    ChatService *-- FileHandler
+    CallbackManager ..> IChatCallback : pushes

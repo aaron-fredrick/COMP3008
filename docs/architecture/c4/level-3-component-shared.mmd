@@ -1,0 +1,22 @@
+C4Component
+    title Component Diagram — Chat.Client.Shared & Chat.Contracts
+
+    Container_Boundary(sharedBoundary, "Chat.Client.Shared") {
+        Component(chatExportService, "ChatExportService", "ZIP Exporter", "Generates transcript.txt & bundles media into .zip")
+        Component(themeService, "ThemeService", "Theme Manager", "Runtime Dark/Light ResourceDictionary switcher")
+        Component(configService, "ConfigurationService", "Settings", "Reads and updates application endpoints")
+        Component(endpointDialog, "EndpointSettingsDialog", "WPF Dialog", "UI window to configure server URLs")
+        Component(fileHelper, "FileHelperService", "File Utility", "MIME validation & system shell execution")
+        Component(customControls, "Custom UI Controls", "WPF Controls", "CustomTitleBar (8-way resize) & ApplicationFooter")
+        Component(viewModels, "ViewModels & Converters", "MVVM", "MessageViewModel, Ribbon SVG Avatar Converters")
+    }
+
+    Container_Boundary(contractsBoundary, "Chat.Contracts") {
+        Component(iChatService, "IChatService", "WCF Interface", "Service contract for HTTP polling")
+        Component(iDuplexChatService, "IDuplexChatService", "WCF Interface", "Service contract for NetTcp duplex")
+        Component(iChatCallback, "IChatCallback", "Callback Interface", "Push callback contract")
+        Component(dataContracts, "Data Contracts", "DTOs", "User, Channel, Message, SharedFile, Enums")
+    }
+
+    Rel_D(iDuplexChatService, iChatService, "Inherits")
+    Rel_D(sharedBoundary, contractsBoundary, "References DTOs")

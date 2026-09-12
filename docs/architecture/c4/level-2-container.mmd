@@ -1,0 +1,26 @@
+C4Container
+    title Container Diagram for Distributed Chat System
+
+    Person(userA, "User A (Polling)", "User running Polling WPF Client")
+    Person(userB, "User B (Duplex)", "User running Duplex WPF Client")
+
+    Container(pollingApp, "Chat.Client.Polling", "WPF, .NET 4.8", "Periodically polls server for messages and state changes")
+    Container(duplexApp, "Chat.Client.Duplex", "WPF, .NET 4.8", "Receives instant server push events via duplex callbacks")
+
+    Container(sharedLib, "Chat.Client.Shared", "C# Class Library", "Shared UI controls, theme engine, converters, and ZIP export service")
+    Container(contractsLib, "Chat.Contracts", "C# Class Library", "WCF ServiceContracts, CallbackContracts, and DataContracts")
+
+    Container(serverApp, "Chat.Server", "WCF Console App, .NET 4.8", "Self-hosted server holding authoritative in-memory state")
+
+    Rel_D(userA, pollingApp, "Interacts with UI", "WPF GUI")
+    Rel_D(userB, duplexApp, "Interacts with UI", "WPF GUI")
+
+    Rel_D(pollingApp, sharedLib, "References UI & services", "In-Process")
+    Rel_D(duplexApp, sharedLib, "References UI & services", "In-Process")
+
+    Rel_D(sharedLib, contractsLib, "References DTOs & contracts", "In-Process")
+
+    Rel_D(pollingApp, serverApp, "Polls updates & executes commands", "BasicHttpBinding / HTTP (9000)")
+    BiRel(duplexApp, serverApp, "Registers callbacks & receives events", "NetTcpBinding / TCP (8081)")
+
+    Rel_U(serverApp, contractsLib, "Implements service contracts", "In-Process")
