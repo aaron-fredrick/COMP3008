@@ -76,25 +76,40 @@ namespace Chat.Server.StateManagement
 
         public bool RoutePrivateMessage(string senderId, string recipientId, string content, out string reason)
         {
+            var message = new Message
+            {
+                SenderId = senderId,
+                Content = content,
+                Timestamp = DateTime.UtcNow,
+                Type = MessageType.Private,
+                ChannelName = null,
+                RecipientId = recipientId
+            };
+
+            return RoutePrivateMessage(message, false, out reason);
+        }
+
+        public bool RoutePrivateMessage(Message message, bool includeSender, out string reason)
+        {
             _lock.EnterWriteLock();
             try
             {
                 reason = null;
 
-                if (!_userManager.IsUserSignedIn(senderId))
+                if (!_userManager.IsUserSignedIn(message.SenderId))
                 {
                     reason = "Sender is not signed in.";
                     return false;
                 }
 
-                if (!_userManager.IsUserSignedIn(recipientId))
+                if (!_userManager.IsUserSignedIn(message.RecipientId))
                 {
                     reason = "Recipient is not signed in.";
                     return false;
                 }
 
-                var senderSession = _userManager.GetUserSession(senderId);
-                var recipientSession = _userManager.GetUserSession(recipientId);
+                var senderSession = _userManager.GetUserSession(message.SenderId);
+                var recipientSession = _userManager.GetUserSession(message.RecipientId);
 
                 if (senderSession.CurrentChannel == null || recipientSession.CurrentChannel == null)
                 {
@@ -108,18 +123,14 @@ namespace Chat.Server.StateManagement
                     return false;
                 }
 
-                var message = new Message
-                {
-                    SenderId = senderId,
-                    Content = content,
-                    Timestamp = DateTime.UtcNow,
-                    Type = MessageType.Private,
-                    ChannelName = null,
-                    RecipientId = recipientId
-                };
+                _userManager.AddPendingPrivateMessage(message.RecipientId, message);
+                _callbackManager.NotifyPrivateMessageReceived(message.RecipientId, message);
 
-                _userManager.AddPendingPrivateMessage(recipientId, message);
-                _callbackManager.NotifyPrivateMessageReceived(recipientId, message);
+                if (includeSender)
+                {
+                    _userManager.AddPendingPrivateMessage(message.SenderId, message);
+                    _callbackManager.NotifyPrivateMessageReceived(message.SenderId, message);
+                }
 
                 return true;
             }

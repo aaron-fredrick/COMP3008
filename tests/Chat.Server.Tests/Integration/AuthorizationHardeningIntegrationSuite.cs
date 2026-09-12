@@ -138,6 +138,16 @@ namespace Chat.Server.Tests.Integration
                 TestAssert.True(o.JoinChannel(oid, channel), "Pending-file other user join failed");
                 var file = s.SharePrivateFile(sid, rid, "pending.txt", FileType.Txt, new byte[] { 10, 11 });
                 TestAssert.True(file != null, "Private file setup failed");
+                var recipientMessages = r.GetPendingPrivateMessages(rid);
+                TestAssert.True(recipientMessages.Any(message =>
+                    message.Type == MessageType.File &&
+                    message.FileId == file.FileId &&
+                    message.RecipientId == rid), "Recipient did not receive the private file message");
+                var senderMessages = s.GetPendingPrivateMessages(sid);
+                TestAssert.True(senderMessages.Any(message =>
+                    message.Type == MessageType.File &&
+                    message.FileId == file.FileId &&
+                    message.RecipientId == rid), "Sender did not receive the private file message");
                 var pending = r.GetPendingPrivateFiles(rid);
                 TestAssert.True(pending.Any(f => f.FileId == file.FileId && f.FileData == null), "Recipient did not receive metadata-only pending private file notification");
                 TestAssert.False(o.GetPendingPrivateFiles(oid).Any(f => f.FileId == file.FileId), "Unrelated user received the private file notification");
