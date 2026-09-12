@@ -1,42 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net48</TargetFramework>
     <RootNamespace>Chat.Server.Tests</RootNamespace>
     <AssemblyName>Chat.Server.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget><DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize><OutputPath>bin\Debug\</OutputPath><DefineConstants>DEBUG;TRACE</DefineConstants><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget><DebugType>pdbonly</DebugType><Optimize>true</Optimize><OutputPath>bin\Release\</OutputPath><DefineConstants>TRACE</DefineConstants><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" /><Reference Include="System.Core" /><Reference Include="Microsoft.CSharp" /><Reference Include="System.Data" /><Reference Include="System.Xml" /><Reference Include="System.Configuration" /><Reference Include="System.ServiceModel" /><Reference Include="System.Runtime.Serialization" />
+    <!-- Program.cs contains the legacy console runner; excluded so MSTest can load this as a Library -->
+    <Compile Remove="Program.cs" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="TestInfrastructure\TestAssert.cs" />
-    <Compile Include="Integration\DeterministicIntegrationSuite.cs" />
-    <Compile Include="Integration\AuthorizationHardeningIntegrationSuite.cs" />
-    <Compile Include="Integration\PollingDuplexParityIntegrationSuite.cs" />
-    <Compile Include="Integration\DuplexDisconnectCleanupIntegrationSuite.cs" />
-    <Compile Include="Integration\DuplexCallbackLifecycleIntegrationSuite.cs" />
-    <Compile Include="Unit\UserManagerTests.cs" />
-    <Compile Include="Unit\ChannelManagerTests.cs" />
-    <Compile Include="Unit\FileStorageTests.cs" />
-    <None Include="App.config" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Chat.Contracts\Chat.Contracts.csproj"><Project>{A1B2C3D4-E5F6-4789-A012-34567890ABCD}</Project><Name>Chat.Contracts</Name></ProjectReference>
-    <ProjectReference Include="..\..\src\Chat.Server\Chat.Server.csproj"><Project>{C3D4E5F6-A7B8-4901-C234-56789012CDEF}</Project><Name>Chat.Server</Name></ProjectReference>
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Chat.Contracts\Chat.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Chat.Server\Chat.Server.csproj" />
+  </ItemGroup>
 </Project>

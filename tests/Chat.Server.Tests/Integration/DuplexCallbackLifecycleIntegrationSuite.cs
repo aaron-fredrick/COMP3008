@@ -1,6 +1,7 @@
 using System;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Chat.Contracts.CallbackContracts;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.ServiceContracts;
@@ -8,7 +9,8 @@ using Chat.Server.Tests.TestInfrastructure;
 
 namespace Chat.Server.Tests.Integration
 {
-    internal static class DuplexCallbackLifecycleIntegrationSuite
+    [TestClass]
+    public class DuplexCallbackLifecycleIntegrationSuite
     {
         public static int Run(string pollingUrl, string duplexUrl)
         {
@@ -25,13 +27,17 @@ namespace Chat.Server.Tests.Integration
             catch (Exception ex) { failed++; Console.WriteLine($"[FAIL] {name}: {ex.Message}"); }
         }
 
+        [TestMethod]
+        [TestCategory("Integration")]
+        public void Test_StaleCallbackCannotCleanReplacementSession() => StaleCallbackCannotCleanReplacementSession(TestServerFixture.PollingUrl, TestServerFixture.DuplexUrl);
+
         private static void StaleCallbackCannotCleanReplacementSession(string pollingUrl, string duplexUrl)
         {
             const string userId = "duplex_callback_race_user";
             const string adminId = "duplex_callback_race_admin";
             const string channel = "duplex_callback_race_channel";
-            const string probeChannel = "duplex_callback_race_probe";
-            const string replacementProbeChannel = "duplex_callback_race_replacement_probe";
+            string probeChannel = "duplex_callback_race_probe_" + Guid.NewGuid().ToString("N");
+            string replacementProbeChannel = "duplex_callback_race_replacement_probe_" + Guid.NewGuid().ToString("N");
 
             ChannelFactory<IChatService> adminFactory = CreatePollingFactory(pollingUrl);
             IChatService admin = adminFactory.CreateChannel();
@@ -93,7 +99,7 @@ namespace Chat.Server.Tests.Integration
 
         private static DuplexChannelFactory<IDuplexChatService> CreateDuplexFactory(IChatCallback callback, string url)
         {
-            return new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), new NetTcpBinding(), new EndpointAddress(url));
+            return new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), TestServerFixture.CreateDuplexBinding(), new EndpointAddress(url));
         }
 
         private static ChannelFactory<IChatService> CreatePollingFactory(string url) => new ChannelFactory<IChatService>(new BasicHttpBinding(), new EndpointAddress(url));
