@@ -223,7 +223,7 @@ namespace Chat.Client.Duplex
             });
         }
 
-        private void OnFileShareRequested(object sender, EventArgs e)
+        private async void OnFileShareRequested(object sender, EventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -249,7 +249,7 @@ namespace Chat.Client.Duplex
             FileType fileType = coordinator.DetermineFileType(fileName);
 
             // Duplex: file-shared notification arrives via callback — no manual refresh needed.
-            coordinator.ShareFile(fileName, fileType, fileData);
+            await System.Threading.Tasks.Task.Run(() => coordinator.ShareFile(fileName, fileType, fileData));
         }
 
         private void OnExportChatRequested(object sender, string zipFilePath)
@@ -335,7 +335,7 @@ namespace Chat.Client.Duplex
             view.ClearMessageInput();
         }
 
-        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        private async void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
             if (!(sender is PrivateMessageView view))
                 return;
@@ -352,7 +352,7 @@ namespace Chat.Client.Duplex
                 return;
             }
 
-            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            var sharedFile = await System.Threading.Tasks.Task.Run(() => coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName)));
             if (sharedFile == null)
             {
                 MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);

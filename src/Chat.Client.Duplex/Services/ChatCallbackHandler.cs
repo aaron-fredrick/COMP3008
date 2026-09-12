@@ -6,6 +6,7 @@ using Chat.Contracts.DataContracts;
 
 namespace Chat.Client.Duplex.Services
 {
+    [CallbackBehavior(UseSynchronizationContext = false, ConcurrencyMode = ConcurrencyMode.Multiple)]
     public class ChatCallbackHandler : IChatCallback
     {
         private readonly Dispatcher _dispatcher;

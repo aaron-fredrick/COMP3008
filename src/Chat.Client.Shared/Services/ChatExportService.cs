@@ -16,51 +16,54 @@ namespace Chat.Client.Shared.Services
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create))
             {
                 var usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var transcriptBuilder = new StringBuilder();
 
-                // Create the transcript text file
+                foreach (var message in messages)
+                {
+                    string timestamp = message.Timestamp.ToLocalTime().ToString("dd/MM/yyyy, HH:mm");
+                    string senderId = message.SenderId;
+                    string content = message.Content;
+
+                    bool isFile = message.Type == MessageType.File || message.FileId.HasValue;
+                    if (isFile)
+                    {
+                        transcriptBuilder.AppendLine($"{timestamp} - {senderId}: <File omitted>");
+
+                        if (message.FileId.HasValue)
+                        {
+                            string originalFileName = !string.IsNullOrEmpty(content) && content.StartsWith("Shared file: ")
+                                ? content.Substring("Shared file: ".Length)
+                                : $"file_{message.FileId.Value}.dat";
+
+                            // Safely handle file name to prevent path traversal
+                            originalFileName = Path.GetFileName(originalFileName);
+
+                            string uniqueFileName = GetUniqueFileName(originalFileName, usedFileNames);
+                            usedFileNames.Add(uniqueFileName);
+
+                            byte[] fileBytes = downloadFileBytes(message.FileId.Value);
+                            if (fileBytes != null)
+                            {
+                                var fileEntry = archive.CreateEntry(uniqueFileName);
+                                using (var fileEntryStream = fileEntry.Open())
+                                {
+                                    fileEntryStream.Write(fileBytes, 0, fileBytes.Length);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        transcriptBuilder.AppendLine($"{timestamp} - {senderId}: {content}");
+                    }
+                }
+
+                // Create the transcript text file last
                 var txtEntry = archive.CreateEntry($"{channelName} channel chat.txt");
                 using (var entryStream = txtEntry.Open())
                 using (var writer = new StreamWriter(entryStream, Encoding.UTF8))
                 {
-                    foreach (var message in messages)
-                    {
-                        string timestamp = message.Timestamp.ToLocalTime().ToString("dd/MM/yyyy, HH:mm");
-                        string senderId = message.SenderId;
-                        string content = message.Content;
-
-                        bool isFile = message.Type == MessageType.File || message.FileId.HasValue;
-                        if (isFile)
-                        {
-                            writer.WriteLine($"{timestamp} - {senderId}: <File omitted>");
-
-                            if (message.FileId.HasValue)
-                            {
-                                string originalFileName = !string.IsNullOrEmpty(content) && content.StartsWith("Shared file: ")
-                                    ? content.Substring("Shared file: ".Length)
-                                    : $"file_{message.FileId.Value}.dat";
-
-                                // Safely handle file name to prevent path traversal
-                                originalFileName = Path.GetFileName(originalFileName);
-
-                                string uniqueFileName = GetUniqueFileName(originalFileName, usedFileNames);
-                                usedFileNames.Add(uniqueFileName);
-
-                                byte[] fileBytes = downloadFileBytes(message.FileId.Value);
-                                if (fileBytes != null)
-                                {
-                                    var fileEntry = archive.CreateEntry(uniqueFileName);
-                                    using (var fileEntryStream = fileEntry.Open())
-                                    {
-                                        fileEntryStream.Write(fileBytes, 0, fileBytes.Length);
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            writer.WriteLine($"{timestamp} - {senderId}: {content}");
-                        }
-                    }
+                    writer.Write(transcriptBuilder.ToString());
                 }
             }
         }
