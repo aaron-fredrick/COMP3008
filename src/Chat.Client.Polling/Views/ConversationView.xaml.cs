@@ -15,6 +15,9 @@ namespace Chat.Client.Polling.Views
         public event EventHandler<Message> FileMessageDownloadRequested;
         public event EventHandler<string> PrivateMessageRequested;
         public event EventHandler FileShareRequested;
+        public event EventHandler<string> ExportChatRequested;
+
+        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
         private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
@@ -165,27 +168,14 @@ namespace Chat.Client.Polling.Views
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
                 Title = "Export Chat",
-                Filter = "Text file (*.txt)|*.txt",
-                FileName = $"chat-{ChannelNameText.Text}-{DateTime.Now:yyyyMMdd-HHmm}.txt"
+                Filter = "ZIP Archive (*.zip)|*.zip",
+                FileName = $"{ChannelNameText.Text} channel chat.zip"
             };
 
-            if (dialog.ShowDialog() != true)
-                return;
-
-            var lines = new System.Text.StringBuilder();
-            lines.AppendLine($"Chat export — #{ChannelNameText.Text}");
-            lines.AppendLine($"Exported on {DateTime.Now:yyyy-MM-dd HH:mm}");
-            lines.AppendLine(new string('─', 48));
-            lines.AppendLine();
-
-            foreach (var message in _messages)
+            if (dialog.ShowDialog() == true)
             {
-                string timestamp = message.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-                lines.AppendLine($"[{timestamp}] {message.SenderId}: {message.Content}");
+                ExportChatRequested?.Invoke(this, dialog.FileName);
             }
-
-            System.IO.File.WriteAllText(dialog.FileName, lines.ToString(), System.Text.Encoding.UTF8);
-            MessageBox.Show($"Chat exported to:\n{dialog.FileName}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

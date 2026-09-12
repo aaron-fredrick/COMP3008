@@ -167,6 +167,7 @@ namespace Chat.Client.Polling
             _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
+            _conversationView.ExportChatRequested += OnExportChatRequested;
 
             coordinator.RefreshChannelMembers();
             coordinator.RefreshChannelFiles();
@@ -280,6 +281,22 @@ namespace Chat.Client.Polling
             };
             _conversationView?.AddMessage(file_message);
         }
+
+        private void OnExportChatRequested(object sender, string zipFilePath)
+        {
+            try
+            {
+                var messages = _conversationView.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, PollingSessionCoordinator.Instance.CurrentChannel, messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void OnPrivateMessageRequested(object sender, string recipient_id)
         {

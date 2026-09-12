@@ -171,6 +171,7 @@ namespace Chat.Client.Duplex
             _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
+            _conversationView.ExportChatRequested += OnExportChatRequested;
 
             MainContent.Content = _conversationView;
             _ = coordinator.RefreshChannelMembersAsync();
@@ -250,6 +251,22 @@ namespace Chat.Client.Duplex
             // Duplex: file-shared notification arrives via callback — no manual refresh needed.
             coordinator.ShareFile(fileName, fileType, fileData);
         }
+
+        private void OnExportChatRequested(object sender, string zipFilePath)
+        {
+            try
+            {
+                var messages = _conversationView.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, DuplexSessionCoordinator.Instance.CurrentChannel, messages, fileId => DuplexSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void OnPrivateMessageRequested(object sender, string recipientId)
         {

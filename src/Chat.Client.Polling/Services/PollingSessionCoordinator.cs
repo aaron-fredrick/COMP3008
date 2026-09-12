@@ -159,6 +159,12 @@ namespace Chat.Client.Polling.Services
             return true;
         }
 
+        public byte[] DownloadFileBytes(Guid fileId)
+        {
+            var downloadedFile = _serviceClient.GetFile(_currentUserId, fileId);
+            return downloadedFile?.FileData;
+        }
+
         private void StartPolling()
         {
             if (_isDisposed || !IsSignedIn || string.IsNullOrEmpty(_currentChannel)) return;
