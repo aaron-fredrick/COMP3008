@@ -34,12 +34,10 @@ C4Container
 
     Rel_D(pollingApp, sharedLib, "References UI & services", "In-Process")
     Rel_D(duplexApp, sharedLib, "References UI & services", "In-Process")
-
     Rel_D(sharedLib, contractsLib, "References DTOs & contracts", "In-Process")
 
     Rel_D(pollingApp, serverApp, "Polls updates & executes commands", "BasicHttpBinding / HTTP (9000)")
     BiRel(duplexApp, serverApp, "Registers callbacks & receives events", "NetTcpBinding / TCP (8081)")
-
     Rel_U(serverApp, contractsLib, "Implements service contracts", "In-Process")
 ```
 
@@ -108,7 +106,7 @@ All raw C4 architecture diagram files are located in [`docs/architecture/c4/`](d
 
 | Feature | Category | Status | Summary | Locations |
 |---|:---|:---:|---|---|
-| **Chat Export (.ZIP)** | Export / UX | ✅ Complete | Exports conversation transcript (`transcript.txt`) and media files to `.zip`. | `ChatExportService.cs` |
+| **Chat Export (.ZIP)** | Export / UX | ✅ Complete | Exports the channel transcript as `<channel name> channel chat.txt` and bundles available attached files into `<channel name> channel chat.zip`. | `ChatExportService.cs` |
 | **Dynamic Endpoint Settings** | Configuration | ✅ Complete | Runtime UI dialog to update server URLs without app restart. | `EndpointSettingsDialog.xaml`<br>`ConfigurationService.cs` |
 | **Theme Switching** | UI / Styling | ✅ Complete | Runtime toggle between Dark and Light mode themes. | `ThemeService.cs`<br>`Styles/` |
 | **Custom Window Chrome** | UI / Windows | ✅ Complete | Frameless window with custom title bar and 8-direction mouse resizing. | `CustomTitleBar.xaml`<br>`WindowResizer.cs` |
@@ -116,7 +114,7 @@ All raw C4 architecture diagram files are located in [`docs/architecture/c4/`](d
 | **Message Grouping** | UI / Chat | ✅ Complete | Groups consecutive messages from the same sender to reduce header clutter. | `MessageViewModel.cs` |
 | **Bounded Message Queue** | Server / Perf | ✅ Complete | Configurable message buffer (`--max-messages`) with eviction logging. | `ChannelManager.cs` |
 | **Color Console Logging** | Server / Logs | ✅ Complete | Tagged, timestamped, color-coded server activity and error logging. | `ServerLogger.cs` |
-| **Structured Test Suite & CI** | Testing / QA | ✅ Complete | 3 unit test suites, 5 integration suites, and automated PowerShell CI runner. | `Chat.Server.Tests/`<br>`run-integration-tests.ps1` |
+| **MSTest Test Suite & CI** | Testing / QA | ✅ Complete | Server unit/integration coverage and client-side unit/smoke coverage using MSTest; GitHub Actions runs the solution build and test commands. | `tests/`<br>`.github/workflows/ci.yml` |
 | **UI Converters & Attached Props** | UI / Helpers | ✅ Complete | File size formatters, initials converters, and rounded corner attached properties. | `Converters/`<br>`ControlHelper.cs` |
 
 ---
@@ -125,7 +123,7 @@ All raw C4 architecture diagram files are located in [`docs/architecture/c4/`](d
 
 ```text
 COMP3008/
-├── COMP3008.slnx                 # Solution file (with .slnf filters)
+├── COMP3008.slnx                 # Solution file
 ├── src/
 │   ├── Chat.Contracts/           # WCF service, callback, and data contracts
 │   ├── Chat.Server/              # Self-hosted WCF server & state management
@@ -133,12 +131,21 @@ COMP3008/
 │   ├── Chat.Client.Polling/      # WPF client using periodic HTTP polling
 │   └── Chat.Client.Duplex/       # WPF client using real-time NetTcp duplex callbacks
 ├── tests/
-│   └── Chat.Server.Tests/        # Unit and integration test suites
-├── scripts/                      # Convenience launchers (.ps1 / .bat) & CI test runner
+│   ├── Chat.Server.Tests/        # Server unit and WCF integration tests
+│   └── Chat.Client.Tests/        # Shared-client unit, export, view-model and smoke tests
+├── scripts/                      # Convenience launchers (.ps1 / .bat)
 └── docs/                         # Assignment specs, lab guides, and C4 architecture diagrams (.mmd)
     └── architecture/
         └── c4/                   # Raw .mmd C4 diagrams (Levels 1 to 4)
 ```
+
+### Test organisation
+
+The test suite uses **MSTest**. Test projects are separated by application boundary rather than by test type:
+
+- `Chat.Server.Tests` contains server unit tests plus WCF/in-process integration coverage for polling and duplex behaviour.
+- `Chat.Client.Tests` contains client-side unit, export, view-model, converter, and smoke coverage.
+- Test categories and fixtures live within the relevant test project; additional folders should only be introduced when they contain a meaningful test grouping.
 
 ---
 
@@ -155,19 +162,24 @@ COMP3008/
 
 ### Prerequisites
 - Windows 10 / 11
-- .NET Framework 4.8 SDK / Developer Pack
-- Visual Studio 2019/2022 or MSBuild / `dotnet` CLI
+- .NET Framework 4.8 Developer Pack / targeting pack
+- Visual Studio with .NET desktop/WPF tooling, or a compatible MSBuild installation
+- .NET SDK 8, 9, or 10 for the current GitHub Actions build/test workflow
 
 ### Building
-```powershell
-# Build using dotnet CLI
-dotnet build COMP3008.slnx -c Debug
 
-# Or build using MSBuild
+The repository contains legacy .NET Framework 4.8/WPF projects. Visual Studio/MSBuild is the recommended local build path, particularly when building the WPF projects. GitHub Actions currently uses the `dotnet` CLI against the solution.
+
+```powershell
+# Build the solution with the configured CLI workflow
+dotnet build COMP3008.slnx --configuration Debug
+
+# Or build with MSBuild / Visual Studio tooling
 msbuild COMP3008.slnx /p:Configuration=Release
 ```
 
 ### Running
+
 ```powershell
 # Start Server
 .\scripts\run_server_debug.ps1
@@ -184,10 +196,34 @@ msbuild COMP3008.slnx /p:Configuration=Release
 
 ## 🧪 Testing
 
+The repository uses **MSTest** and the current CI workflow builds and tests the solution directly with the .NET CLI.
+
 ```powershell
-# Run automated CI test suite (launches server, runs all unit & integration tests)
-powershell -ExecutionPolicy Bypass -File .\scripts\ci\run-integration-tests.ps1
+# Build the solution
+dotnet build COMP3008.slnx --configuration Debug
+
+# Run all tests
+dotnet test COMP3008.slnx --configuration Debug
+
+# Run a specific test project
+dotnet test tests\Chat.Server.Tests\Chat.Server.Tests.csproj --configuration Debug
+dotnet test tests\Chat.Client.Tests\Chat.Client.Tests.csproj --configuration Debug
 ```
+
+For test discovery/debugging, the generated test assembly can also be run directly with VSTest after the project has been built:
+
+```powershell
+vstest.console.exe tests\Chat.Server.Tests\bin\Debug\Chat.Server.Tests.dll
+```
+
+### CI
+
+GitHub Actions runs on `windows-latest` against .NET SDK **8.0**, **9.0**, and **10.0**. Each matrix job performs:
+
+1. `dotnet build COMP3008.slnx --configuration Debug`
+2. `dotnet test COMP3008.slnx --configuration Debug`
+
+The former custom `scripts/ci/run-integration-tests.ps1` server-launching test runner has been removed; integration coverage is now part of the MSTest projects themselves.
 
 ---
 
