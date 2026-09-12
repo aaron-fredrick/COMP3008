@@ -49,7 +49,6 @@ namespace Chat.Client.Duplex
 
         private void InitializeFooter()
         {
-            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
             AppFooter.SignOutClicked += (s, e) => SignOut();
             AppFooter.IsLoggedIn = false;
             AppFooter.ConnectionStatus = ConnectionState.Disconnected;
@@ -155,8 +154,8 @@ namespace Chat.Client.Duplex
             _channelListView.CreateChannelRequested += OnCreateChannelRequested;
             _channelListView.SignOutRequested += OnSignOutRequested;
 
-            coordinator.RefreshChannels();
             MainContent.Content = _channelListView;
+            _ = coordinator.RefreshChannelsAsync();
         }
 
         private void ShowConversationView(string channelName)
@@ -172,10 +171,11 @@ namespace Chat.Client.Duplex
             _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
+            _conversationView.ExportChatRequested += OnExportChatRequested;
 
-            coordinator.RefreshChannelMembers();
-            coordinator.RefreshChannelFiles();
             MainContent.Content = _conversationView;
+            _ = coordinator.RefreshChannelMembersAsync();
+            _ = coordinator.RefreshChannelFilesAsync();
         }
 
         // ── Channel list event handlers ────────────────────────────────────────
@@ -201,9 +201,9 @@ namespace Chat.Client.Duplex
         private void OnSendMessageRequested(object sender, string content) =>
             DuplexSessionCoordinator.Instance.SendPublicMessage(content);
 
-        private void OnLeaveChannelRequested(object sender, EventArgs e)
+        private async void OnLeaveChannelRequested(object sender, EventArgs e)
         {
-            DuplexSessionCoordinator.Instance.LeaveChannel();
+            await DuplexSessionCoordinator.Instance.LeaveChannelAsync();
             CloseAllPrivateMessageViews();
             ShowChannelListView();
         }
@@ -223,7 +223,7 @@ namespace Chat.Client.Duplex
             });
         }
 
-        private void OnFileShareRequested(object sender, EventArgs e)
+        private async void OnFileShareRequested(object sender, EventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -249,8 +249,24 @@ namespace Chat.Client.Duplex
             FileType fileType = coordinator.DetermineFileType(fileName);
 
             // Duplex: file-shared notification arrives via callback — no manual refresh needed.
-            coordinator.ShareFile(fileName, fileType, fileData);
+            await System.Threading.Tasks.Task.Run(() => coordinator.ShareFile(fileName, fileType, fileData));
         }
+
+        private void OnExportChatRequested(object sender, string zipFilePath)
+        {
+            try
+            {
+                var messages = _conversationView.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, DuplexSessionCoordinator.Instance.CurrentChannel, messages, fileId => DuplexSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void OnPrivateMessageRequested(object sender, string recipientId)
         {
@@ -272,6 +288,7 @@ namespace Chat.Client.Duplex
             view.SendMessageRequested += OnPrivateMessageSendRequested;
             view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
             view.FileDownloadRequested += OnPrivateMessageFileDownloadRequested;
+            view.ExportChatRequested += OnPrivateMessageExportChatRequested;
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipientId] = view;
@@ -319,7 +336,7 @@ namespace Chat.Client.Duplex
             view.ClearMessageInput();
         }
 
-        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        private async void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
             if (!(sender is PrivateMessageView view))
                 return;
@@ -336,7 +353,7 @@ namespace Chat.Client.Duplex
                 return;
             }
 
-            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            var sharedFile = await System.Threading.Tasks.Task.Run(() => coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName)));
             if (sharedFile == null)
             {
                 MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -358,6 +375,23 @@ namespace Chat.Client.Duplex
             var view = sender as PrivateMessageView;
             if (view != null)
                 _privateMessageViews.Remove(view.RecipientId);
+        }
+
+        private void OnPrivateMessageExportChatRequested(object sender, string zipFilePath)
+        {
+            var view = sender as PrivateMessageView;
+            if (view == null) return;
+            try
+            {
+                var messages = view.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => DuplexSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void ClosePrivateMessageView(string recipientId)
@@ -400,9 +434,6 @@ namespace Chat.Client.Duplex
         }
 
         // ── Footer ────────────────────────────────────────────────────────────
-
-        private void AppFooter_SettingsClicked(object sender, EventArgs e) =>
-            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
 
         // ── Window lifecycle ──────────────────────────────────────────────────
 

@@ -50,7 +50,6 @@ namespace Chat.Client.Polling
 
         private void InitializeFooter()
         {
-            AppFooter.SettingsClicked += AppFooter_SettingsClicked;
             AppFooter.SignOutClicked += (s, e) => SignOut();
             AppFooter.IsLoggedIn = false;
             AppFooter.ConnectionStatus = ConnectionState.Disconnected;
@@ -168,6 +167,7 @@ namespace Chat.Client.Polling
             _conversationView.FileMessageDownloadRequested += OnFileMessageDownloadRequested;
             _conversationView.PrivateMessageRequested += OnPrivateMessageRequested;
             _conversationView.FileShareRequested += OnFileShareRequested;
+            _conversationView.ExportChatRequested += OnExportChatRequested;
 
             coordinator.RefreshChannelMembers();
             coordinator.RefreshChannelFiles();
@@ -238,7 +238,7 @@ namespace Chat.Client.Polling
             });
         }
 
-        private void OnFileShareRequested(object sender, EventArgs e)
+        private async void OnFileShareRequested(object sender, EventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -263,7 +263,7 @@ namespace Chat.Client.Polling
 
             byte[] file_data = coordinator.ReadFile(file_path);
             FileType file_type = coordinator.DetermineFileType(file_name);
-            bool success = coordinator.ShareFile(file_name, file_type, file_data);
+            bool success = await System.Threading.Tasks.Task.Run(() => coordinator.ShareFile(file_name, file_type, file_data));
 
             if (!success)
                 return;
@@ -281,6 +281,22 @@ namespace Chat.Client.Polling
             };
             _conversationView?.AddMessage(file_message);
         }
+
+        private void OnExportChatRequested(object sender, string zipFilePath)
+        {
+            try
+            {
+                var messages = _conversationView.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, PollingSessionCoordinator.Instance.CurrentChannel, messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void OnPrivateMessageRequested(object sender, string recipient_id)
         {
@@ -302,6 +318,7 @@ namespace Chat.Client.Polling
             view.SendMessageRequested += OnPrivateMessageSendRequested;
             view.FileUploadRequested += OnPrivateMessageFileUploadRequested;
             view.FileDownloadRequested += OnPrivateMessageFileDownloadRequested;
+            view.ExportChatRequested += OnPrivateMessageExportChatRequested;
             view.Closing += OnPrivateMessageViewClosing;
             view.Owner = this;
             _privateMessageViews[recipient_id] = view;
@@ -353,7 +370,7 @@ namespace Chat.Client.Polling
             view.ClearMessageInput();
         }
 
-        private void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
+        private async void OnPrivateMessageFileUploadRequested(object sender, EventArgs e)
         {
             if (!(sender is PrivateMessageView view))
                 return;
@@ -370,7 +387,7 @@ namespace Chat.Client.Polling
                 return;
             }
 
-            var sharedFile = coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName));
+            var sharedFile = await System.Threading.Tasks.Task.Run(() => coordinator.SharePrivateFile(view.RecipientId, coordinator.GetFileName(dialog.FileName), coordinator.DetermineFileType(dialog.FileName), coordinator.ReadFile(dialog.FileName)));
             if (sharedFile == null)
             {
                 MessageBox.Show("The private file could not be shared. Both users must be in the same channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -392,6 +409,23 @@ namespace Chat.Client.Polling
             var view = sender as PrivateMessageView;
             if (view != null)
                 _privateMessageViews.Remove(view.RecipientId);
+        }
+
+        private void OnPrivateMessageExportChatRequested(object sender, string zipFilePath)
+        {
+            var view = sender as PrivateMessageView;
+            if (view == null) return;
+            try
+            {
+                var messages = view.GetMessages();
+                var exportService = new Chat.Client.Shared.Services.ChatExportService();
+                exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
+                MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export chat: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void CloseAllPrivateMessageViews()
@@ -429,9 +463,6 @@ namespace Chat.Client.Polling
         }
 
         // ── Footer ────────────────────────────────────────────────────────────
-
-        private void AppFooter_SettingsClicked(object sender, EventArgs e) =>
-            MessageBox.Show("Settings view will be implemented in a future task.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
 
         // ── Window lifecycle ──────────────────────────────────────────────────
 

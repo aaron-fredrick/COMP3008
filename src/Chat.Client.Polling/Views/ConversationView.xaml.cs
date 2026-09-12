@@ -15,6 +15,9 @@ namespace Chat.Client.Polling.Views
         public event EventHandler<Message> FileMessageDownloadRequested;
         public event EventHandler<string> PrivateMessageRequested;
         public event EventHandler FileShareRequested;
+        public event EventHandler<string> ExportChatRequested;
+
+        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
         private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
@@ -152,6 +155,27 @@ namespace Chat.Client.Polling.Views
         private void ShareFileButton_Click(object sender, RoutedEventArgs e)
         {
             FileShareRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void ExportChatButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_messages.Count == 0)
+            {
+                MessageBox.Show("There are no messages to export.", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export Chat",
+                Filter = "ZIP Archive (*.zip)|*.zip",
+                FileName = $"{ChannelNameText.Text} channel chat.zip"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                ExportChatRequested?.Invoke(this, dialog.FileName);
+            }
         }
     }
 }

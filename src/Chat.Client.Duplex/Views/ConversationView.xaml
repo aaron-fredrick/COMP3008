@@ -70,6 +70,10 @@
                         Background="Transparent" BorderThickness="0"
                         Foreground="{StaticResource ForegroundBrush}"
                         HorizontalAlignment="Left" Padding="8" Click="LeaveButton_Click"/>
+                <Button x:Name="ExportChatButton" Content="↓ Export chat"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{StaticResource ForegroundBrush}"
+                        HorizontalAlignment="Left" Padding="8" Margin="0,2,0,0" Click="ExportChatButton_Click"/>
             </StackPanel>
         </Border>
 
@@ -124,7 +128,7 @@
             <ListBox x:Name="MessagesListBox" Grid.Row="1"
                      Background="{StaticResource BackgroundBrush}"
                      Foreground="{StaticResource ForegroundBrush}"
-                     BorderThickness="0" Padding="22,24"
+                     BorderThickness="0" Padding="22,24,22,4"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -321,42 +325,52 @@
         <!-- ═══ Right Sidebar — Shared Files ═══ -->
         <Border Grid.Column="2" Background="{StaticResource SidebarBackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
-            <StackPanel Margin="20,14">
-                <TextBlock Text="Shared Files" FontSize="14" FontWeight="Bold"
+            <Grid Margin="20,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Shared Files" FontSize="14" FontWeight="Bold"
                            Foreground="{StaticResource ForegroundBrush}" Margin="0,8,0,18"/>
-                <Grid>
+                <Grid Grid.Row="1">
                     <TextBlock x:Name="NoFilesText" Text="No shared files yet" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"
                                HorizontalAlignment="Center" Margin="0,20,0,0" Visibility="Collapsed"/>
                     <ListBox x:Name="FilesListBox" Background="{StaticResource SidebarBackgroundBrush}"
                              Foreground="{StaticResource ForegroundBrush}" BorderThickness="0"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              MouseDoubleClick="FilesListBox_MouseDoubleClick">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Margin="8" Background="Transparent">
-                                    <Border Width="34" Height="34" CornerRadius="8"
+                                <Grid Margin="8" Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="8"
                                             Background="{StaticResource FileIconBackgroundBrush}" Margin="0,0,10,0">
                                         <TextBlock Text="{Binding FileType, Converter={StaticResource FileTypeConverter}}"
                                                    FontSize="12" FontWeight="Bold"
                                                    Foreground="{StaticResource AvatarTextBrush}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
-                                    <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding FileName}" FontWeight="650" FontSize="12"
-                                                   Foreground="{StaticResource ForegroundBrush}"/>
+                                                   Foreground="{StaticResource ForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
                                         <TextBlock FontSize="10" Foreground="{StaticResource SecondaryTextBrush}"
-                                                   Margin="0,2,0,0">
+                                                   Margin="0,2,0,0" TextTrimming="CharacterEllipsis">
                                             <Run Text="{Binding UploaderId}"/>
                                             <Run Text=" · "/>
                                             <Run Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"/>
                                         </TextBlock>
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </Grid>
-            </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
