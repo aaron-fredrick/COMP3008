@@ -23,6 +23,11 @@ namespace Chat.Client.Duplex.Views
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
         private readonly System.Collections.Generic.List<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
 
+        private const double TextBoxMinHeight = 36.0;
+        private const double LineHeight = 18.0;
+        private const double MaxLines = 8.0;
+        private const double TextBoxMaxHeight = TextBoxMinHeight + (LineHeight * (MaxLines - 1));
+
         public static readonly DependencyProperty CurrentUserIdProperty =
             DependencyProperty.Register("CurrentUserId", typeof(string), typeof(ConversationView),
                 new PropertyMetadata(string.Empty));
@@ -117,6 +122,14 @@ namespace Chat.Client.Duplex.Views
         {
             if (e.Key == Key.Enter && !e.IsRepeat)
             {
+                if (Keyboard.Modifiers == ModifierKeys.Shift)
+                {
+                    int caretIndex = MessageTextBox.CaretIndex;
+                    MessageTextBox.Text = MessageTextBox.Text.Insert(caretIndex, Environment.NewLine);
+                    MessageTextBox.CaretIndex = caretIndex + Environment.NewLine.Length;
+                    e.Handled = true;
+                    return;
+                }
                 e.Handled = true;
                 SendCurrentMessage();
             }
@@ -129,6 +142,7 @@ namespace Chat.Client.Duplex.Views
             {
                 SendMessageRequested?.Invoke(this, message);
                 MessageTextBox.Clear();
+                ResetTextBoxHeight();
             }
         }
 
@@ -182,6 +196,38 @@ namespace Chat.Client.Duplex.Views
             {
                 ExportChatRequested?.Invoke(this, dialog.FileName);
             }
+        }
+
+        private void MessageTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateTextBoxHeight();
+        }
+
+        private void UpdateTextBoxHeight()
+        {
+            int lineCount = MessageTextBox.LineCount;
+            double desiredHeight = TextBoxMinHeight + (LineHeight * (lineCount - 1));
+            double clampedHeight = Math.Min(desiredHeight, TextBoxMaxHeight);
+            MessageTextBoxBorder.Height = clampedHeight;
+            
+            // Center text for single-line, top-align for multiline with padding
+            if (lineCount > 1)
+            {
+                MessageTextBox.VerticalContentAlignment = VerticalAlignment.Top;
+                MessageTextBox.Padding = new Thickness(11, 8, 11, 8);
+            }
+            else
+            {
+                MessageTextBox.VerticalContentAlignment = VerticalAlignment.Center;
+                MessageTextBox.Padding = new Thickness(11, 0, 11, 0);
+            }
+        }
+
+        private void ResetTextBoxHeight()
+        {
+            MessageTextBoxBorder.Height = TextBoxMinHeight;
+            MessageTextBox.VerticalContentAlignment = VerticalAlignment.Center;
+            MessageTextBox.Padding = new Thickness(11, 0, 11, 0);
         }
     }
 }

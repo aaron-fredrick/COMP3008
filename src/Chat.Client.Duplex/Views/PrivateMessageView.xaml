@@ -151,14 +151,26 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox
-                                x:Name="MessageTextBox"
+                            <Border
+                                x:Name="MessageTextBoxBorder"
                                 Grid.Column="0"
-                                Padding="11"
+                                MinHeight="36"
                                 Background="{StaticResource BackgroundBrush}"
                                 BorderBrush="{StaticResource InputBorderBrush}"
-                                Foreground="{StaticResource ForegroundBrush}"
-                                KeyDown="MessageTextBox_KeyDown" />
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <TextBox
+                                    x:Name="MessageTextBox"
+                                    Padding="11"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    FontSize="13"
+                                    Foreground="{StaticResource ForegroundBrush}"
+                                    TextWrapping="Wrap"
+                                    VerticalScrollBarVisibility="Auto"
+                                    KeyDown="MessageTextBox_KeyDown"
+                                    TextChanged="MessageTextBox_TextChanged" />
+                            </Border>
                             <Button
                                 Grid.Column="1"
                                 Margin="9,0,0,0"
