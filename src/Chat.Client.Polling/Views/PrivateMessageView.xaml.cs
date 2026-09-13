@@ -40,7 +40,7 @@ namespace Chat.Client.Polling.Views
         private const double TextBoxMinHeight = 36.0;
         private const double LineHeight = 18.0;
         private const double MaxLines = 8.0;
-        private const double TextBoxMaxHeight = TextBoxMinHeight + (LineHeight * (MaxLines - 1));
+        private const double MultilineVerticalPadding = 16.0;
 
         public PrivateMessageView(string recipientId)
         {
@@ -176,28 +176,37 @@ namespace Chat.Client.Polling.Views
         private void UpdateTextBoxHeight()
         {
             int lineCount = MessageTextBox.LineCount;
-            double desiredHeight = TextBoxMinHeight + (LineHeight * (lineCount - 1));
-            double clampedHeight = Math.Min(desiredHeight, TextBoxMaxHeight);
-            MessageTextBoxBorder.Height = clampedHeight;
+            double desiredHeight;
             
-            // Center text for single-line, top-align for multiline with padding
             if (lineCount > 1)
             {
+                desiredHeight = MultilineVerticalPadding + (LineHeight * lineCount) + GetBorderVerticalThickness();
                 MessageTextBox.VerticalContentAlignment = VerticalAlignment.Top;
-                MessageTextBox.Padding = new Thickness(11, 8, 11, 8);
+                MessageTextBox.Padding = new Thickness(11, 0, 11, 0);
+                MessageTextBox.Margin = new Thickness(0, 8, 0, 8);
             }
             else
             {
+                desiredHeight = TextBoxMinHeight;
                 MessageTextBox.VerticalContentAlignment = VerticalAlignment.Center;
                 MessageTextBox.Padding = new Thickness(11, 0, 11, 0);
+                MessageTextBox.Margin = new Thickness(0);
             }
+
+            double maximumHeight = MultilineVerticalPadding + (LineHeight * MaxLines) + GetBorderVerticalThickness();
+            double clampedHeight = Math.Min(desiredHeight, maximumHeight);
+            MessageTextBoxBorder.Height = clampedHeight;
         }
+
+        private double GetBorderVerticalThickness() =>
+            MessageTextBoxBorder.BorderThickness.Top + MessageTextBoxBorder.BorderThickness.Bottom;
 
         private void ResetTextBoxHeight()
         {
             MessageTextBoxBorder.Height = TextBoxMinHeight;
             MessageTextBox.VerticalContentAlignment = VerticalAlignment.Center;
             MessageTextBox.Padding = new Thickness(11, 0, 11, 0);
+            MessageTextBox.Margin = new Thickness(0);
         }
     }
 }
