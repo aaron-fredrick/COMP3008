@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ServiceModel;
 using System.Windows.Threading;
 using Chat.Contracts.CallbackContracts;
@@ -20,19 +21,19 @@ namespace Chat.Client.Duplex.Services
 
         // TODO: Before production release, verify WPF Dispatcher responsiveness during a deliberately slow WCF operation.
         // This is a deferred verification task; do not add artificial production delays for this check.
-        public void OnChannelListChanged()
+        public void OnChannelListChanged(List<Channel> channels)
         {
             _dispatcher.BeginInvoke(new Action(() =>
             {
-                _serviceClient.OnChannelListChangedInternal();
+                _serviceClient.OnChannelListChangedInternal(channels);
             }));
         }
 
-        public void OnChannelMembersChanged(string channelName)
+        public void OnChannelMembersChanged(string channelName, List<string> members)
         {
             _dispatcher.BeginInvoke(new Action(() =>
             {
-                _serviceClient.OnChannelMembersChangedInternal(channelName);
+                _serviceClient.OnChannelMembersChangedInternal(channelName, members);
             }));
         }
 

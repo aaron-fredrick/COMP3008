@@ -129,7 +129,9 @@
                      Background="{StaticResource BackgroundBrush}"
                      Foreground="{StaticResource ForegroundBrush}"
                      BorderThickness="0" Padding="22,24,22,4"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.CanContentScroll="False"
+                     ScrollViewer.ScrollChanged="MessagesListBox_ScrollChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -304,13 +306,14 @@
                             helpers:ControlHelper.CornerRadius="9" Margin="0,0,9,0"/>
 
                     <!-- Message text box -->
-                    <Border Grid.Column="1" Height="36" Background="{StaticResource BackgroundBrush}"
+                    <Border x:Name="MessageTextBoxBorder" Grid.Column="1" MinHeight="36" Background="{StaticResource BackgroundBrush}"
                             BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1" CornerRadius="10">
                         <TextBox x:Name="MessageTextBox" FontSize="13" Padding="11,0"
                                  Background="Transparent" Foreground="{StaticResource ForegroundBrush}"
                                  BorderThickness="0" CaretBrush="{StaticResource ForegroundBrush}"
                                  VerticalContentAlignment="Center"
-                                 KeyDown="MessageTextBox_KeyDown"/>
+                                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 KeyDown="MessageTextBox_KeyDown" TextChanged="MessageTextBox_TextChanged"/>
                     </Border>
 
                     <!-- Send button -->

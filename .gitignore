@@ -123,6 +123,8 @@ Thumbs.db
 # Educational materials
 #docs/lecs/
 #docs/labs/
+docs/labs/*.pdf
+docs/lecs/*.pdf
 
 # Agentic tool configs & rules
 .agents/

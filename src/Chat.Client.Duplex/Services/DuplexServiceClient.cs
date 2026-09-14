@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.ServiceModel;
 using System.Windows.Threading;
@@ -12,7 +13,7 @@ namespace Chat.Client.Duplex.Services
     {
         private DuplexChannelFactory<IDuplexChatService> _channelFactory; private IDuplexChatService _proxy; private IChatCallback _callback; private InstanceContext _instanceContext; private string _serverUrl; private Dispatcher _dispatcher; private bool _isConnected;
         public bool IsConnected => _isConnected;
-        public event EventHandler<Message> MessageReceived; public event EventHandler<Message> PrivateMessageReceived; public event EventHandler<SharedFile> FileShared; public event EventHandler<SharedFile> PrivateFileShared; public event EventHandler ChannelListChanged; public event EventHandler<string> ChannelMembersChanged; public event EventHandler<string> UserDisconnected; public event EventHandler ConnectionLost;
+        public event EventHandler<Message> MessageReceived; public event EventHandler<Message> PrivateMessageReceived; public event EventHandler<SharedFile> FileShared; public event EventHandler<SharedFile> PrivateFileShared; public event EventHandler<List<Channel>> ChannelListChanged; public event EventHandler<(string ChannelName, List<string> Members)> ChannelMembersChanged; public event EventHandler<string> UserDisconnected; public event EventHandler ConnectionLost;
         public DuplexServiceClient(Dispatcher dispatcher) { _dispatcher = dispatcher; _serverUrl = ConfigurationManager.AppSettings["DuplexServerUrl"] ?? "net.tcp://localhost:9001/ChatService/Duplex"; Initialize(); }
         public DuplexServiceClient(string serverUrl, Dispatcher dispatcher) { _dispatcher = dispatcher; _serverUrl = serverUrl; Initialize(); }
         private void Initialize()
@@ -36,6 +37,6 @@ namespace Chat.Client.Duplex.Services
         public string Ping(string userId, byte[] hash) { try { return _proxy.Ping(userId, hash); } catch (Exception ex) { HandleError(ex); return null; } }
         private void HandleError(Exception ex) { System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}"); if (_isConnected) { _isConnected = false; _dispatcher.BeginInvoke(new Action(() => ConnectionLost?.Invoke(this, EventArgs.Empty))); } }
         public void Dispose() { if (_proxy != null) { var channel = _proxy as ICommunicationObject; if (channel != null && channel.State == CommunicationState.Opened) channel.Close(); } if (_channelFactory != null) _channelFactory.Close(); if (_instanceContext != null) _instanceContext.Close(); }
-        internal void OnMessageReceivedInternal(Message message) { MessageReceived?.Invoke(this, message); } internal void OnPrivateMessageReceivedInternal(Message message) { PrivateMessageReceived?.Invoke(this, message); } internal void OnFileSharedInternal(SharedFile file) { FileShared?.Invoke(this, file); } internal void OnPrivateFileSharedInternal(SharedFile file) { PrivateFileShared?.Invoke(this, file); } internal void OnChannelListChangedInternal() { ChannelListChanged?.Invoke(this, EventArgs.Empty); } internal void OnChannelMembersChangedInternal(string channelName) { ChannelMembersChanged?.Invoke(this, channelName); } internal void OnUserDisconnectedInternal(string userId) { UserDisconnected?.Invoke(this, userId); }
+        internal void OnMessageReceivedInternal(Message message) { MessageReceived?.Invoke(this, message); } internal void OnPrivateMessageReceivedInternal(Message message) { PrivateMessageReceived?.Invoke(this, message); } internal void OnFileSharedInternal(SharedFile file) { FileShared?.Invoke(this, file); } internal void OnPrivateFileSharedInternal(SharedFile file) { PrivateFileShared?.Invoke(this, file); } internal void OnChannelListChangedInternal(List<Channel> channels) { ChannelListChanged?.Invoke(this, channels); } internal void OnChannelMembersChangedInternal(string channelName, List<string> members) { ChannelMembersChanged?.Invoke(this, (channelName, members)); } internal void OnUserDisconnectedInternal(string userId) { UserDisconnected?.Invoke(this, userId); }
     }
 }

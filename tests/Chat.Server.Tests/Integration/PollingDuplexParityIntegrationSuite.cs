@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
@@ -164,8 +165,8 @@ namespace Chat.Server.Tests.Integration
             public SharedFile LastFile { get; private set; }
             public bool LastMembersChanged { get; set; }
             public string LastMembersChannel { get; private set; }
-            public void OnChannelListChanged() { RegisteredSignal = true; }
-            public void OnChannelMembersChanged(string channelName) { LastMembersChanged = true; LastMembersChannel = channelName; }
+            public void OnChannelListChanged(List<Channel> channels) { RegisteredSignal = true; }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { LastMembersChanged = true; LastMembersChannel = channelName; }
             public void OnMessageReceived(Message message) { LastMessage = message; }
             public void OnPrivateMessageReceived(Message message) { LastPrivateMessage = message; }
             public void OnFileShared(SharedFile file) { LastFile = file; }
