@@ -49,11 +49,7 @@ For the detailed **requirement → implementation → Lab → Lecture** mapping,
 | Public messaging | ✓ | ✓ | ✓ |
 | Private messaging | ✓ | ✓ | ✓ |
 | File sharing / retrieval | ✓ | ✓ | ✓ |
-<<<<<<< HEAD
-| Automatic membership updates | ✓ | ✓ | ✓ |
-=======
 | Membership updates | ✓ | ✓ | ✓ |
->>>>>>> cd2313e5ef306a143ac6f6825a069a91612ea30f
 | User joined / left system messages | ✓ | ✓ | ✓ |
 | Chat export | ✓ | ✓ | ✓ |
 | Concurrent server state | — | — | ✓ |
