@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -100,8 +101,8 @@ namespace Chat.Server.Tests.Integration
         private sealed class TestCallback : IChatCallback
         {
             public bool ChannelListChanged { get; private set; }
-            public void OnChannelListChanged() { ChannelListChanged = true; }
-            public void OnChannelMembersChanged(string channelName) { }
+            public void OnChannelListChanged(List<Channel> channels) { ChannelListChanged = true; }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { }
             public void OnMessageReceived(Message message) { }
             public void OnPrivateMessageReceived(Message message) { }
             public void OnFileShared(SharedFile file) { }

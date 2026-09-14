@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -83,8 +84,8 @@ namespace Chat.Server.Tests.Integration
             public void Reset() { lock (_sync) _lastMessage = null; }
             public void OnMessageReceived(Message message) { lock (_sync) _lastMessage = message.Content; }
             public void OnPrivateMessageReceived(Message message) { }
-            public void OnChannelListChanged() { }
-            public void OnChannelMembersChanged(string channelName) { }
+            public void OnChannelListChanged(List<Channel> channels) { }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { }
             public void OnFileShared(SharedFile file) { }
             public void OnPrivateFileShared(SharedFile file) { }
             public void OnUserDisconnected(string userId) { }

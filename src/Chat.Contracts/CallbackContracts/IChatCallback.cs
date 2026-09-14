@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.ServiceModel;
 using Chat.Contracts.DataContracts;
 
@@ -8,10 +8,10 @@ namespace Chat.Contracts.CallbackContracts
     public interface IChatCallback
     {
         [OperationContract(IsOneWay = true)]
-        void OnChannelListChanged();
+        void OnChannelListChanged(List<Channel> channels);
 
         [OperationContract(IsOneWay = true)]
-        void OnChannelMembersChanged(string channelName);
+        void OnChannelMembersChanged(string channelName, List<string> members);
 
         [OperationContract(IsOneWay = true)]
         void OnMessageReceived(Message message);

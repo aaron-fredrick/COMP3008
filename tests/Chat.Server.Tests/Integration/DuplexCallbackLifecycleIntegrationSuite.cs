@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -127,14 +128,14 @@ namespace Chat.Server.Tests.Integration
             public readonly ManualResetEvent Entered = new ManualResetEvent(false);
             public readonly ManualResetEvent Release = new ManualResetEvent(false);
 
-            public void OnChannelListChanged()
+            public void OnChannelListChanged(List<Channel> channels)
             {
                 Entered.Set();
                 Release.WaitOne(5000);
                 throw new CommunicationException("Simulated stale callback failure");
             }
 
-            public void OnChannelMembersChanged(string channelName) { }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { }
             public void OnMessageReceived(Message message) { }
             public void OnPrivateMessageReceived(Message message) { }
             public void OnFileShared(SharedFile file) { }
@@ -146,8 +147,8 @@ namespace Chat.Server.Tests.Integration
         {
             public readonly ManualResetEvent ChannelListChanged = new ManualResetEvent(false);
 
-            public void OnChannelListChanged() { ChannelListChanged.Set(); }
-            public void OnChannelMembersChanged(string channelName) { }
+            public void OnChannelListChanged(List<Channel> channels) { ChannelListChanged.Set(); }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { }
             public void OnMessageReceived(Message message) { }
             public void OnPrivateMessageReceived(Message message) { }
             public void OnFileShared(SharedFile file) { }

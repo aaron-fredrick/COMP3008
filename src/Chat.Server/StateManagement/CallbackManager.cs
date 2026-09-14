@@ -28,21 +28,25 @@ namespace Chat.Server.StateManagement
 
         public void NotifyChannelListChanged()
         {
+            // Snapshot authoritative channel list once; pass it as push payload to every connected user.
+            var channels = _channelManager.GetChannels();
             var allUsers = _userManager.GetAllSignedInUserIds();
             foreach (var userId in allUsers)
             {
                 var callback = _userManager.GetCallback(userId);
-                if (callback != null) SafeInvoke(userId, callback, () => callback.OnChannelListChanged());
+                if (callback != null) SafeInvoke(userId, callback, () => callback.OnChannelListChanged(channels));
             }
         }
 
         public void NotifyChannelMembersChanged(string channelName)
         {
+            // Snapshot the authoritative member list once and include it in the callback payload.
+            // Members receive the full updated list directly; no follow-up GetChannelMembers() needed.
             var members = _channelManager.GetChannelMembers(channelName);
             foreach (var memberId in members)
             {
                 var callback = _userManager.GetCallback(memberId);
-                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnChannelMembersChanged(channelName));
+                if (callback != null) SafeInvoke(memberId, callback, () => callback.OnChannelMembersChanged(channelName, members));
             }
         }
 

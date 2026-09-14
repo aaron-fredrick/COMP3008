@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
@@ -257,8 +258,8 @@ namespace Chat.Server.Tests.Integration
         private sealed class TestCallback : IChatCallback
         {
             public Message LastMessage { get; private set; }
-            public void OnChannelListChanged() { }
-            public void OnChannelMembersChanged(string channelName) { }
+            public void OnChannelListChanged(List<Channel> channels) { }
+            public void OnChannelMembersChanged(string channelName, List<string> members) { }
             public void OnMessageReceived(Message message) { LastMessage = message; }
             public void OnPrivateMessageReceived(Message message) { }
             public void OnFileShared(SharedFile file) { }
