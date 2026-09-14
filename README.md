@@ -58,10 +58,12 @@ For the detailed **requirement → implementation → lab → lecture** mapping,
 | Private conversations | ✓ | ✓ | ✓ |
 | File sharing / retrieval | ✓ | ✓ | ✓ |
 | Automatic membership updates | ✓ | ✓ | ✓ |
-| User joined / left system messages | ✓ | ✓ | ✓ |
+| User joined / left system messages | ◐* | ◐* | ◐* |
 | Chat export | ✓ | ✓ | ✓ |
 | Concurrent server state | — | — | ✓ |
 | Disconnect cleanup | — | ✓ | ✓ |
+
+`◐*` indicates the typed system-message enhancement is documented and being completed in the current development work; the current `dev` branch should be treated as authoritative for whether that implementation has landed.
 
 ---
 
@@ -143,7 +145,7 @@ Public messages are routed to current channel members. Private messages are rout
 
 ### System messages
 
-Membership events are represented as typed conversation items rather than raw strings:
+The system-message enhancement is designed around typed conversation items rather than raw strings:
 
 ```text
 ConversationItemViewModel
@@ -151,7 +153,9 @@ ConversationItemViewModel
     └── SystemMessageViewModel
 ```
 
-System events such as `Alice joined the channel.` and `Bob left the channel.` use a dedicated WPF template: centered, subtle, timestamped and without sender/file controls. They are kept separate from `MessageType.File` rendering.
+The target events are `Alice joined the channel.` and `Bob left the channel.`. They use a dedicated WPF template: centered, subtle, timestamped and without sender/file controls. They must remain separate from `MessageType.File` rendering.
+
+The implementation should be considered complete only after both clients, exports, duplicate-event handling and regression tests/manual verification have been validated on the current branch.
 
 ### File sharing
 
@@ -159,9 +163,9 @@ Permitted channel files are `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp` and `.txt`, 
 
 ### Chat export
 
-`ChatExportService` exports the conversation transcript and available attached files as a ZIP. Normal messages retain their sender; system messages use the normal timestamp format but deliberately have no sender prefix.
+`ChatExportService` exports the conversation transcript and available attached files as a ZIP. Normal messages retain their sender; system messages use the normal timestamp format but deliberately have no sender prefix once the system-message enhancement is active.
 
-Example:
+Example target format:
 
 ```text
 [10:40 AM] Alice: Hello
@@ -257,8 +261,6 @@ The repository's documentation is organised so that a marker or developer can mo
 | [`docs/architecture/c4/`](docs/architecture/c4/) | C4 system/container/component/code diagrams |
 | [`docs/ass/`](docs/ass/) | Assignment reference/extraction material retained in the repository |
 
-The walkthrough also includes a debugging table for tracing common failures to the responsible architectural layer.
-
 ---
 
 ## Project structure
@@ -290,7 +292,8 @@ COMP3008/
 
 ## Constraints
 
-- **Server state:** authoritative application state is in memory; restarting the server resets sessions/channels/message state. File bytes use the server's configured file-content store.
+- **Server application state:** authoritative sessions/channels/message state are in memory; restarting the server resets them.
+- **File storage:** file metadata is held by the server and file bytes use the configured server-side content store.
 - **Message isolation:** late channel joiners do not receive earlier channel messages.
 - **Private chat:** sender and recipient must currently share a channel.
 - **File restrictions:** `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.txt`; maximum 2 MB.
