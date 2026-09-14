@@ -48,6 +48,7 @@ namespace Chat.Server.Hosting
                     pollingBinding.ReaderQuotas.MaxArrayLength = 2147483647;
                     pollingBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
                     pollingBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+                    pollingBinding.TransferMode = System.ServiceModel.TransferMode.StreamedResponse;
 
                     pollingBinding.HostNameComparisonMode = System.ServiceModel.HostNameComparisonMode.Exact;
 
@@ -75,6 +76,25 @@ namespace Chat.Server.Hosting
                     typeof(IDuplexChatService),
                     duplexBinding,
                     $"net.tcp://{_host}:{_duplexPort}/ChatService/Duplex");
+
+                var streamTcpBinding = new System.ServiceModel.NetTcpBinding();
+                streamTcpBinding.Security.Mode = System.ServiceModel.SecurityMode.None;
+                streamTcpBinding.MaxBufferSize = 2147483647;
+                streamTcpBinding.MaxReceivedMessageSize = 2147483647;
+                streamTcpBinding.MaxBufferPoolSize = 2147483647;
+                streamTcpBinding.ReaderQuotas.MaxDepth = 2147483647;
+                streamTcpBinding.ReaderQuotas.MaxStringContentLength = 2147483647;
+                streamTcpBinding.ReaderQuotas.MaxArrayLength = 2147483647;
+                streamTcpBinding.ReaderQuotas.MaxBytesPerRead = 2147483647;
+                streamTcpBinding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+                streamTcpBinding.TransferMode = System.ServiceModel.TransferMode.StreamedResponse;
+
+                streamTcpBinding.HostNameComparisonMode = System.ServiceModel.HostNameComparisonMode.Exact;
+
+                _serviceHost.AddServiceEndpoint(
+                    typeof(IChatService),
+                    streamTcpBinding,
+                    $"net.tcp://{_host}:{_duplexPort}/ChatService/Stream");
 
                 _serviceHost.Open();
                 DuplexEndpoint = duplexEndpoint.Address.ToString();

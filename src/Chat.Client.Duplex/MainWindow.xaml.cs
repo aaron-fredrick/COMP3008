@@ -204,15 +204,15 @@ namespace Chat.Client.Duplex
             ShowChannelListView();
         }
 
-        private void OnFileDownloadRequested(object sender, SharedFile file) =>
-            DuplexSessionCoordinator.Instance.DownloadAndOpenFile(file);
+        private async void OnFileDownloadRequested(object sender, SharedFile file) =>
+            await DuplexSessionCoordinator.Instance.DownloadAndOpenFileAsync(file);
 
-        private void OnFileMessageDownloadRequested(object sender, Message message)
+        private async void OnFileMessageDownloadRequested(object sender, Message message)
         {
             if (!message.FileId.HasValue)
                 return;
 
-            DuplexSessionCoordinator.Instance.DownloadAndOpenFile(new SharedFile
+            await DuplexSessionCoordinator.Instance.DownloadAndOpenFileAsync(new SharedFile
             {
                 FileId = message.FileId.Value,
                 FileName = message.Content.Replace("Shared file: ", string.Empty)
@@ -360,9 +360,9 @@ namespace Chat.Client.Duplex
             _privateFileHistory[view.RecipientId].Add(sharedFile);
         }
 
-        private void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        private async void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
         {
-            if (!DuplexSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
+            if (!await DuplexSessionCoordinator.Instance.DownloadAndOpenPrivateFileAsync(file))
                 MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 

@@ -37,6 +37,12 @@ namespace Chat.Server.FileStorage
             return File.Exists(path) ? File.ReadAllBytes(path) : null;
         }
 
+        public Stream OpenRead(Guid fileId)
+        {
+            string path = GetPath(fileId.ToString("N"));
+            return File.Exists(path) ? new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read) : null;
+        }
+
         public bool Exists(Guid fileId)
         {
             return File.Exists(GetPath(fileId.ToString("N")));

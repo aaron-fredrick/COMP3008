@@ -35,6 +35,45 @@ namespace Chat.Client.Duplex.Services
         public SharedFile GetPrivateFile(string userId, Guid fileId) { try { return _proxy.GetPrivateFile(userId, fileId); } catch (Exception ex) { HandleError(ex); return null; } }
         public System.Collections.Generic.List<SharedFile> GetChannelFiles(string userId, string channelName) { try { return _proxy.GetChannelFiles(userId, channelName); } catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<SharedFile>(); } }
         public string Ping(string userId, byte[] hash) { try { return _proxy.Ping(userId, hash); } catch (Exception ex) { HandleError(ex); return null; } }
+
+        public System.IO.Stream DownloadFileStream(string userId, Guid fileId, out ChannelFactory<IChatService> factory)
+        {
+            factory = null;
+            try
+            {
+                string streamUrl = _serverUrl.Replace("/Duplex", "/Stream");
+                var binding = new NetTcpBinding(); binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647; binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647; binding.Security.Mode = SecurityMode.None; binding.TransferMode = TransferMode.StreamedResponse;
+                factory = new ChannelFactory<IChatService>(binding, new EndpointAddress(streamUrl));
+                var proxy = factory.CreateChannel();
+                return proxy.DownloadFileStream(userId, fileId);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                if (factory != null) { try { factory.Close(); } catch { } factory = null; }
+                return null;
+            }
+        }
+
+        public System.IO.Stream DownloadPrivateFileStream(string userId, Guid fileId, out ChannelFactory<IChatService> factory)
+        {
+            factory = null;
+            try
+            {
+                string streamUrl = _serverUrl.Replace("/Duplex", "/Stream");
+                var binding = new NetTcpBinding(); binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647; binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647; binding.Security.Mode = SecurityMode.None; binding.TransferMode = TransferMode.StreamedResponse;
+                factory = new ChannelFactory<IChatService>(binding, new EndpointAddress(streamUrl));
+                var proxy = factory.CreateChannel();
+                return proxy.DownloadPrivateFileStream(userId, fileId);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                if (factory != null) { try { factory.Close(); } catch { } factory = null; }
+                return null;
+            }
+        }
+
         private void HandleError(Exception ex) { System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}"); if (_isConnected) { _isConnected = false; _dispatcher.BeginInvoke(new Action(() => ConnectionLost?.Invoke(this, EventArgs.Empty))); } }
         public void Dispose() { if (_proxy != null) { var channel = _proxy as ICommunicationObject; if (channel != null && channel.State == CommunicationState.Opened) channel.Close(); } if (_channelFactory != null) _channelFactory.Close(); if (_instanceContext != null) _instanceContext.Close(); }
         internal void OnMessageReceivedInternal(Message message) { MessageReceived?.Invoke(this, message); } internal void OnPrivateMessageReceivedInternal(Message message) { PrivateMessageReceived?.Invoke(this, message); } internal void OnFileSharedInternal(SharedFile file) { FileShared?.Invoke(this, file); } internal void OnPrivateFileSharedInternal(SharedFile file) { PrivateFileShared?.Invoke(this, file); } internal void OnChannelListChangedInternal(List<Channel> channels) { ChannelListChanged?.Invoke(this, channels); } internal void OnChannelMembersChangedInternal(string channelName, List<string> members) { ChannelMembersChanged?.Invoke(this, (channelName, members)); } internal void OnUserDisconnectedInternal(string userId) { UserDisconnected?.Invoke(this, userId); }

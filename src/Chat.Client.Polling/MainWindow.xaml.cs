@@ -226,15 +226,15 @@ namespace Chat.Client.Polling
             ShowChannelListView();
         }
 
-        private void OnFileDownloadRequested(object sender, SharedFile file) =>
-            PollingSessionCoordinator.Instance.DownloadAndOpenFile(file);
+        private async void OnFileDownloadRequested(object sender, SharedFile file) =>
+            await PollingSessionCoordinator.Instance.DownloadAndOpenFileAsync(file);
 
-        private void OnFileMessageDownloadRequested(object sender, Message message)
+        private async void OnFileMessageDownloadRequested(object sender, Message message)
         {
             if (!message.FileId.HasValue)
                 return;
 
-            PollingSessionCoordinator.Instance.DownloadAndOpenFile(new SharedFile
+            await PollingSessionCoordinator.Instance.DownloadAndOpenFileAsync(new SharedFile
             {
                 FileId = message.FileId.Value,
                 FileName = message.Content.Replace("Shared file: ", string.Empty)
@@ -401,9 +401,9 @@ namespace Chat.Client.Polling
             _privateFileHistory[view.RecipientId].Add(sharedFile);
         }
 
-        private void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        private async void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
         {
-            if (!PollingSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
+            if (!await PollingSessionCoordinator.Instance.DownloadAndOpenPrivateFileAsync(file))
                 MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 

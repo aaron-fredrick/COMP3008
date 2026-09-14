@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Chat.Client.Shared.Controls;
 using Chat.Client.Shared.Services;
 using Chat.Contracts.DataContracts;
+using Chat.Contracts.ServiceContracts;
 using Chat.Contracts.SharedTypes;
 
 namespace Chat.Client.Polling.Services
@@ -140,25 +141,62 @@ namespace Chat.Client.Polling.Services
         public bool ShareFile(string fileName, FileType fileType, byte[] fileData) => _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
         public SharedFile SharePrivateFile(string recipientId, string fileName, FileType fileType, byte[] fileData) => _serviceClient.SharePrivateFile(_currentUserId, recipientId, fileName, fileType, fileData);
 
-        public bool DownloadAndOpenPrivateFile(SharedFile file)
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenPrivateFileAsync(SharedFile file)
         {
-            var downloadedFile = _serviceClient.GetPrivateFile(_currentUserId, file.FileId);
-            if (downloadedFile?.FileData == null) return false;
+            var downloadService = new DownloadService();
             string downloadsPath = _fileHelperService.GetDownloadsPath();
-            if (!_fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath)) return false;
-            _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName));
-            return true;
+            string fullPath = System.IO.Path.Combine(downloadsPath, file.FileName);
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadPrivateFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, fullPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(fullPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
         }
 
-        public bool DownloadAndOpenFile(SharedFile file)
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(SharedFile file)
         {
-            var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId);
-            if (downloadedFile?.FileData == null) return false;
+            var downloadService = new DownloadService();
             string downloadsPath = _fileHelperService.GetDownloadsPath();
-            bool saved = _fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath);
-            if (!saved) return false;
-            _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName));
-            return true;
+            string fullPath = System.IO.Path.Combine(downloadsPath, file.FileName);
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, fullPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(fullPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
         }
 
         public byte[] DownloadFileBytes(Guid fileId)

@@ -22,6 +22,7 @@ namespace Chat.Client.Polling.Services
             var binding = new BasicHttpBinding();
             binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647;
             binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+            binding.TransferMode = TransferMode.StreamedResponse;
             _channelFactory = new ChannelFactory<IChatService>(binding, new EndpointAddress(_serverUrl));
             _proxy = _channelFactory.CreateChannel(); _isConnected = true;
         }
@@ -43,6 +44,49 @@ namespace Chat.Client.Polling.Services
         public SharedFile GetPrivateFile(string userId, Guid fileId) { try { lock (_proxyLock) return _proxy.GetPrivateFile(userId, fileId); } catch (Exception ex) { HandleError(ex); return null; } }
         public System.Collections.Generic.List<SharedFile> GetChannelFiles(string userId, string channelName) { try { lock (_proxyLock) return _proxy.GetChannelFiles(userId, channelName); } catch (Exception ex) { HandleError(ex); return new System.Collections.Generic.List<SharedFile>(); } }
         public string Ping(string userId, byte[] hash) { try { lock (_proxyLock) return _proxy.Ping(userId, hash); } catch (Exception ex) { HandleError(ex); return null; } }
+
+        public System.IO.Stream DownloadFileStream(string userId, Guid fileId, out ChannelFactory<IChatService> factory)
+        {
+            factory = null;
+            try
+            {
+                var binding = new BasicHttpBinding();
+                binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647;
+                binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+                binding.TransferMode = TransferMode.StreamedResponse;
+                factory = new ChannelFactory<IChatService>(binding, new EndpointAddress(_serverUrl));
+                var proxy = factory.CreateChannel();
+                return proxy.DownloadFileStream(userId, fileId);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                if (factory != null) { try { factory.Close(); } catch { } factory = null; }
+                return null;
+            }
+        }
+
+        public System.IO.Stream DownloadPrivateFileStream(string userId, Guid fileId, out ChannelFactory<IChatService> factory)
+        {
+            factory = null;
+            try
+            {
+                var binding = new BasicHttpBinding();
+                binding.MaxBufferSize = 2147483647; binding.MaxReceivedMessageSize = 2147483647; binding.MaxBufferPoolSize = 2147483647;
+                binding.ReaderQuotas.MaxDepth = 2147483647; binding.ReaderQuotas.MaxStringContentLength = 2147483647; binding.ReaderQuotas.MaxArrayLength = 2147483647; binding.ReaderQuotas.MaxBytesPerRead = 2147483647; binding.ReaderQuotas.MaxNameTableCharCount = 2147483647;
+                binding.TransferMode = TransferMode.StreamedResponse;
+                factory = new ChannelFactory<IChatService>(binding, new EndpointAddress(_serverUrl));
+                var proxy = factory.CreateChannel();
+                return proxy.DownloadPrivateFileStream(userId, fileId);
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+                if (factory != null) { try { factory.Close(); } catch { } factory = null; }
+                return null;
+            }
+        }
+
         private void HandleError(Exception ex) { System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}"); _isConnected = false; }
         public void Dispose()
         {

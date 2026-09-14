@@ -61,6 +61,12 @@ namespace Chat.Contracts.ServiceContracts
         List<SharedFile> GetPendingPrivateFiles(string userId);
 
         [OperationContract]
+        System.IO.Stream DownloadFileStream(string userId, Guid fileId);
+
+        [OperationContract]
+        System.IO.Stream DownloadPrivateFileStream(string userId, Guid fileId);
+
+        [OperationContract]
         string Ping(string userId, byte[] hash);
     }
 }

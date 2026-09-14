@@ -5,7 +5,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
 
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <RootNamespace>Chat.Client.Polling</RootNamespace>
     <AssemblyName>Chat.Client.Polling</AssemblyName>
 
