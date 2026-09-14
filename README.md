@@ -58,7 +58,7 @@ For the detailed **requirement → implementation → lab → lecture** mapping,
 | Private conversations | ✓ | ✓ | ✓ |
 | File sharing / retrieval | ✓ | ✓ | ✓ |
 | Automatic membership updates | ✓ | ✓ | ✓ |
-| User joined / left system messages | ◐* | ◐* | ◐* |
+| User joined / left system messages | ✓ | ✓ | ✓ |
 | Chat export | ✓ | ✓ | ✓ |
 | Concurrent server state | — | — | ✓ |
 | Disconnect cleanup | — | ✓ | ✓ |
