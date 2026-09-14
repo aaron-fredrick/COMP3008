@@ -1,0 +1,850 @@
+============================================================
+COMP3008 - ASSIGNMENT PART A REQUIREMENTS
+Extracted from the official Assignment Part A material
+============================================================
+
+## SOURCE DOCUMENTS
+
+1. `docs/ass/Part A.pdf` (official Assignment 1 (Part A), 4 pages).
+
+No other Assignment A-related document was used. `docs/ass/Part B.pdf` was not treated as Part A source material.
+
+============================================================
+1. ASSIGNMENT OVERVIEW
+============================================================
+
+A user signs in with a user ID of their own choosing and sees the channels that currently exist. The user can join an existing channel or create a channel. Inside a channel, the user participates in conversation with everyone else there, holds private conversations with individual members, and shares files with the channel.
+
+The application is a real-time chat application for Windows, built using C#, the .NET Framework, Windows Communication Foundation (WCF), and Windows Presentation Foundation (WPF).
+
+Part A is a group assignment for two or three members, although an individual may also work alone.
+
+The solution must contain at least three projects:
+
+* Chat Server: a self-hosted WCF service, for which a console application is sufficient. It holds all shared state: who is signed in, which channels exist, who is in each channel, and the files that have been shared.
+* Polling Client: a WPF application providing the Section A user interface. It keeps itself up to date by asking the server for changes on a background thread. Several instances run at the same time.
+* Duplex Client: a second WPF application offering the same functionality, in which the server pushes changes to the client instead. This is what Section C assesses.
+
+Both clients connect to the same running server and share its state, so a user on the polling client and a user on the duplex client can be in the same channel and talk to each other.
+
+Code is expected to be shared between the two clients, including the service contracts, data classes, and windows, rather than duplicated. Placing shared contracts in their own class-library project is recommended.
+
+Sections A and B are marked on the polling client and server. Section C is marked on the duplex client. The polling client should be built first; the duplex client should be attempted once the polling client works.
+
+============================================================
+2. REQUIRED FUNCTIONALITY
+============================================================
+
+A-F01 - Sign in with a user ID. The client application asks for a user ID and signs in. There is no password. If someone currently signed in is already using that ID, the client shows the reason and lets the user try another.
+
+A-F02 - Show the current channel list and allow joining. The client application shows every channel that currently exists and lets the user join one. The list reflects channels created by other people and updates on its own.
+
+A-F03 - Enforce at-most-one channel membership in the client workflow. A user is in at most one channel at a time and returns to the channel-list view on leaving.
+
+A-F04 - Create a channel. The user can create a channel by giving it a name. If a channel with that name already exists, the client says so and the user chooses another.
+
+A-F05 - Send and receive channel messages. Inside a channel the user sends messages and sees messages from every other member appear as they arrive.
+
+A-F06 - Keep the channel member list current. The user sees a member list that stays up to date as people join and leave.
+
+A-F07 - Do not show earlier channel messages to a late joiner. A user who joins part way through sees messages sent from that point onward; earlier messages are not shown.
+
+A-F08 - Start private conversations. The user can select any other member of the channel and start a private conversation with them.
+
+A-F09 - Show incoming private conversations separately. An incoming private message opens its own separate window, apart from the main conversation, which names the sender, keeps the history of that exchange between the two users, and allows a reply to be sent from within it.
+
+A-F10 - Support multiple private conversations. Several private conversations can be open at once.
+
+A-F11 - Share permitted files with a channel. The user can choose a text or image file, up to 2 MB, and share it with the channel.
+
+A-F12 - Display shared files to channel members. Shared files appear to every member as clickable entries showing at least the file name and who shared it.
+
+A-F13 - Retrieve and open shared files. Clicking a shared-file entry retrieves the file from the server and opens it.
+
+A-F14 - Reject invalid files visibly. Files of a disallowed type or size are refused with a message the user can read.
+
+A-F15 - Sign out at any time. Signing out is available at any time, from either view.
+
+A-F16 - Cleanly sign out. On sign out, the client leaves any channel the user is in, releases the user ID, and shuts down cleanly.
+
+A-F17 - Keep the polling client current without user action. The polling client uses a background thread that periodically asks the server for changes, including new messages, member lists, the channel list, and shared files, and updates the interface from what comes back.
+
+A-F18 - Provide the two required client views and navigation. The client application has a channel-list view and a channel-conversation view, with navigation between them.
+
+A-F19 - Provide channel-list controls. The channel-list view shows the available channels with controls to create and to join.
+
+A-F20 - Provide channel-conversation controls and information. The channel-conversation view shows the conversation, a message box, the member list, the shared files, and a way to leave.
+
+A-F21 - Make signing out available in both views. Signing out is available at all times, including from both required views.
+
+Constraints and fallback stated with these requirements:
+
+* Polling is a pull strategy and must periodically ask the server for changes.
+* The polling interval is to be chosen deliberately: too frequent wastes the server and too slow makes the application feel dead.
+* If background threads cannot be made to work, manual "Refresh" buttons may be used as a fallback. This is accepted, but requirements 2, 4, and 6 in Section A then score at most half marks because the interface no longer keeps itself current.
+* The polling fallback does not apply to the duplex client. The duplex client must have neither a polling thread nor a refresh button.
+
+============================================================
+3. ARCHITECTURE / SYSTEM REQUIREMENTS
+============================================================
+
+A-ARC01 - Build the application as a real-time chat application for Windows.
+
+A-ARC02 - Use a client-server system. All traffic passes through the server; clients never connect directly to one another. This is not a peer-to-peer system.
+
+A-ARC03 - Provide a Chat Server as a self-hosted WCF service. A console application is sufficient for hosting it.
+
+A-ARC04 - The server holds all shared state, including who is signed in, which channels exist, who is in each channel, and the files that have been shared.
+
+A-ARC05 - Provide a Polling Client as a WPF application with the Section A user interface.
+
+A-ARC06 - The Polling Client keeps itself up to date by asking the server for changes on a background thread. Several instances run at the same time.
+
+A-ARC07 - Provide a separate Duplex Client as a second WPF application offering the same functionality as the polling client, with the server pushing changes instead.
+
+A-ARC08 - Both clients connect to the same running server and share its state. They must be able to have users in the same channel and communicate with each other.
+
+A-ARC09 - The two clients must share code for service contracts, data classes, and windows rather than duplicating that code. A shared contracts class-library project is recommended, not stated as mandatory.
+
+A-ARC10 - The server listens on a fixed address and port known to the clients. Because development is on a single machine, localhost with a fixed port is acceptable.
+
+A-ARC11 - All state is held in server memory. No database is required, and nothing needs to survive a server restart.
+
+A-ARC12 - The Duplex Client uses a duplex WCF channel over `netTcpBinding`.
+
+A-ARC13 - The Duplex Client is a separate WPF application, not a switch or setting inside the polling client.
+
+A-ARC14 - Both clients must build and run from the submitted solution.
+
+A-ARC15 - Both clients must work against the same server without the server being restarted or reconfigured between them.
+
+A-ARC16 - Test with one to five concurrent clients; at least three clients must run at the demonstration.
+
+============================================================
+4. POLLING REQUIREMENTS
+============================================================
+
+A-POL01 - The polling client must keep itself current without the user doing anything.
+
+A-POL02 - A background thread in the polling client periodically asks the server for changes.
+
+A-POL03 - Polling must cover new messages, member lists, the channel list, and shared files.
+
+A-POL04 - The polling client updates its interface from the data returned by polling.
+
+A-POL05 - The polling interval must be chosen deliberately: polling too frequently wastes the server, while polling too slowly makes the application feel dead.
+
+A-POL06 - If background threads cannot be made to work, manual "Refresh" buttons may be used as a fallback. Under this fallback, requirements 2, 4, and 6 of Section A score at most half marks.
+
+A-POL07 - The duplex client must have neither a polling thread nor a refresh button.
+
+A-POL08 - In the Duplex Client, channel list changes, member changes, messages, private messages, and shared files must all reach the client because the server pushed them; no timer, background loop, or refresh button may fetch updates in core functionality.
+
+============================================================
+5. DUPLEX / CALLBACK REQUIREMENTS
+============================================================
+
+A-DPX01 - The Duplex Client offers the user exactly the same functionality as the polling client in Section A.
+
+A-DPX02 - The Duplex Client does not ask the server for anything on a timer.
+
+A-DPX03 - On sign-in, the Duplex Client registers a callback with the server.
+
+A-DPX04 - The server invokes the registered callback whenever something happens that the client needs to know about.
+
+A-DPX05 - The duplex service contract is correctly declared with a callback contract and is hosted over `netTcpBinding`.
+
+A-DPX06 - Clients register on sign-in.
+
+A-DPX07 - The server tracks which callback belongs to which user.
+
+A-DPX08 - Channel list changes, member changes, messages, private messages, and shared files reach the Duplex Client through server push.
+
+A-DPX09 - The Duplex Client has no timer, background loop, or refresh button fetching updates anywhere in its core functionality. If some updates are pushed and others are still fetched, marks are awarded in proportion.
+
+A-DPX10 - The server detects when a client closes, crashes, or is killed.
+
+A-DPX11 - When a client disconnects, the server releases the user ID, removes the user from their channel, and tells the remaining members.
+
+A-DPX12 - Pushing to a callback that has gone away must not bring down the server or block other users.
+
+============================================================
+6. CHAT / CHANNEL REQUIREMENTS
+============================================================
+
+A-CHAT01 - The user signs in with a user ID of their own choosing; there is no password.
+
+A-CHAT02 - Currently signed-in user IDs are unique. A duplicate is rejected with a reason the client can display.
+
+A-CHAT03 - An ID is released immediately when its user signs out or disconnects and may then be taken by someone else.
+
+A-CHAT04 - The client shows every currently existing channel and lets the user join one.
+
+A-CHAT05 - The channel list reflects channels created by other people and updates on its own.
+
+A-CHAT06 - A user is in at most one channel at a time.
+
+A-CHAT07 - The server creates channels with unique names.
+
+A-CHAT08 - The server moves users in and out of channels and keeps each user in at most one channel.
+
+A-CHAT09 - The server holds the authoritative list of channels and their members.
+
+A-CHAT10 - Inside a channel, the user sends messages.
+
+A-CHAT11 - Channel messages are seen by every other member as they arrive.
+
+A-CHAT12 - A user joining part way through sees messages sent from that point onward; earlier messages are not shown.
+
+A-CHAT13 - The server delivers a channel message to every member of that channel at the time it was sent, and nobody else.
+
+A-CHAT14 - The server keeps no message history and does not replay past messages to a user who joins later.
+
+A-CHAT15 - The user can select any other channel member and start a private conversation.
+
+A-CHAT16 - An incoming private message opens a separate window apart from the main conversation.
+
+A-CHAT17 - The private-conversation window names the sender, keeps the history of that exchange between the two users, and allows a reply from within the window.
+
+A-CHAT18 - Several private conversations can be open at once.
+
+A-CHAT19 - A private message reaches the one named recipient and nobody else.
+
+A-CHAT20 - The sender and recipient of a private message must be members of the same channel; the server refuses the message otherwise.
+
+A-CHAT21 - Signing out makes the client leave any channel the user is in and releases the user ID.
+
+A-CHAT22 - When a duplex client disconnects, the user is removed from their channel and remaining members are told.
+
+============================================================
+7. FILE SHARING REQUIREMENTS
+============================================================
+
+A-FILE01 - The user can choose a text or image file and share it with the channel.
+
+A-FILE02 - A shared file is at most 2 MB.
+
+A-FILE03 - Shared files appear to every member as clickable entries.
+
+A-FILE04 - Each shared-file entry shows at least the file name and who shared it.
+
+A-FILE05 - Clicking a shared-file entry retrieves the file from the server and opens it.
+
+A-FILE06 - Files of a disallowed type or size are refused with a message the user can read.
+
+A-FILE07 - The server receives shared files and stores them.
+
+A-FILE08 - The server enforces permitted file types and the size limit, refusing anything else with a reason.
+
+A-FILE09 - Each file is served only to members of the channel into which it was shared.
+
+A-FILE10 - File contents must travel to and from the server. Passing a local file path between clients does not satisfy the requirement and scores zero for it.
+
+A-FILE11 - Permitted file extensions are `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, and `.txt`, up to 2 MB each.
+
+============================================================
+8. CONCURRENCY / THREADING / SYNCHRONIZATION
+============================================================
+
+A-CON01 - Several polling-client instances run at the same time.
+
+A-CON02 - The application must be tested with one to five concurrent clients.
+
+A-CON03 - The polling client uses a background thread for periodic server requests and interface updates.
+
+A-CON04 - In the Duplex Client, callbacks arrive on WCF threads.
+
+A-CON05 - Duplex-client updates to the interface are correctly marshalled onto the WPF UI thread.
+
+A-CON06 - Shared server state is reached by many request threads at once and is correctly synchronised.
+
+A-CON07 - The client must not throw, freeze, or corrupt its display under concurrent updates.
+
+A-CON08 - The server's handling of a callback that has gone away must not block other users.
+
+============================================================
+9. USER INTERFACE REQUIREMENTS
+============================================================
+
+A-UI01 - The client asks for a user ID and provides sign-in.
+
+A-UI02 - For a duplicate signed-in ID, the client shows the reason and lets the user try another ID.
+
+A-UI03 - The channel-list view shows every existing channel and controls to create and join.
+
+A-UI04 - The channel-list view reflects channels created by other people and updates on its own.
+
+A-UI05 - The channel-conversation view shows the conversation, a message box, the member list, the shared files, and a way to leave.
+
+A-UI06 - The conversation shows messages from other channel members as they arrive.
+
+A-UI07 - The member list stays current as people join and leave.
+
+A-UI08 - An incoming private message opens its own separate window apart from the main conversation.
+
+A-UI09 - The private-conversation window names the sender, keeps the exchange history, and allows a reply.
+
+A-UI10 - Several private-conversation windows can be open at once.
+
+A-UI11 - Shared files appear as clickable entries to every channel member, showing at least the file name and who shared it.
+
+A-UI12 - Clicking a shared file retrieves it from the server and opens it.
+
+A-UI13 - Invalid file type or size is refused with a readable user message.
+
+A-UI14 - Signing out is available at any time from either view.
+
+A-UI15 - The client has navigation between the channel-list and channel-conversation views.
+
+A-UI16 - The polling client updates the interface from polling results.
+
+A-UI17 - The duplex client receives channel list changes, member changes, messages, private messages, and shared files through pushed updates, with no timer or refresh button for core updates.
+
+============================================================
+10. ERROR / FAILURE REQUIREMENTS
+============================================================
+
+A-ERR01 - A duplicate currently signed-in user ID is rejected, and the client can display the reason.
+
+A-ERR02 - A duplicate channel name is reported by the client so the user can choose another.
+
+A-ERR03 - A private message is refused by the server if sender and recipient are not members of the same channel.
+
+A-ERR04 - Files of a disallowed type or size are refused with a reason the user can read.
+
+A-ERR05 - The server releases a user ID when the user disconnects.
+
+A-ERR06 - The server detects a client that closes, crashes, or is killed.
+
+A-ERR07 - On client disconnection, the server removes the user from their channel and tells remaining members.
+
+A-ERR08 - A callback that has gone away must not bring down the server or block other users.
+
+A-ERR09 - Under concurrent updates, the client must not throw, freeze, or corrupt its display.
+
+A-ERR10 - The submitted project must be re-downloaded, opened, and run to confirm it was submitted correctly and is not corrupted.
+
+A-ERR11 - Do not use WinRar, do not nest zip files, and do not email the submission; emails carrying potentially executable attachments may be silently discarded by Curtin's filters.
+
+============================================================
+11. TECHNOLOGY / IMPLEMENTATION CONSTRAINTS
+============================================================
+
+A-TECH01 - Use C#.
+
+A-TECH02 - Use the .NET Framework.
+
+A-TECH03 - Use Windows Communication Foundation (WCF).
+
+A-TECH04 - Use Windows Presentation Foundation (WPF).
+
+A-TECH05 - The Chat Server is a self-hosted WCF service.
+
+A-TECH06 - The Polling Client is a WPF application.
+
+A-TECH07 - The Duplex Client is a separate WPF application.
+
+A-TECH08 - The Duplex Client uses a duplex WCF channel over `netTcpBinding`.
+
+A-TECH09 - The server listens on a fixed address and port known to clients; localhost with a fixed port is acceptable for single-machine development.
+
+A-TECH10 - All traffic passes through the server; clients do not connect directly to one another.
+
+A-TECH11 - All state is held in server memory. No database is required, and state need not survive a server restart.
+
+A-TECH12 - The solution contains at least three projects: Chat Server, Polling Client, and Duplex Client.
+
+A-TECH13 - Both clients must build and run from the submitted solution and work against the same server without restart or reconfiguration between them.
+
+A-TECH14 - Permitted shared-file extensions are `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, and `.txt`; each file is limited to 2 MB.
+
+A-TECH15 - If background threads cannot be made to work in the polling client, manual "Refresh" buttons are an explicitly accepted fallback, subject to the stated marking cap. The duplex client has no such fallback.
+
+============================================================
+12. DELIVERABLES
+============================================================
+
+A-DEL01 - Submit the assignment electronically via Blackboard before the deadline.
+
+A-DEL02 - Each group member submits the same zip file individually via Blackboard.
+
+A-DEL03 - Complete and sign a declaration of originality. A photo, scan, or electronically completed form is acceptable if complete and readable.
+
+A-DEL04 - Place the declaration of originality inside the project directory as a `.pdf`, `.jpg`, or `.png`.
+
+A-DEL05 - Zip the entire project directory, leaving nothing out.
+
+A-DEL06 - Submit the zip file to the assignment area on Blackboard.
+
+A-DEL07 - Re-download, open, and run the submitted work to confirm that it was submitted correctly and is not corrupted.
+
+A-DEL08 - The submitted solution contains at least three projects: Chat Server, Polling Client, and Duplex Client.
+
+A-DEL09 - Both clients build and run from the submitted solution.
+
+A-DEL10 - A one-to-one demonstration and discussion with a marker is required. The marker may ask the student to rebuild and run the application, demonstrate major features, and answer questions about any aspect of the submission.
+
+A-DEL11 - The contribution percentage must be provided during the demonstration. If working individually, the contribution is 100%.
+
+A-DEL12 - At least three clients must be run at the demonstration.
+
+A-DEL13 - The demonstration must be prepared to cover duplicate user-ID sign-in, public and private messages, sharing and opening an image and a text file, and closing a client with the window X button while others remain connected.
+
+A-DEL14 - If the duplex client is built, the demonstration must be prepared to run both clients side by side against the same server, send a single message and show it arriving on each, and walk the marker through the callback contract, locking, and the absence of any timer or refresh path in the duplex client code.
+
+Submission constraints explicitly stated by the document:
+
+* Multiple submissions are allowed, but only the newest is marked.
+* The late submission policy in the Unit Outline is strictly enforced.
+* Do not use WinRar, nest zip files, or email the submission.
+
+============================================================
+13. MARKING / ASSESSMENT CRITERIA
+============================================================
+
+A-MARK01 - Assignment 1 (Part A) is worth 32 marks overall. Source: page 1 heading.
+
+A-MARK02 - Section A, Client Application functionality, is worth 14 marks. Source: page 1, Section A heading.
+
+A-MARK03 - Section A, item 1, Sign in, is worth 2 marks. Source: page 1, Section A item 1.
+
+A-MARK04 - Section A, item 2, Channel list, is worth 2 marks. Source: page 1, Section A item 2.
+
+A-MARK05 - Section A, item 3, Channel creation, is worth 2 marks. Source: page 1, Section A item 3.
+
+A-MARK06 - Section A, item 4, Conversation, is worth 2 marks. Source: page 1, Section A item 4.
+
+A-MARK07 - Section A, item 5, Private conversation, is worth 2 marks. Source: page 2, Section A item 5.
+
+A-MARK08 - Section A, item 6, File sharing, is worth 3 marks. Source: page 2, Section A item 6.
+
+A-MARK09 - Section A, item 7, Sign out, is worth 1 mark. Source: page 2, Section A item 7.
+
+A-MARK10 - Section B, Server functionality, is worth 10 marks. Source: page 2, Section B heading.
+
+A-MARK11 - Section B, item 1, User management, is worth 2 marks. Source: page 2, Section B item 1.
+
+A-MARK12 - Section B, item 2, Channel management, is worth 2 marks. Source: page 2, Section B item 2.
+
+A-MARK13 - Section B, item 3, Message distribution, is worth 2 marks. Source: page 2, Section B item 3.
+
+A-MARK14 - Section B, item 4, Private messaging, is worth 2 marks. Source: page 2, Section B item 4.
+
+A-MARK15 - Section B, item 5, File handling, is worth 2 marks. Source: page 3, Section B item 5.
+
+A-MARK16 - Section C, Duplex Client: Real-time updates by duplex channel, is worth 8 marks. Source: page 3, Section C heading.
+
+A-MARK17 - Section C, item 1, Duplex contract and callback registration, is worth 2 marks. Source: page 3, Section C item 1.
+
+A-MARK18 - Section C, item 2, Polling and refresh removed, is worth 2 marks. Source: page 3, Section C item 2.
+
+A-MARK19 - Section C, item 3, Thread safety, is worth 2 marks. Source: page 3, Section C item 3.
+
+A-MARK20 - Section C, item 4, Disconnection handling, is worth 2 marks. Source: page 3, Section C item 4.
+
+A-MARK21 - Polling fallback marking cap: if manual Refresh buttons are used because background threads cannot be made to work, requirements 2, 4, and 6 of Section A score at most half marks. Source: page 2, Keeping the polling client up to date.
+
+A-MARK22 - Duplex partial credit: where some updates are pushed and others are still fetched, marks are awarded in proportion. Source: page 3, Section C item 2.
+
+A-MARK23 - Most marks are derived from the one-to-one marking demonstration. Source: page 4, Marking demonstration.
+
+A-MARK24 - A student's contribution percentage adjusts their share of the group mark; an individual student's contribution is 100%. Source: page 4, Marking demonstration.
+
+A-MARK25 - If demonstrations are cancelled for unavoidable reasons, marking is by full inspection. Source: page 4, Marking demonstration.
+
+A-MARK26 - The schedule and policy for demonstrations will be published on Blackboard. Source: page 4, Marking demonstration.
+
+============================================================
+14. EXPLICIT NON-REQUIREMENTS / LIMITATIONS
+============================================================
+
+A-NON01 - There is no password for sign-in.
+
+A-NON02 - The server keeps no message history and does not replay past messages to a user who joins later.
+
+A-NON03 - No database is required.
+
+A-NON04 - Nothing needs to survive a server restart.
+
+A-NON05 - The system is not peer-to-peer; clients never connect directly to one another.
+
+A-NON06 - The polling-client fallback does not apply to the duplex client; the duplex client must have neither a polling thread nor a refresh button.
+
+A-NON07 - Passing a local file path between clients does not satisfy file sharing and scores zero for the file-handling requirement.
+
+A-NON08 - A console application is sufficient for hosting the self-hosted WCF Chat Server.
+
+A-NON09 - Localhost with a fixed port is acceptable for single-machine development.
+
+A-NON10 - The shared contracts class-library project is recommended, not stated as mandatory.
+
+============================================================
+15. AMBIGUITIES / UNCLEAR WORDING
+============================================================
+
+A-AMB01 - The polling interval must be chosen deliberately, with only qualitative guidance that too frequent wastes the server and too slow makes the application feel dead. No numeric polling interval or measurable threshold is specified.
+
+A-AMB02 - The Duplex Client must invoke the callback "whenever something happens the client needs to know about," but the document does not define an exhaustive event list in that sentence. Section C item 2 separately names channel list changes, member changes, messages, private messages, and shared files.
+
+A-AMB03 - The document says the Duplex Client offers "exactly the same functionality" as the polling client while also requiring that it have neither polling nor a refresh button. The scope of "same functionality" is not separately defined beyond the Section A functionality and the stated duplex restrictions.
+
+A-AMB04 - The document requires a fixed address and port known to clients and says localhost with a fixed port is fine, but it does not specify a particular address or port number.
+
+A-AMB05 - The document says to test with one to five concurrent clients and separately says at least three must run at the demonstration; it does not state whether the one-to-five range is a formal submission test limit or demonstration-only guidance.
+
+A-AMB06 - The file requirement uses "text or image file" in Section A and later gives the permitted extensions. The document does not separately define whether file type is to be determined solely by extension or also by file content/MIME type.
+
+============================================================
+16. REQUIREMENT TRACEABILITY TO ASSIGNMENT TEXT
+============================================================
+
+A-F01 -> Part A, page 1, Section A item 1, Sign in.
+A-F02 -> Part A, page 1, Section A item 2, Channel list.
+A-F03 -> Part A, page 1, Section A item 2, Channel list.
+A-F04 -> Part A, page 1, Section A item 3, Channel creation.
+A-F05 -> Part A, page 1, Section A item 4, Conversation.
+A-F06 -> Part A, page 1, Section A item 4, Conversation.
+A-F07 -> Part A, page 1, Section A item 4, Conversation.
+A-F08 -> Part A, page 2, Section A item 5, Private conversation.
+A-F09 -> Part A, page 2, Section A item 5, Private conversation.
+A-F10 -> Part A, page 2, Section A item 5, Private conversation.
+A-F11 -> Part A, page 2, Section A item 6, File sharing.
+A-F12 -> Part A, page 2, Section A item 6, File sharing.
+A-F13 -> Part A, page 2, Section A item 6, File sharing.
+A-F14 -> Part A, page 2, Section A item 6, File sharing.
+A-F15 -> Part A, page 2, Section A item 7, Sign out.
+A-F16 -> Part A, page 2, Section A item 7, Sign out.
+A-F17 -> Part A, page 2, Keeping the polling client up to date.
+A-F18 -> Part A, page 2, Interface expectations.
+A-F19 -> Part A, page 2, Interface expectations.
+A-F20 -> Part A, page 2, Interface expectations.
+A-F21 -> Part A, page 2, Interface expectations.
+
+A-ARC01-A-ARC09 -> Part A, page 1, Objective and required-project description.
+A-ARC10-A-ARC11 -> Part A, page 3, Additional Guidelines.
+A-ARC12-A-ARC15 -> Part A, page 3, Section C opening paragraph.
+A-ARC16 -> Part A, page 3, Additional Guidelines.
+
+A-POL01-A-POL07 -> Part A, page 2, Keeping the polling client up to date.
+A-POL08 -> Part A, page 3, Section C item 2.
+
+A-DPX01-A-DPX04 -> Part A, page 3, Section C opening paragraph.
+A-DPX05-A-DPX07 -> Part A, page 3, Section C item 1.
+A-DPX08-A-DPX09 -> Part A, page 3, Section C item 2.
+A-DPX10-A-DPX12 -> Part A, page 3, Section C item 4.
+
+A-CHAT01 -> Part A, page 1, Objective and Section A item 1.
+A-CHAT02-A-CHAT03 -> Part A, page 2, Section B item 1.
+A-CHAT04-A-CHAT06 -> Part A, page 1, Section A item 2.
+A-CHAT07-A-CHAT09 -> Part A, page 2, Section B item 2.
+A-CHAT10-A-CHAT12 -> Part A, page 1, Section A item 4.
+A-CHAT13-A-CHAT14 -> Part A, page 2, Section B item 3.
+A-CHAT15-A-CHAT18 -> Part A, page 2, Section A item 5.
+A-CHAT19-A-CHAT20 -> Part A, page 2, Section B item 4.
+A-CHAT21 -> Part A, page 2, Section A item 7.
+A-CHAT22 -> Part A, page 3, Section C item 4.
+
+A-FILE01-A-FILE06 -> Part A, page 2, Section A item 6.
+A-FILE07-A-FILE10 -> Part A, page 3, Section B item 5.
+A-FILE11 -> Part A, page 3, Additional Guidelines.
+
+A-CON01 -> Part A, page 1, required-project description.
+A-CON02 -> Part A, page 3, Additional Guidelines.
+A-CON03 -> Part A, page 2, Keeping the polling client up to date.
+A-CON04-A-CON07 -> Part A, page 3, Section C item 3.
+A-CON08 -> Part A, page 3, Section C item 4.
+
+A-UI01-A-UI02 -> Part A, page 1, Section A item 1.
+A-UI03 -> Part A, page 1, Section A item 2, and page 2, Interface expectations.
+A-UI04 -> Part A, page 1, Section A item 2.
+A-UI05 -> Part A, page 2, Interface expectations.
+A-UI06-A-UI07 -> Part A, page 1, Section A item 4.
+A-UI08-A-UI10 -> Part A, page 2, Section A item 5.
+A-UI11-A-UI13 -> Part A, page 2, Section A item 6.
+A-UI14-A-UI15 -> Part A, page 2, Interface expectations.
+A-UI16 -> Part A, page 2, Keeping the polling client up to date.
+A-UI17 -> Part A, page 3, Section C item 2.
+
+A-ERR01 -> Part A, pages 1-2, Section A item 1 and Section B item 1.
+A-ERR02 -> Part A, page 1, Section A item 3.
+A-ERR03 -> Part A, page 2, Section B item 4.
+A-ERR04 -> Part A, pages 2-3, Section A item 6 and Section B item 5.
+A-ERR05 -> Part A, page 2, Section B item 1.
+A-ERR06-A-ERR08 -> Part A, page 3, Section C item 4.
+A-ERR09 -> Part A, page 3, Section C item 3.
+A-ERR10-A-ERR11 -> Part A, page 4, Submission guidelines.
+
+A-TECH01-A-TECH04 -> Part A, page 1, Objective.
+A-TECH05-A-TECH06 -> Part A, page 1, required-project description.
+A-TECH07-A-TECH08 -> Part A, page 3, Section C opening paragraph.
+A-TECH09-A-TECH11 -> Part A, page 3, Additional Guidelines.
+A-TECH12 -> Part A, page 1, required-project description.
+A-TECH13 -> Part A, page 3, Section C opening paragraph.
+A-TECH14 -> Part A, page 3, Additional Guidelines.
+A-TECH15 -> Part A, page 2, Keeping the polling client up to date.
+
+A-DEL01-A-DEL07 -> Part A, page 4, Submission guidelines.
+A-DEL08 -> Part A, page 1, required-project description.
+A-DEL09 -> Part A, page 3, Section C opening paragraph.
+A-DEL10-A-DEL14 -> Part A, page 4, Marking demonstration.
+
+A-MARK01-A-MARK09 -> Part A, pages 1-2, Section A heading and items 1-7.
+A-MARK10-A-MARK15 -> Part A, pages 2-3, Section B heading and items 1-5.
+A-MARK16-A-MARK20 -> Part A, page 3, Section C heading and items 1-4.
+A-MARK21 -> Part A, page 2, Keeping the polling client up to date.
+A-MARK22 -> Part A, page 3, Section C item 2.
+A-MARK23-A-MARK26 -> Part A, page 4, Marking demonstration.
+
+A-NON01 -> Part A, page 1, Section A item 1.
+A-NON02 -> Part A, page 2, Section B item 3.
+A-NON03-A-NON05 -> Part A, page 3, Additional Guidelines.
+A-NON06 -> Part A, page 2, Keeping the polling client up to date.
+A-NON07 -> Part A, page 3, Section B item 5.
+A-NON08 -> Part A, page 1, required-project description.
+A-NON09 -> Part A, page 3, Additional Guidelines.
+A-NON10 -> Part A, page 1, shared-code expectation.
+
+A-AMB01 -> Part A, page 2, Keeping the polling client up to date.
+A-AMB02-A-AMB03 -> Part A, page 3, Section C opening paragraph and item 2.
+A-AMB04-A-AMB05 -> Part A, page 3, Additional Guidelines and page 4, Marking demonstration.
+A-AMB06 -> Part A, pages 2-3, Section A item 6 and Additional Guidelines.
+
+Specific source map:
+
+* Page 1: title/total marks; Objective; required projects; shared-state and shared-code expectations; Section A items 1-4.
+* Page 2: Section A items 5-7; polling update requirements and fallback; interface expectations; Section B items 1-4.
+* Page 3: Section B item 5; Section C heading and items 1-4; Additional Guidelines.
+* Page 4: Submission guidelines; Marking demonstration; Academic integrity; end of Assignment 1A.
+
+Academic-integrity text is source material in the PDF but is not converted into an implementation requirement ID. It states that the task is assessable, submitted work must be original, external sources must be referenced, the unit coordinator may require oral justification, and responses may be used as evidence in an Academic Misconduct inquiry.
+
+============================================================
+17. RAW REQUIREMENT CHECKLIST
+============================================================
+
+[ ] A-F01 - Sign in
+[ ] A-F02 - Channel list and joining
+[ ] A-F03 - At-most-one channel
+[ ] A-F04 - Create channel
+[ ] A-F05 - Channel messages
+[ ] A-F06 - Current member list
+[ ] A-F07 - Late-join message visibility
+[ ] A-F08 - Start private conversation
+[ ] A-F09 - Private conversation window
+[ ] A-F10 - Multiple private conversations
+[ ] A-F11 - Share permitted files
+[ ] A-F12 - Display shared files
+[ ] A-F13 - Retrieve and open files
+[ ] A-F14 - Reject invalid files
+[ ] A-F15 - Sign out at any time
+[ ] A-F16 - Clean sign out
+[ ] A-F17 - Polling client self-update
+[ ] A-F18 - Two client views
+[ ] A-F19 - Channel-list controls
+[ ] A-F20 - Conversation-view controls
+[ ] A-F21 - Sign out in both views
+[ ] A-ARC01 - Windows real-time chat
+[ ] A-ARC02 - Client-server architecture
+[ ] A-ARC03 - Self-hosted WCF server
+[ ] A-ARC04 - Server shared state
+[ ] A-ARC05 - WPF polling client
+[ ] A-ARC06 - Concurrent polling instances
+[ ] A-ARC07 - Separate duplex client
+[ ] A-ARC08 - Shared server state
+[ ] A-ARC09 - Shared client code
+[ ] A-ARC10 - Fixed server address and port
+[ ] A-ARC11 - In-memory state
+[ ] A-ARC12 - Duplex netTcpBinding
+[ ] A-ARC13 - Separate WPF application
+[ ] A-ARC14 - Both clients build and run
+[ ] A-ARC15 - Same server without restart
+[ ] A-ARC16 - One-to-five concurrent clients
+[ ] A-POL01 - Self-updating polling client
+[ ] A-POL02 - Background polling thread
+[ ] A-POL03 - Polled data categories
+[ ] A-POL04 - Update interface from polling
+[ ] A-POL05 - Deliberate polling interval
+[ ] A-POL06 - Refresh fallback and mark cap
+[ ] A-POL07 - No duplex polling or refresh
+[ ] A-POL08 - Duplex updates pushed
+[ ] A-DPX01 - Same functionality as polling client
+[ ] A-DPX02 - No duplex timer requests
+[ ] A-DPX03 - Register callback on sign-in
+[ ] A-DPX04 - Server invokes callback
+[ ] A-DPX05 - Duplex callback contract
+[ ] A-DPX06 - Client registration
+[ ] A-DPX07 - Callback-to-user tracking
+[ ] A-DPX08 - Push update categories
+[ ] A-DPX09 - No fetched core updates
+[ ] A-DPX10 - Detect client disconnection
+[ ] A-DPX11 - Clean up disconnected user
+[ ] A-DPX12 - Failed callback isolation
+[ ] A-CHAT01 - User ID sign-in
+[ ] A-CHAT02 - Unique signed-in IDs
+[ ] A-CHAT03 - Release disconnected ID
+[ ] A-CHAT04 - Show and join channels
+[ ] A-CHAT05 - Current channel list
+[ ] A-CHAT06 - One channel per user
+[ ] A-CHAT07 - Unique channel names
+[ ] A-CHAT08 - Move users in and out
+[ ] A-CHAT09 - Authoritative channel membership
+[ ] A-CHAT10 - Send channel messages
+[ ] A-CHAT11 - Receive channel messages
+[ ] A-CHAT12 - Late-join visibility
+[ ] A-CHAT13 - Channel recipient scope
+[ ] A-CHAT14 - No message history
+[ ] A-CHAT15 - Select private recipient
+[ ] A-CHAT16 - Separate private window
+[ ] A-CHAT17 - Private history and reply
+[ ] A-CHAT18 - Multiple private windows
+[ ] A-CHAT19 - Private recipient scope
+[ ] A-CHAT20 - Same-channel private messaging
+[ ] A-CHAT21 - Sign-out membership release
+[ ] A-CHAT22 - Disconnected-user notification
+[ ] A-FILE01 - Choose and share file
+[ ] A-FILE02 - Two MB limit
+[ ] A-FILE03 - Clickable file entries
+[ ] A-FILE04 - File metadata display
+[ ] A-FILE05 - Retrieve and open file
+[ ] A-FILE06 - Reject invalid file
+[ ] A-FILE07 - Server stores files
+[ ] A-FILE08 - Server enforces file limits
+[ ] A-FILE09 - Channel file access
+[ ] A-FILE10 - File contents through server
+[ ] A-FILE11 - Permitted extensions
+[ ] A-CON01 - Concurrent polling instances
+[ ] A-CON02 - Concurrent-client test range
+[ ] A-CON03 - Polling background thread
+[ ] A-CON04 - WCF callback threads
+[ ] A-CON05 - WPF UI-thread marshalling
+[ ] A-CON06 - Synchronised shared state
+[ ] A-CON07 - Concurrent-update stability
+[ ] A-CON08 - Failed callback non-blocking
+[ ] A-UI01 - Sign-in UI
+[ ] A-UI02 - Duplicate-ID UI error
+[ ] A-UI03 - Channel-list controls
+[ ] A-UI04 - Self-updating channel list
+[ ] A-UI05 - Conversation-view contents
+[ ] A-UI06 - Incoming channel messages
+[ ] A-UI07 - Current member display
+[ ] A-UI08 - Incoming private window
+[ ] A-UI09 - Private window history and reply
+[ ] A-UI10 - Multiple private windows
+[ ] A-UI11 - Shared-file entries
+[ ] A-UI12 - Open retrieved file
+[ ] A-UI13 - Invalid-file message
+[ ] A-UI14 - Sign-out availability
+[ ] A-UI15 - View navigation
+[ ] A-UI16 - Polling UI updates
+[ ] A-UI17 - Duplex pushed updates
+[ ] A-ERR01 - Duplicate user rejection
+[ ] A-ERR02 - Duplicate channel rejection
+[ ] A-ERR03 - Invalid private recipient
+[ ] A-ERR04 - Invalid file rejection
+[ ] A-ERR05 - Disconnection ID release
+[ ] A-ERR06 - Disconnection detection
+[ ] A-ERR07 - Disconnection notification
+[ ] A-ERR08 - Failed callback handling
+[ ] A-ERR09 - Concurrent-update stability
+[ ] A-ERR10 - Submission integrity check
+[ ] A-ERR11 - Submission format restrictions
+[ ] A-TECH01 - C#
+[ ] A-TECH02 - .NET Framework
+[ ] A-TECH03 - WCF
+[ ] A-TECH04 - WPF
+[ ] A-TECH05 - Self-hosted WCF server
+[ ] A-TECH06 - WPF polling client
+[ ] A-TECH07 - Separate WPF duplex client
+[ ] A-TECH08 - netTcpBinding
+[ ] A-TECH09 - Fixed address and port
+[ ] A-TECH10 - Server-mediated traffic
+[ ] A-TECH11 - In-memory state
+[ ] A-TECH12 - Three required projects
+[ ] A-TECH13 - Both clients same server
+[ ] A-TECH14 - File type and size limits
+[ ] A-TECH15 - Polling fallback restriction
+[ ] A-DEL01 - Blackboard submission
+[ ] A-DEL02 - Per-member same zip
+[ ] A-DEL03 - Signed originality declaration
+[ ] A-DEL04 - Declaration file format/location
+[ ] A-DEL05 - Complete project zip
+[ ] A-DEL06 - Blackboard assignment area
+[ ] A-DEL07 - Re-download and test submission
+[ ] A-DEL08 - Three required projects
+[ ] A-DEL09 - Both clients build and run
+[ ] A-DEL10 - One-to-one demonstration
+[ ] A-DEL11 - Contribution percentage
+[ ] A-DEL12 - Three-client demonstration
+[ ] A-DEL13 - Required demonstration features
+[ ] A-DEL14 - Duplex demonstration features
+[ ] A-MARK01 - Total marks
+[ ] A-MARK02 - Section A marks
+[ ] A-MARK03 - Sign-in marks
+[ ] A-MARK04 - Channel-list marks
+[ ] A-MARK05 - Channel-creation marks
+[ ] A-MARK06 - Conversation marks
+[ ] A-MARK07 - Private-conversation marks
+[ ] A-MARK08 - File-sharing marks
+[ ] A-MARK09 - Sign-out marks
+[ ] A-MARK10 - Section B marks
+[ ] A-MARK11 - User-management marks
+[ ] A-MARK12 - Channel-management marks
+[ ] A-MARK13 - Message-distribution marks
+[ ] A-MARK14 - Private-messaging marks
+[ ] A-MARK15 - File-handling marks
+[ ] A-MARK16 - Section C marks
+[ ] A-MARK17 - Duplex-contract marks
+[ ] A-MARK18 - Polling-removal marks
+[ ] A-MARK19 - Thread-safety marks
+[ ] A-MARK20 - Disconnection marks
+[ ] A-MARK21 - Polling fallback mark cap
+[ ] A-MARK22 - Duplex proportional marks
+[ ] A-MARK23 - Demonstration-derived marks
+[ ] A-MARK24 - Contribution adjustment
+[ ] A-MARK25 - Full-inspection fallback
+[ ] A-MARK26 - Demonstration schedule
+[ ] A-NON01 - No password
+[ ] A-NON02 - No message history
+[ ] A-NON03 - No database required
+[ ] A-NON04 - No restart persistence
+[ ] A-NON05 - Not peer-to-peer
+[ ] A-NON06 - No duplex polling fallback
+[ ] A-NON07 - No local-path file transfer
+[ ] A-NON08 - Console server host sufficient
+[ ] A-NON09 - Localhost acceptable
+[ ] A-NON10 - Shared contracts project recommended
+[ ] A-AMB01 - Unspecified polling interval
+[ ] A-AMB02 - Callback event scope
+[ ] A-AMB03 - Meaning of same functionality
+[ ] A-AMB04 - Unspecified fixed port
+[ ] A-AMB05 - Concurrent-client range scope
+[ ] A-AMB06 - File-type validation basis
+
+============================================================
+EXTRACTION COUNTS
+============================================================
+
+Functional requirements: 21 (A-F01-A-F21)
+Architecture requirements: 16 (A-ARC01-A-ARC16)
+Polling requirements: 8 (A-POL01-A-POL08)
+Duplex requirements: 12 (A-DPX01-A-DPX12)
+Chat/channel requirements: 22 (A-CHAT01-A-CHAT22)
+File requirements: 11 (A-FILE01-A-FILE11)
+Concurrency requirements: 8 (A-CON01-A-CON08)
+UI requirements: 17 (A-UI01-A-UI17)
+Error-handling requirements: 11 (A-ERR01-A-ERR11)
+Technology constraints: 15 (A-TECH01-A-TECH15)
+Deliverables: 14 (A-DEL01-A-DEL14)
+Marking criteria: 26 (A-MARK01-A-MARK26)
+
+QUALITY CONTROL
+
+* The official `docs/ass/Part A.pdf` was read directly and cross-checked a second time using page-delimited text extraction.
+* `docs/ass/Part B.pdf` and the existing project implementation/README were not used to fill requirements.
+* Tables, figures, and captions: the PDF contains no separate figures, tables, or rubric table requiring additional extraction; the stated marks and section/item labels were extracted above.
+* No unreadable PDF text was encountered.
+* Repeated requirements are intentionally represented in the category where the assignment explicitly states them, so the audit checklist can be used section by section without relying on inferred implementation details.
+
+============================================================
+END OF TEMPORARY EXTRACTION
+============================================================
