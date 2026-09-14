@@ -15,7 +15,8 @@ namespace Chat.Client.Shared.Services
             byte[] buffer = new byte[81920]; // 80 KB bounded buffer
             int bytesRead;
 
-            Console.WriteLine($"[DOWNLOAD START] {fileName} ({totalBytes} bytes)");
+            string sizeStr = totalBytes > 0 ? $"{totalBytes} bytes" : "unknown size";
+            Console.WriteLine($"[DOWNLOAD START] {fileName} ({sizeStr})");
 
             try
             {
@@ -26,11 +27,18 @@ namespace Chat.Client.Shared.Services
                         await destination.WriteAsync(buffer, 0, bytesRead);
                         downloadedBytes += bytesRead;
 
-                        int percentage = totalBytes > 0 ? (int)((downloadedBytes * 100) / totalBytes) : 0;
-                        Console.WriteLine($"[DOWNLOAD] {fileName} {downloadedBytes}/{totalBytes} bytes ({percentage}%)");
+                        if (totalBytes > 0)
+                        {
+                            int percentage = (int)((downloadedBytes * 100) / totalBytes);
+                            Console.WriteLine($"[DOWNLOAD] {fileName} {downloadedBytes}/{totalBytes} bytes ({percentage}%)");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[DOWNLOAD] {fileName} {downloadedBytes} bytes downloaded...");
+                        }
                     }
                 }
-                Console.WriteLine($"[DOWNLOAD COMPLETE] {fileName} ({totalBytes} bytes)");
+                Console.WriteLine($"[DOWNLOAD COMPLETE] {fileName} ({downloadedBytes} bytes total)");
             }
             catch (Exception ex)
             {
