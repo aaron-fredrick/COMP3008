@@ -78,6 +78,8 @@
                         BorderThickness="0"
                         Foreground="{StaticResource ForegroundBrush}"
                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.CanContentScroll="False"
+                        ScrollViewer.ScrollChanged="MessagesListBox_ScrollChanged"
                         Tag="">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">

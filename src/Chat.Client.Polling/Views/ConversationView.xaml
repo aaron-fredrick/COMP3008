@@ -113,7 +113,9 @@
             <!-- Messages -->
             <ListBox x:Name="MessagesListBox" Grid.Row="1" Background="{StaticResource BackgroundBrush}"
                      Foreground="{StaticResource ForegroundBrush}" BorderThickness="0" Padding="22,24,22,4"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.CanContentScroll="False"
+                     ScrollViewer.ScrollChanged="MessagesListBox_ScrollChanged">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

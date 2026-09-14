@@ -76,7 +76,10 @@
                         Padding="20,16"
                         Background="{StaticResource BackgroundBrush}"
                         BorderThickness="0"
-                        Foreground="{StaticResource ForegroundBrush}">
+                        Foreground="{StaticResource ForegroundBrush}"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.CanContentScroll="False"
+                        ScrollViewer.ScrollChanged="MessagesListBox_ScrollChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,4">
