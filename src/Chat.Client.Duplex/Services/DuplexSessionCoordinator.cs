@@ -11,7 +11,7 @@ namespace Chat.Client.Duplex.Services
     {
         private static readonly Lazy<DuplexSessionCoordinator> _instance = new Lazy<DuplexSessionCoordinator>(() => new DuplexSessionCoordinator());
         public static DuplexSessionCoordinator Instance => _instance.Value;
-        public event EventHandler<List<Channel>> ChannelsUpdated; public event EventHandler<List<string>> ChannelMembersUpdated; public event EventHandler<List<SharedFile>> ChannelFilesUpdated; public event EventHandler<Message> PublicMessageReceived; public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived; public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived; public event EventHandler<ConnectionState> ConnectionStateChanged; public event EventHandler<string> UserDisconnected; public event EventHandler<string> SystemMessageReceived;
+        public event EventHandler<List<Channel>> ChannelsUpdated; public event EventHandler<List<string>> ChannelMembersUpdated; public event EventHandler<List<SharedFile>> ChannelFilesUpdated; public event EventHandler<Message> PublicMessageReceived; public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived; public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived; public event EventHandler<ConnectionState> ConnectionStateChanged; public event EventHandler<string> UserDisconnected;
         private DuplexServiceClient _serviceClient; private readonly ValidationService _validationService; private readonly FileHelperService _fileHelperService; private string _currentUserId; private string _currentChannel; private bool _isDisposed;
 
         // Local file list: populated on join (via RefreshChannelFilesAsync) and appended to by OnFileShared push.
@@ -86,7 +86,6 @@ namespace Chat.Client.Duplex.Services
         {
             // The updated member list arrives separately via OnChannelMembersChanged — no pull needed.
             UserDisconnected?.Invoke(this, disconnectedUserId);
-            SystemMessageReceived?.Invoke(this, $"{disconnectedUserId} has left the channel.");
         }
 
         private void OnConnectionLost(object sender, EventArgs e) { ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected); _currentUserId = null; _currentChannel = null; }

@@ -44,7 +44,6 @@ namespace Chat.Client.Duplex
             coordinator.PrivateFileReceived += OnPrivateFileReceived;
             coordinator.ConnectionStateChanged += OnConnectionStateChanged;
             coordinator.UserDisconnected += OnUserDisconnected;
-            coordinator.SystemMessageReceived += OnSystemMessageReceived;
         }
 
         private void InitializeFooter()
@@ -112,9 +111,6 @@ namespace Chat.Client.Duplex
 
         private void OnUserDisconnected(object sender, string userId) =>
             ClosePrivateMessageView(userId);
-
-        private void OnSystemMessageReceived(object sender, string message) =>
-            _conversationView?.AddSystemMessage(message);
 
         // ── Sign in / out ─────────────────────────────────────────────────────
 
@@ -256,7 +252,7 @@ namespace Chat.Client.Duplex
         {
             try
             {
-                var messages = _conversationView.GetMessages();
+                var messages = _conversationView.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, DuplexSessionCoordinator.Instance.CurrentChannel, messages, fileId => DuplexSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -383,7 +379,7 @@ namespace Chat.Client.Duplex
             if (view == null) return;
             try
             {
-                var messages = view.GetMessages();
+                var messages = view.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => DuplexSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);

@@ -5,10 +5,8 @@ using Chat.Contracts.SharedTypes;
 
 namespace Chat.Client.Shared.ViewModels
 {
-    public class MessageViewModel : INotifyPropertyChanged
+    public class MessageViewModel : ConversationItemViewModel
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-
         public Message Message { get; }
 
         /// <summary>
@@ -25,7 +23,7 @@ namespace Chat.Client.Shared.ViewModels
             {
                 if (_showMetadata == value) return;
                 _showMetadata = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMetadata)));
+                OnPropertyChanged(nameof(ShowMetadata));
             }
         }
 
@@ -42,7 +40,7 @@ namespace Chat.Client.Shared.ViewModels
         public Guid? FileId => Message.FileId;
 
         // Convert the server's UTC/local timestamp to the client's local time offset
-        public DateTime Timestamp => Message.Timestamp.ToLocalTime();
+        public override DateTime Timestamp => Message.Timestamp.ToLocalTime();
 
         public string HeaderText
         {

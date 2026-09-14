@@ -18,10 +18,11 @@ namespace Chat.Client.Polling.Views
         public event EventHandler FileShareRequested;
         public event EventHandler<string> ExportChatRequested;
 
-        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
+        public System.Collections.Generic.IEnumerable<Chat.Client.Shared.ViewModels.ConversationItemViewModel> GetConversationItems() => _messageViewModels;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private readonly ObservableCollection<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
+        private readonly ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel> _messageViewModels;
+        private System.Collections.Generic.List<string> _currentMembers = null;
 
         // Bottom-following: user is considered "at bottom" when within this many pixels of the end.
         private const double BottomThreshold = 20.0;
@@ -47,7 +48,7 @@ namespace Chat.Client.Polling.Views
         {
             InitializeComponent();
             _messages = new System.Collections.Generic.SortedSet<Message>();
-            _messageViewModels = new ObservableCollection<Chat.Client.Shared.ViewModels.MessageViewModel>();
+            _messageViewModels = new ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel>();
 
             // Set the ItemsSource once; it is never replaced — only items are added/removed.
             MessagesListBox.ItemsSource = _messageViewModels;
@@ -70,6 +71,34 @@ namespace Chat.Client.Polling.Views
         {
             MembersListBox.ItemsSource = members;
             MembersSectionText.Text = $"MEMBERS — {members.Count}";
+
+            if (_currentMembers == null)
+            {
+                _currentMembers = new System.Collections.Generic.List<string>(members);
+            }
+            else
+            {
+                var joined = new System.Collections.Generic.List<string>();
+                foreach (var m in members) if (!_currentMembers.Contains(m)) joined.Add(m);
+                
+                var left = new System.Collections.Generic.List<string>();
+                foreach (var m in _currentMembers) if (!members.Contains(m)) left.Add(m);
+
+                foreach (var user in joined)
+                    AddSystemMessage($"{user} joined the channel.");
+
+                foreach (var user in left)
+                    AddSystemMessage($"{user} left the channel.");
+
+                _currentMembers = new System.Collections.Generic.List<string>(members);
+            }
+        }
+
+        public void AddSystemMessage(string text)
+        {
+            _messageViewModels.Add(new Chat.Client.Shared.ViewModels.SystemMessageViewModel(text, DateTime.UtcNow));
+            if (_isAtBottom)
+                ScrollToBottom();
         }
 
         public void UpdateFiles(System.Collections.Generic.List<SharedFile> files)
@@ -97,8 +126,8 @@ namespace Chat.Client.Polling.Views
 
             if (_messageViewModels.Count > 0)
             {
-                var previous = _messageViewModels[_messageViewModels.Count - 1];
-                if (previous.SenderId == message.SenderId &&
+                var previous = _messageViewModels[_messageViewModels.Count - 1] as Chat.Client.Shared.ViewModels.MessageViewModel;
+                if (previous != null && previous.SenderId == message.SenderId &&
                     previous.Timestamp.ToString("yyyyMMddHHmm") == message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm"))
                 {
                     showMetadata = false;
@@ -208,7 +237,7 @@ namespace Chat.Client.Polling.Views
 
         private void ExportChatButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_messages.Count == 0)
+            if (_messageViewModels.Count == 0)
             {
                 MessageBox.Show("There are no messages to export.", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;

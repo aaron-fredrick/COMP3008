@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
              xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers;assembly=Chat.Client.Shared"
+             xmlns:selectors="clr-namespace:Chat.Client.Shared.Selectors;assembly=Chat.Client.Shared"
              mc:Ignorable="d"
              d:DesignHeight="664" d:DesignWidth="1000">
     <Grid>
@@ -147,8 +148,10 @@
                         </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
+                <ListBox.ItemTemplateSelector>
+                    <selectors:ConversationItemTemplateSelector>
+                        <selectors:ConversationItemTemplateSelector.MessageTemplate>
+                            <DataTemplate>
                         <Grid MaxWidth="500">
                             <Grid.Style>
                                 <Style TargetType="Grid">
@@ -285,8 +288,15 @@
                                 </Border>
                             </StackPanel>
                         </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
+                            </DataTemplate>
+                        </selectors:ConversationItemTemplateSelector.MessageTemplate>
+                        <selectors:ConversationItemTemplateSelector.SystemMessageTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" Foreground="{StaticResource MessageMetadataBrush}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16"/>
+                            </DataTemplate>
+                        </selectors:ConversationItemTemplateSelector.SystemMessageTemplate>
+                    </selectors:ConversationItemTemplateSelector>
+                </ListBox.ItemTemplateSelector>
             </ListBox>
 
             <!-- Input Area -->

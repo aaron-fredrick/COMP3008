@@ -19,10 +19,14 @@ namespace Chat.Client.Duplex.Views
         public event EventHandler FileShareRequested;
         public event EventHandler<string> ExportChatRequested;
 
-        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
+        public System.Collections.Generic.IEnumerable<Chat.Client.Shared.ViewModels.ConversationItemViewModel> GetConversationItems() => _conversationItems;
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private readonly ObservableCollection<object> _messageViewModels;
+        private readonly ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel> _conversationItems;
+
+        // Tracks the current member snapshot for join/leave diffing.
+        // Null until the first UpdateMembers call, which establishes baseline without generating events.
+        private System.Collections.Generic.List<string> _currentMembers = null;
 
         // Bottom-following: user is considered "at bottom" when within this many pixels of the end.
         private const double BottomThreshold = 20.0;
@@ -48,12 +52,10 @@ namespace Chat.Client.Duplex.Views
         {
             InitializeComponent();
             _messages = new System.Collections.Generic.SortedSet<Message>();
-
-            // Object collection so system message strings can coexist with MessageViewModels.
-            _messageViewModels = new ObservableCollection<object>();
+            _conversationItems = new ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel>();
 
             // Set the ItemsSource once; it is never replaced — only items are added/removed.
-            MessagesListBox.ItemsSource = _messageViewModels;
+            MessagesListBox.ItemsSource = _conversationItems;
 
             Loaded += (_, __) => _scrollViewer = FindScrollViewer(MessagesListBox);
         }
@@ -69,10 +71,44 @@ namespace Chat.Client.Duplex.Views
             CurrentUserId = userId;
         }
 
+        /// <summary>
+        /// Updates the member list and generates join/leave system messages by diffing
+        /// the incoming snapshot against the previous one.
+        /// The first call establishes baseline state and must NOT generate any events.
+        /// </summary>
         public void UpdateMembers(System.Collections.Generic.List<string> members)
         {
             MembersListBox.ItemsSource = members;
             MembersSectionText.Text = $"MEMBERS — {members.Count}";
+
+            if (_currentMembers == null)
+            {
+                // First call — establish baseline, no events.
+                _currentMembers = new System.Collections.Generic.List<string>(members);
+            }
+            else
+            {
+                var joined = new System.Collections.Generic.List<string>();
+                foreach (var m in members) if (!_currentMembers.Contains(m)) joined.Add(m);
+
+                var left = new System.Collections.Generic.List<string>();
+                foreach (var m in _currentMembers) if (!members.Contains(m)) left.Add(m);
+
+                foreach (var user in joined)
+                    AddSystemMessage($"{user} joined the channel.");
+
+                foreach (var user in left)
+                    AddSystemMessage($"{user} left the channel.");
+
+                _currentMembers = new System.Collections.Generic.List<string>(members);
+            }
+        }
+
+        public void AddSystemMessage(string text)
+        {
+            _conversationItems.Add(new Chat.Client.Shared.ViewModels.SystemMessageViewModel(text, DateTime.UtcNow));
+            if (_isAtBottom)
+                ScrollToBottom();
         }
 
         public void UpdateFiles(System.Collections.Generic.List<SharedFile> files)
@@ -98,10 +134,10 @@ namespace Chat.Client.Duplex.Views
         {
             bool showMetadata = true;
 
-            // Walk backwards to find the last MessageViewModel (skip any system-message strings).
-            for (int i = _messageViewModels.Count - 1; i >= 0; i--)
+            // Walk backwards to find the last MessageViewModel (skip any system messages).
+            for (int i = _conversationItems.Count - 1; i >= 0; i--)
             {
-                if (_messageViewModels[i] is Chat.Client.Shared.ViewModels.MessageViewModel previous)
+                if (_conversationItems[i] is Chat.Client.Shared.ViewModels.MessageViewModel previous)
                 {
                     if (previous.SenderId == message.SenderId &&
                         previous.Timestamp.ToString("yyyyMMddHHmm") == message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm"))
@@ -112,19 +148,7 @@ namespace Chat.Client.Duplex.Views
                 }
             }
 
-            _messageViewModels.Add(new Chat.Client.Shared.ViewModels.MessageViewModel(message, showMetadata));
-
-            if (_isAtBottom)
-                ScrollToBottom();
-        }
-
-        /// <summary>
-        /// Duplex-specific: system messages arrive via callback and are shown as plain text items.
-        /// Appended to the shared collection without rebuilding.
-        /// </summary>
-        public void AddSystemMessage(string text)
-        {
-            _messageViewModels.Add($"— {text} —");
+            _conversationItems.Add(new Chat.Client.Shared.ViewModels.MessageViewModel(message, showMetadata));
 
             if (_isAtBottom)
                 ScrollToBottom();
@@ -222,7 +246,7 @@ namespace Chat.Client.Duplex.Views
 
         private void ExportChatButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_messages.Count == 0)
+            if (_conversationItems.Count == 0)
             {
                 MessageBox.Show("There are no messages to export.", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;

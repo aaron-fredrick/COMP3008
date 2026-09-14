@@ -289,7 +289,7 @@ namespace Chat.Client.Polling
         {
             try
             {
-                var messages = _conversationView.GetMessages();
+                var messages = _conversationView.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, PollingSessionCoordinator.Instance.CurrentChannel, messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -420,7 +420,7 @@ namespace Chat.Client.Polling
             if (view == null) return;
             try
             {
-                var messages = view.GetMessages();
+                var messages = view.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);

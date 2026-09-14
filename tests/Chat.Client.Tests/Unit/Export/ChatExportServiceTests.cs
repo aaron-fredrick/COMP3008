@@ -116,7 +116,7 @@ namespace Chat.Client.Tests.Unit.Export
         [TestCategory("Unit")]
         public void EmptyChannel_ProducesZipWithTranscriptOnly()
         {
-            var zip = RunExport("empty-channel", new List<Message>(), _ => null);
+            var zip = RunExport("empty-channel", new List<Chat.Client.Shared.ViewModels.ConversationItemViewModel>(), _ => null);
 
             using (var archive = new ZipArchive(new MemoryStream(zip), ZipArchiveMode.Read))
             {
@@ -131,7 +131,7 @@ namespace Chat.Client.Tests.Unit.Export
         [TestCategory("Unit")]
         public void TranscriptFileName_ContainsChannelName()
         {
-            var zip = RunExport("my-channel", new List<Message>(), _ => null);
+            var zip = RunExport("my-channel", new List<Chat.Client.Shared.ViewModels.ConversationItemViewModel>(), _ => null);
 
             using (var archive = new ZipArchive(new MemoryStream(zip), ZipArchiveMode.Read))
             {
@@ -247,7 +247,7 @@ namespace Chat.Client.Tests.Unit.Export
                 IsCurrentUser = false
             };
 
-            var zip = RunExport("general", new List<Message> { msg }, id => new byte[] { 1 });
+            var zip = RunExport("general", MessageBuilder.Wrap(msg), id => new byte[] { 1 });
 
             using (var archive = new ZipArchive(new MemoryStream(zip), ZipArchiveMode.Read))
             {
@@ -260,10 +260,10 @@ namespace Chat.Client.Tests.Unit.Export
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private byte[] RunExport(string channelName, IEnumerable<Message> messages, Func<Guid, byte[]> download)
+        private byte[] RunExport(string channelName, IEnumerable<Chat.Client.Shared.ViewModels.ConversationItemViewModel> items, Func<Guid, byte[]> download)
         {
             var zipPath = Path.Combine(_tempDir, $"{channelName}.zip");
-            _service.ExportChannelChat(zipPath, channelName, messages, download);
+            _service.ExportChannelChat(zipPath, channelName, items, download);
             return File.ReadAllBytes(zipPath);
         }
 
