@@ -234,11 +234,7 @@ namespace Chat.Client.Polling
             if (!message.FileId.HasValue)
                 return;
 
-            await PollingSessionCoordinator.Instance.DownloadAndOpenFileAsync(new SharedFile
-            {
-                FileId = message.FileId.Value,
-                FileName = message.Content.Replace("Shared file: ", string.Empty)
-            });
+            await PollingSessionCoordinator.Instance.DownloadAndOpenFileAsync(message.FileId.Value);
         }
 
         private async void OnFileShareRequested(object sender, EventArgs e)

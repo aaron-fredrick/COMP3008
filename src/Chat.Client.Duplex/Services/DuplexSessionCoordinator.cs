@@ -106,6 +106,15 @@ namespace Chat.Client.Duplex.Services
                 if (factory != null) { try { factory.Close(); } catch { } }
             }
         }
+
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(Guid fileId)
+        {
+            SharedFile file = _serviceClient.GetFile(_currentUserId, fileId);
+            if (file == null) return false;
+            
+            return await DownloadAndOpenFileAsync(file);
+        }
+
         public byte[] DownloadFileBytes(Guid fileId) { var downloadedFile = _serviceClient.GetFile(_currentUserId, fileId); return downloadedFile?.FileData; }
 
         // ── Callback handlers — payload consumed directly; no follow-up server requests ────────────
@@ -147,4 +156,4 @@ namespace Chat.Client.Duplex.Services
         private void OnConnectionLost(object sender, EventArgs e) { ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected); _currentUserId = null; _currentChannel = null; }
         public void Dispose() { if (_isDisposed) return; if (IsSignedIn) SignOut(); UnsubscribeEvents(); _serviceClient?.Dispose(); _isDisposed = true; }
     }
-}
+}

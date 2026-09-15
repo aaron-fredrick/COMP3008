@@ -212,11 +212,7 @@ namespace Chat.Client.Duplex
             if (!message.FileId.HasValue)
                 return;
 
-            await DuplexSessionCoordinator.Instance.DownloadAndOpenFileAsync(new SharedFile
-            {
-                FileId = message.FileId.Value,
-                FileName = message.Content.Replace("Shared file: ", string.Empty)
-            });
+            await DuplexSessionCoordinator.Instance.DownloadAndOpenFileAsync(message.FileId.Value);
         }
 
         private async void OnFileShareRequested(object sender, EventArgs e)

@@ -199,6 +199,14 @@ namespace Chat.Client.Polling.Services
             }
         }
 
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(Guid fileId)
+        {
+            SharedFile file = _serviceClient.GetFile(_currentUserId, fileId);
+            if (file == null) return false;
+            
+            return await DownloadAndOpenFileAsync(file);
+        }
+
         public byte[] DownloadFileBytes(Guid fileId)
         {
             var downloadedFile = _serviceClient.GetFile(_currentUserId, fileId);
