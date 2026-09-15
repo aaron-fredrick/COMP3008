@@ -4,6 +4,7 @@ using System.Windows;
 using Chat.Client.Duplex.Services;
 using Chat.Client.Duplex.Views;
 using Chat.Client.Shared.Controls;
+using Chat.Client.Shared.Services;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -17,6 +18,7 @@ namespace Chat.Client.Duplex
         private readonly Dictionary<string, List<Message>> _privateMessageHistory;
         private readonly Dictionary<string, List<SharedFile>> _privateFileHistory = new Dictionary<string, List<SharedFile>>();
         private Chat.Client.Shared.Controls.WindowResizer _windowResizer;
+        private readonly FileHelperService _fileHelperService;
 
         public MainWindow()
         {
@@ -24,6 +26,7 @@ namespace Chat.Client.Duplex
             _privateMessageViews = new Dictionary<string, PrivateMessageView>();
             _privateMessageHistory = new Dictionary<string, List<Message>>();
             _windowResizer = new Chat.Client.Shared.Controls.WindowResizer(this);
+            _fileHelperService = new FileHelperService();
 
             SubscribeCoordinatorEvents();
 
@@ -212,7 +215,26 @@ namespace Chat.Client.Duplex
             if (!message.FileId.HasValue)
                 return;
 
-            await DuplexSessionCoordinator.Instance.DownloadAndOpenFileAsync(message.FileId.Value);
+            Guid fileId = message.FileId.Value;
+            var coordinator = DuplexSessionCoordinator.Instance;
+            
+            SharedFile file = coordinator.GetFileMetadata(fileId);
+            if (file == null)
+                return;
+
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = file.FileName,
+                InitialDirectory = downloadsPath,
+                OverwritePrompt = true
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            await coordinator.DownloadAndOpenFileAsync(file, dialog.FileName);
         }
 
         private async void OnFileShareRequested(object sender, EventArgs e)

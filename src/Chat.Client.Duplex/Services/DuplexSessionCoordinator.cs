@@ -115,6 +115,38 @@ namespace Chat.Client.Duplex.Services
             return await DownloadAndOpenFileAsync(file);
         }
 
+        public SharedFile GetFileMetadata(Guid fileId)
+        {
+            return _serviceClient.GetFile(_currentUserId, fileId);
+        }
+
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(SharedFile file, string destinationPath)
+        {
+            var downloadService = new DownloadService();
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, destinationPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(destinationPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
+        }
+
         public byte[] DownloadFileBytes(Guid fileId) { var downloadedFile = _serviceClient.GetFile(_currentUserId, fileId); return downloadedFile?.FileData; }
 
         // ── Callback handlers — payload consumed directly; no follow-up server requests ────────────
