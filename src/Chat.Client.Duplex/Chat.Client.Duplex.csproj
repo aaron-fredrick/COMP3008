@@ -5,7 +5,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
 
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <RootNamespace>Chat.Client.Duplex</RootNamespace>
     <AssemblyName>Chat.Client.Duplex</AssemblyName>
 
