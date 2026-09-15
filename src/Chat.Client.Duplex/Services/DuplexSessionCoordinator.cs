@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Threading;
 using Chat.Client.Shared.Services;
 using Chat.Contracts.DataContracts;
+using Chat.Contracts.ServiceContracts;
 using Chat.Contracts.SharedTypes;
 using Chat.Client.Shared.Controls;
 namespace Chat.Client.Duplex.Services
@@ -11,7 +12,7 @@ namespace Chat.Client.Duplex.Services
     {
         private static readonly Lazy<DuplexSessionCoordinator> _instance = new Lazy<DuplexSessionCoordinator>(() => new DuplexSessionCoordinator());
         public static DuplexSessionCoordinator Instance => _instance.Value;
-        public event EventHandler<List<Channel>> ChannelsUpdated; public event EventHandler<List<string>> ChannelMembersUpdated; public event EventHandler<List<SharedFile>> ChannelFilesUpdated; public event EventHandler<Message> PublicMessageReceived; public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived; public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived; public event EventHandler<ConnectionState> ConnectionStateChanged; public event EventHandler<string> UserDisconnected; public event EventHandler<string> SystemMessageReceived;
+        public event EventHandler<List<Channel>> ChannelsUpdated; public event EventHandler<List<string>> ChannelMembersUpdated; public event EventHandler<List<SharedFile>> ChannelFilesUpdated; public event EventHandler<Message> PublicMessageReceived; public event EventHandler<(string OtherUserId, Message Message)> PrivateMessageReceived; public event EventHandler<(string OtherUserId, SharedFile File)> PrivateFileReceived; public event EventHandler<ConnectionState> ConnectionStateChanged; public event EventHandler<string> UserDisconnected;
         private DuplexServiceClient _serviceClient; private readonly ValidationService _validationService; private readonly FileHelperService _fileHelperService; private string _currentUserId; private string _currentChannel; private bool _isDisposed;
 
         // Local file list: populated on join (via RefreshChannelFilesAsync) and appended to by OnFileShared push.
@@ -48,8 +49,104 @@ namespace Chat.Client.Duplex.Services
         public ValidationResult ValidateFile(string filePath) => _validationService.ValidateFile(filePath); public FileType DetermineFileType(string fileName) => _validationService.DetermineFileType(fileName); public string GetFileName(string filePath) => _fileHelperService.GetFileName(filePath); public byte[] ReadFile(string filePath) => _fileHelperService.ReadFile(filePath);
         public bool ShareFile(string fileName, FileType fileType, byte[] fileData) => _serviceClient.ShareFile(_currentUserId, _currentChannel, fileName, fileType, fileData);
         public SharedFile SharePrivateFile(string recipientId, string fileName, FileType fileType, byte[] fileData) => _serviceClient.SharePrivateFile(_currentUserId, recipientId, fileName, fileType, fileData);
-        public bool DownloadAndOpenPrivateFile(SharedFile file) { var downloadedFile = _serviceClient.GetPrivateFile(_currentUserId, file.FileId); if (downloadedFile?.FileData == null) return false; string downloadsPath = _fileHelperService.GetDownloadsPath(); if (!_fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath)) return false; _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName)); return true; }
-        public bool DownloadAndOpenFile(SharedFile file) { var downloadedFile = _serviceClient.GetFile(_currentUserId, file.FileId); if (downloadedFile?.FileData == null) return false; string downloadsPath = _fileHelperService.GetDownloadsPath(); bool saved = _fileHelperService.SaveFile(downloadedFile.FileData, file.FileName, downloadsPath); if (!saved) return false; _fileHelperService.OpenFile(System.IO.Path.Combine(downloadsPath, file.FileName)); return true; }
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenPrivateFileAsync(SharedFile file)
+        {
+            var downloadService = new DownloadService();
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            string fullPath = System.IO.Path.Combine(downloadsPath, file.FileName);
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadPrivateFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, fullPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(fullPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
+        }
+        
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(SharedFile file)
+        {
+            var downloadService = new DownloadService();
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            string fullPath = System.IO.Path.Combine(downloadsPath, file.FileName);
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, fullPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(fullPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
+        }
+
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(Guid fileId)
+        {
+            SharedFile file = _serviceClient.GetFile(_currentUserId, fileId);
+            if (file == null) return false;
+            
+            return await DownloadAndOpenFileAsync(file);
+        }
+
+        public SharedFile GetFileMetadata(Guid fileId)
+        {
+            return _serviceClient.GetFile(_currentUserId, fileId);
+        }
+
+        public async System.Threading.Tasks.Task<bool> DownloadAndOpenFileAsync(SharedFile file, string destinationPath)
+        {
+            var downloadService = new DownloadService();
+            
+            System.ServiceModel.ChannelFactory<IChatService> factory = null;
+            System.IO.Stream sourceStream = null;
+            try
+            {
+                sourceStream = _serviceClient.DownloadFileStream(_currentUserId, file.FileId, out factory);
+                if (sourceStream == null) return false;
+                
+                await downloadService.DownloadAsync(sourceStream, destinationPath, file.FileSize, file.FileName);
+                _fileHelperService.OpenFile(destinationPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Streaming download failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                if (sourceStream != null) { try { sourceStream.Dispose(); } catch { } }
+                if (factory != null) { try { factory.Close(); } catch { } }
+            }
+        }
+
         public byte[] DownloadFileBytes(Guid fileId) { var downloadedFile = _serviceClient.GetFile(_currentUserId, fileId); return downloadedFile?.FileData; }
 
         // ── Callback handlers — payload consumed directly; no follow-up server requests ────────────
@@ -86,10 +183,9 @@ namespace Chat.Client.Duplex.Services
         {
             // The updated member list arrives separately via OnChannelMembersChanged — no pull needed.
             UserDisconnected?.Invoke(this, disconnectedUserId);
-            SystemMessageReceived?.Invoke(this, $"{disconnectedUserId} has left the channel.");
         }
 
         private void OnConnectionLost(object sender, EventArgs e) { ConnectionStateChanged?.Invoke(this, ConnectionState.Disconnected); _currentUserId = null; _currentChannel = null; }
         public void Dispose() { if (_isDisposed) return; if (IsSignedIn) SignOut(); UnsubscribeEvents(); _serviceClient?.Dispose(); _isDisposed = true; }
     }
-}
+}

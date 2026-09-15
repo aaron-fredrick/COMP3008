@@ -36,7 +36,7 @@ namespace Chat.Client.Polling.Views
         }
 
         private readonly System.Collections.Generic.SortedSet<Message> _messages;
-        private readonly ObservableCollection<Chat.Client.Shared.ViewModels.MessageViewModel> _messageViewModels;
+        private readonly ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel> _messageViewModels;
 
         // Bottom-following: user is considered "at bottom" when within this many pixels of the end.
         private const double BottomThreshold = 20.0;
@@ -56,7 +56,7 @@ namespace Chat.Client.Polling.Views
             Title = $"DM — {recipientId}";
             RecipientText.Text = $"{recipientId}";
             _messages = new System.Collections.Generic.SortedSet<Message>();
-            _messageViewModels = new ObservableCollection<Chat.Client.Shared.ViewModels.MessageViewModel>();
+            _messageViewModels = new ObservableCollection<Chat.Client.Shared.ViewModels.ConversationItemViewModel>();
 
             // Set the ItemsSource once; it is never replaced — only items are added/removed.
             MessagesListBox.ItemsSource = _messageViewModels;
@@ -95,8 +95,8 @@ namespace Chat.Client.Polling.Views
 
             if (_messageViewModels.Count > 0)
             {
-                var previous = _messageViewModels[_messageViewModels.Count - 1];
-                if (previous.SenderId == message.SenderId &&
+                var previous = _messageViewModels[_messageViewModels.Count - 1] as Chat.Client.Shared.ViewModels.MessageViewModel;
+                if (previous != null && previous.SenderId == message.SenderId &&
                     previous.Timestamp.ToString("yyyyMMddHHmm") == message.Timestamp.ToLocalTime().ToString("yyyyMMddHHmm"))
                 {
                     showMetadata = false;
@@ -179,7 +179,7 @@ namespace Chat.Client.Polling.Views
                 ExportChatRequested?.Invoke(this, dialog.FileName);
         }
 
-        public System.Collections.Generic.IEnumerable<Message> GetMessages() => _messages;
+        public System.Collections.Generic.IEnumerable<Chat.Client.Shared.ViewModels.ConversationItemViewModel> GetConversationItems() => _messageViewModels;
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {

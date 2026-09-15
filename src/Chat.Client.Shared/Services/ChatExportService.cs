@@ -5,12 +5,13 @@ using System.IO.Compression;
 using System.Text;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
+using Chat.Client.Shared.ViewModels;
 
 namespace Chat.Client.Shared.Services
 {
     public class ChatExportService
     {
-        public void ExportChannelChat(string zipFilePath, string channelName, IEnumerable<Message> messages, Func<Guid, byte[]> downloadFileBytes)
+        public void ExportChannelChat(string zipFilePath, string channelName, IEnumerable<ConversationItemViewModel> items, Func<Guid, byte[]> downloadFileBytes)
         {
             using (var fileStream = new FileStream(zipFilePath, FileMode.Create, FileAccess.Write))
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create))
@@ -18,43 +19,52 @@ namespace Chat.Client.Shared.Services
                 var usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var transcriptBuilder = new StringBuilder();
 
-                foreach (var message in messages)
+                foreach (var item in items)
                 {
-                    string timestamp = message.Timestamp.ToLocalTime().ToString("dd/MM/yyyy, HH:mm");
-                    string senderId = message.SenderId;
-                    string content = message.Content;
-
-                    bool isFile = message.Type == MessageType.File || message.FileId.HasValue;
-                    if (isFile)
+                    if (item is SystemMessageViewModel sysMsg)
                     {
-                        transcriptBuilder.AppendLine($"{timestamp} - {senderId}: <File omitted>");
+                        string timestamp = sysMsg.Timestamp.ToString("dd/MM/yyyy, HH:mm");
+                        transcriptBuilder.AppendLine($"{timestamp} - {sysMsg.Text}");
+                    }
+                    else if (item is MessageViewModel msgVm)
+                    {
+                        var message = msgVm.Message;
+                        string timestamp = message.Timestamp.ToLocalTime().ToString("dd/MM/yyyy, HH:mm");
+                        string senderId = message.SenderId;
+                        string content = message.Content;
 
-                        if (message.FileId.HasValue)
+                        bool isFile = message.Type == MessageType.File || message.FileId.HasValue;
+                        if (isFile)
                         {
-                            string originalFileName = !string.IsNullOrEmpty(content) && content.StartsWith("Shared file: ")
-                                ? content.Substring("Shared file: ".Length)
-                                : $"file_{message.FileId.Value}.dat";
+                            transcriptBuilder.AppendLine($"{timestamp} - {senderId}: <File omitted>");
 
-                            // Safely handle file name to prevent path traversal
-                            originalFileName = Path.GetFileName(originalFileName);
-
-                            string uniqueFileName = GetUniqueFileName(originalFileName, usedFileNames);
-                            usedFileNames.Add(uniqueFileName);
-
-                            byte[] fileBytes = downloadFileBytes(message.FileId.Value);
-                            if (fileBytes != null)
+                            if (message.FileId.HasValue)
                             {
-                                var fileEntry = archive.CreateEntry(uniqueFileName);
-                                using (var fileEntryStream = fileEntry.Open())
+                                string originalFileName = !string.IsNullOrEmpty(content) && content.StartsWith("Shared file: ")
+                                    ? content.Substring("Shared file: ".Length)
+                                    : $"file_{message.FileId.Value}.dat";
+
+                                // Safely handle file name to prevent path traversal
+                                originalFileName = Path.GetFileName(originalFileName);
+
+                                string uniqueFileName = GetUniqueFileName(originalFileName, usedFileNames);
+                                usedFileNames.Add(uniqueFileName);
+
+                                byte[] fileBytes = downloadFileBytes(message.FileId.Value);
+                                if (fileBytes != null)
                                 {
-                                    fileEntryStream.Write(fileBytes, 0, fileBytes.Length);
+                                    var fileEntry = archive.CreateEntry(uniqueFileName);
+                                    using (var fileEntryStream = fileEntry.Open())
+                                    {
+                                        fileEntryStream.Write(fileBytes, 0, fileBytes.Length);
+                                    }
                                 }
                             }
                         }
-                    }
-                    else
-                    {
-                        transcriptBuilder.AppendLine($"{timestamp} - {senderId}: {content}");
+                        else
+                        {
+                            transcriptBuilder.AppendLine($"{timestamp} - {senderId}: {content}");
+                        }
                     }
                 }
 

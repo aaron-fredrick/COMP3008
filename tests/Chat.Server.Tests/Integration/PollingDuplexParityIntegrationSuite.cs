@@ -147,7 +147,18 @@ namespace Chat.Server.Tests.Integration
         private static DuplexChannelFactory<IDuplexChatService> DuplexFactory(string url, TestCallback callback) => new DuplexChannelFactory<IDuplexChatService>(new InstanceContext(callback), TestServerFixture.CreateDuplexBinding(), new EndpointAddress(url));
         private static void CreateChannel(IChatService client, string channel) { TestAssert.True(client.CreateChannel(channel), "Test channel creation failed: " + channel); }
         private static void Join(IChatService client, string user, string channel) { TestAssert.True(client.JoinChannel(user, channel), "Test join failed: " + channel); }
-        private static void TriggerCallbackRegistration(IChatService client, string probeChannel, TestCallback callback) { CreateChannel(client, probeChannel); WaitUntil(() => callback.RegisteredSignal, 3000, "Duplex callback registration was not observed"); }
+        private static void TriggerCallbackRegistration(IChatService client, string probeChannel, TestCallback callback)
+        {
+            var end = DateTime.UtcNow.AddMilliseconds(3000);
+            int attempt = 0;
+            while (DateTime.UtcNow < end)
+            {
+                CreateChannel(client, $"{probeChannel}-{attempt++}");
+                if (callback.RegisteredSignal) return;
+                Thread.Sleep(50);
+            }
+            throw new InvalidOperationException("Duplex callback registration was not observed");
+        }
         private static void SignInClean(IChatService client, string user) { SignOut(client, user); TestAssert.True(client.SignIn(user), "Sign-in failed for " + user); }
         private static void SignOut(IChatService client, string user) { try { client.SignOut(user); } catch { } }
         private static void Close(object proxy, ICommunicationObject factory)

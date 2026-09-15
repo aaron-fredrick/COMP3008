@@ -206,6 +206,7 @@ namespace Chat.Server.Tests.Unit
             public int DeleteCalls { get; private set; }
             public string Store(Guid fileId, byte[] content) { throw new IOException("simulated content-store failure"); }
             public byte[] Read(Guid fileId) { return null; }
+            public System.IO.Stream OpenRead(Guid fileId) { return null; }
             public bool Exists(Guid fileId) { return false; }
             public void Delete(Guid fileId) { DeleteCalls++; }
         }
@@ -216,6 +217,7 @@ namespace Chat.Server.Tests.Unit
             public readonly ManualResetEventSlim Release = new ManualResetEventSlim(false);
             public string Store(Guid fileId, byte[] content) { StoreStarted.Set(); Release.Wait(5000); return fileId.ToString("N"); }
             public byte[] Read(Guid fileId) { return new byte[] { 1 }; }
+            public System.IO.Stream OpenRead(Guid fileId) { return new System.IO.MemoryStream(new byte[] { 1 }); }
             public bool Exists(Guid fileId) { return true; }
             public void Delete(Guid fileId) { }
         }

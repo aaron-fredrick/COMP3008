@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Chat.Client.Shared.ViewModels;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -42,6 +43,23 @@ namespace Chat.Client.Tests.Helpers
             };
         }
 
-        public static List<Message> Sequence(params Message[] messages) => new List<Message>(messages);
+        /// <summary>
+        /// Wraps the given <see cref="Message"/> objects as <see cref="MessageViewModel"/> instances
+        /// so they can be passed to <see cref="Chat.Client.Shared.Services.ChatExportService.ExportChannelChat"/>.
+        /// </summary>
+        public static List<ConversationItemViewModel> Sequence(params Message[] messages)
+        {
+            var result = new List<ConversationItemViewModel>(messages.Length);
+            foreach (var m in messages)
+                result.Add(new MessageViewModel(m, showMetadata: true));
+            return result;
+        }
+
+        /// <summary>
+        /// Wraps a single <see cref="Message"/> as a <see cref="MessageViewModel"/>.
+        /// Convenience overload for tests that construct messages inline.
+        /// </summary>
+        public static List<ConversationItemViewModel> Wrap(params Message[] messages)
+            => Sequence(messages);
     }
 }

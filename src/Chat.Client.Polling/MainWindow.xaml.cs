@@ -5,6 +5,7 @@ using System.Windows;
 using Chat.Client.Polling.Services;
 using Chat.Client.Polling.Views;
 using Chat.Client.Shared.Controls;
+using Chat.Client.Shared.Services;
 using Chat.Contracts.DataContracts;
 using Chat.Contracts.SharedTypes;
 
@@ -19,6 +20,7 @@ namespace Chat.Client.Polling
         private readonly Dictionary<string, List<Message>> _privateMessageHistory;
         private readonly Dictionary<string, List<SharedFile>> _privateFileHistory = new Dictionary<string, List<SharedFile>>();
         private WindowResizer _windowResizer;
+        private readonly FileHelperService _fileHelperService;
 
         public MainWindow()
         {
@@ -26,6 +28,7 @@ namespace Chat.Client.Polling
             _privateMessageViews = new Dictionary<string, PrivateMessageView>();
             _privateMessageHistory = new Dictionary<string, List<Message>>();
             _windowResizer = new WindowResizer(this);
+            _fileHelperService = new FileHelperService();
 
             SubscribeCoordinatorEvents();
 
@@ -226,19 +229,34 @@ namespace Chat.Client.Polling
             ShowChannelListView();
         }
 
-        private void OnFileDownloadRequested(object sender, SharedFile file) =>
-            PollingSessionCoordinator.Instance.DownloadAndOpenFile(file);
+        private async void OnFileDownloadRequested(object sender, SharedFile file) =>
+            await PollingSessionCoordinator.Instance.DownloadAndOpenFileAsync(file);
 
-        private void OnFileMessageDownloadRequested(object sender, Message message)
+        private async void OnFileMessageDownloadRequested(object sender, Message message)
         {
             if (!message.FileId.HasValue)
                 return;
 
-            PollingSessionCoordinator.Instance.DownloadAndOpenFile(new SharedFile
+            Guid fileId = message.FileId.Value;
+            var coordinator = PollingSessionCoordinator.Instance;
+            
+            SharedFile file = coordinator.GetFileMetadata(fileId);
+            if (file == null)
+                return;
+
+            string downloadsPath = _fileHelperService.GetDownloadsPath();
+            
+            var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                FileId = message.FileId.Value,
-                FileName = message.Content.Replace("Shared file: ", string.Empty)
-            });
+                FileName = file.FileName,
+                InitialDirectory = downloadsPath,
+                OverwritePrompt = true
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            await coordinator.DownloadAndOpenFileAsync(file, dialog.FileName);
         }
 
         private async void OnFileShareRequested(object sender, EventArgs e)
@@ -289,7 +307,7 @@ namespace Chat.Client.Polling
         {
             try
             {
-                var messages = _conversationView.GetMessages();
+                var messages = _conversationView.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, PollingSessionCoordinator.Instance.CurrentChannel, messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -401,9 +419,9 @@ namespace Chat.Client.Polling
             _privateFileHistory[view.RecipientId].Add(sharedFile);
         }
 
-        private void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
+        private async void OnPrivateMessageFileDownloadRequested(object sender, SharedFile file)
         {
-            if (!PollingSessionCoordinator.Instance.DownloadAndOpenPrivateFile(file))
+            if (!await PollingSessionCoordinator.Instance.DownloadAndOpenPrivateFileAsync(file))
                 MessageBox.Show("The file is no longer available in the current channel.", "Private file", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
@@ -420,7 +438,7 @@ namespace Chat.Client.Polling
             if (view == null) return;
             try
             {
-                var messages = view.GetMessages();
+                var messages = view.GetConversationItems();
                 var exportService = new Chat.Client.Shared.Services.ChatExportService();
                 exportService.ExportChannelChat(zipFilePath, $"Chat with {view.RecipientId}", messages, fileId => PollingSessionCoordinator.Instance.DownloadFileBytes(fileId));
                 MessageBox.Show($"Chat exported successfully to:\n{zipFilePath}", "Export Chat", MessageBoxButton.OK, MessageBoxImage.Information);

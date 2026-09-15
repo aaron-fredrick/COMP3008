@@ -10,6 +10,7 @@ namespace Chat.Server.FileStorage
     {
         string Store(Guid fileId, byte[] content);
         byte[] Read(Guid fileId);
+        System.IO.Stream OpenRead(Guid fileId);
         bool Exists(Guid fileId);
         void Delete(Guid fileId);
     }

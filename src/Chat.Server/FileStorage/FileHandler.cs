@@ -105,6 +105,14 @@ namespace Chat.Server.FileStorage
             return content == null ? null : CopyMetadata(metadata, content);
         }
 
+        public Stream GetFileStream(Guid fileId)
+        {
+            _lock.EnterReadLock();
+            try { if (!_files.ContainsKey(fileId)) return null; }
+            finally { _lock.ExitReadLock(); }
+            return _contentStore.OpenRead(fileId);
+        }
+
         public List<SharedFile> GetChannelFiles(string channelName, DateTime visibleFromUtc)
         {
             _lock.EnterReadLock();

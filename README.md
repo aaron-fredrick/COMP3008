@@ -1,232 +1,272 @@
 # Distributed Real-Time Chat Application
 
-> An educational distributed chat application built with **C#**, **.NET Framework 4.8**, **WCF**, and **WPF**, exploring client-server architecture, HTTP polling, and NetTcp duplex push communication.
+> Educational distributed chat application built with **C#**, **.NET Framework 4.8**, **WCF**, and **WPF**, implementing both HTTP polling and `NetTcpBinding` duplex push communication.
 
----
+## Assignment at a glance
 
-## 📌 Context & Disclaimer
-
-Independent educational project for self-directed learning on distributed systems, concurrent server state, and WCF communication patterns. Not an official university assessment submission. Educational reference material is located in `docs/`.
-
----
-
-## 🏗 System Architecture
-
-The application uses a multi-tier client-server architecture with shared contract definitions:
+The application combines one authoritative WCF server with two independent WPF clients. The same server state is shared by both clients while the clients demonstrate two different distributed communication models.
 
 ```mermaid
-C4Container
-    title Container Diagram for Distributed Chat System
+flowchart TB
+    S[Chat.Server\nSelf-hosted WCF\nAuthoritative state]
+    P[Polling Client\nWPF]
+    D[Duplex Client\nWPF]
+    H[BasicHttpBinding\nHTTP :9000]
+    T[NetTcpBinding\nTCP :8081]
 
-    Person(userA, "User A (Polling)", "User running Polling WPF Client")
-    Person(userB, "User B (Duplex)", "User running Duplex WPF Client")
+    S --> H --> P
+    S --> T --> D
 
-    Container(pollingApp, "Chat.Client.Polling", "WPF, .NET 4.8", "Periodically polls server for messages and state changes")
-    Container(duplexApp, "Chat.Client.Duplex", "WPF, .NET 4.8", "Receives instant server push events via duplex callbacks")
-
-    Container(sharedLib, "Chat.Client.Shared", "C# Class Library", "Shared UI controls, theme engine, converters, and ZIP export service")
-    Container(contractsLib, "Chat.Contracts", "C# Class Library", "WCF ServiceContracts, CallbackContracts, and DataContracts")
-
-    Container(serverApp, "Chat.Server", "WCF Console App, .NET 4.8", "Self-hosted server holding authoritative in-memory state")
-
-    Rel_D(userA, pollingApp, "Interacts with UI", "WPF GUI")
-    Rel_D(userB, duplexApp, "Interacts with UI", "WPF GUI")
-
-    Rel_D(pollingApp, sharedLib, "References UI & services", "In-Process")
-    Rel_D(duplexApp, sharedLib, "References UI & services", "In-Process")
-    Rel_D(sharedLib, contractsLib, "References DTOs & contracts", "In-Process")
-
-    Rel_D(pollingApp, serverApp, "Polls updates & executes commands", "BasicHttpBinding / HTTP (9000)")
-    BiRel(duplexApp, serverApp, "Registers callbacks & receives events", "NetTcpBinding / TCP (8081)")
-    Rel_U(serverApp, contractsLib, "Implements service contracts", "In-Process")
+    S --- U[Users • Channels • Messages • Files]
+    P -. periodic pull .-> S
+    S -. callback push .-> D
 ```
 
-### 📐 C4 Model Diagrams (`.mmd`)
+**Core distinction:** the Polling client periodically asks the server for current changes; the Duplex client registers a callback and receives core real-time updates pushed by the server.
 
-All raw C4 architecture diagram files are located in [`docs/architecture/c4/`](docs/architecture/c4/):
+### Assignment coverage at a glance
 
-- **Level 1 (System Context)**: [`level-1-context.mmd`](docs/architecture/c4/level-1-context.mmd)
-- **Level 2 (Containers)**: [`level-2-container.mmd`](docs/architecture/c4/level-2-container.mmd)
-- **Level 3 (Components)**:
-  - **Server**: [`level-3-component-server.mmd`](docs/architecture/c4/level-3-component-server.mmd)
-  - **Polling Client**: [`level-3-component-polling-client.mmd`](docs/architecture/c4/level-3-component-polling-client.mmd)
-  - **Duplex Client**: [`level-3-component-duplex-client.mmd`](docs/architecture/c4/level-3-component-duplex-client.mmd)
-  - **Shared Client & Contracts**: [`level-3-component-shared.mmd`](docs/architecture/c4/level-3-component-shared.mmd)
-- **Level 4 (Code / Class Diagram)**: [`level-4-code.mmd`](docs/architecture/c4/level-4-code.mmd)
+| Assignment area | Requirements | Main implementation | Course relationship |
+|---|---|---|---|
+| Client functionality | A-F01–A-F21 | `Chat.Client.Polling`, shared WPF code | Lab 1; Labs 2–3; Lab 6; Lectures 1–4 |
+| Architecture | A-ARC01–A-ARC16 | `Chat.Contracts`, `Chat.Server`, both clients | Labs 1–3, 6; Lectures 1–5 |
+| Polling | A-POL01–A-POL08 | `Chat.Client.Polling` | Lecture 4; Labs 2–3, 6 |
+| Duplex / callbacks | A-DPX01–A-DPX12 | Contracts, `CallbackManager`, Duplex client | Lecture 5; Lab 6; Lecture 4 |
+| Chat / channels | A-CHAT01–A-CHAT22 | `ChatService`, managers, router, clients | Labs 2–3, 6; Lectures 2–5 |
+| File sharing | A-FILE01–A-FILE11 | `FileHandler`, WCF operations, client handling | Lectures 1–3, 5; no retained lab directly reproduces the complete feature |
+| Concurrency / synchronization | A-CON* | WCF service behaviour, synchronized state, callback isolation, WPF Dispatcher | Lab 6; Lectures 3–5 |
 
-### Protocols & Endpoints
-
-| Client | Contract | Binding | Default Endpoint | Update Mechanism |
-| :--- | :--- | :--- | :--- | :--- |
-| **Polling Client** | `IChatService` | `BasicHttpBinding` | `http://localhost:9000/ChatService/Polling` | Periodic request-response polling |
-| **Duplex Client** | `IDuplexChatService` | `NetTcpBinding` | `net.tcp://localhost:8081/ChatService/Duplex` | Real-time push via `IChatCallback` |
+For the detailed **requirement → implementation → Lab → Lecture** mapping, see [`docs/assignment-mapping.md`](docs/assignment-mapping.md).
 
 ---
 
-## 📊 Feature & Requirement Matrix
+## Feature overview
 
-### Section A: Client Functionality (14 Marks)
-
-| # | Feature | Marks | Status | Summary | Locations |
-|---|:---|:---:|:---:|---|---|
-| **A.1** | **Sign in** | 2m | ✅ Complete | Passwordless sign-in by user ID; rejects duplicate active usernames with reason. | `SignInView.xaml.cs`<br>`UserManager.cs` |
-| **A.2** | **Channel list** | 2m | ✅ Complete | Auto-updating channel list. Single channel membership per user with return on leave. | `ChannelListView.xaml.cs`<br>`ChannelManager.cs` |
-| **A.3** | **Channel creation** | 2m | ✅ Complete | Creates named channels; rejects duplicate channel names with feedback. | `ChannelListView.xaml.cs`<br>`ChannelManager.cs` |
-| **A.4** | **Channel conversation** | 2m | ✅ Complete | Public channel messaging and live member list. Late joiners only receive new messages. | `ConversationView.xaml.cs`<br>`MessageRouter.cs` |
-| **A.5** | **Private conversation** | 2m | ✅ Complete | 1-on-1 private messaging in dedicated popup windows with concurrent window support. | `PrivateMessageView.xaml.cs`<br>`MessageRouter.cs` |
-| **A.6** | **File sharing** | 3m | ✅ Complete | Upload/download image and text files (max 2 MB) with in-app click-to-open. | `ConversationView.xaml.cs`<br>`FileHandler.cs` |
-| **A.7** | **Sign out** | 1m | ✅ Complete | Clean channel exit, session release, and shutdown from any view. | `MainWindow.xaml.cs`<br>`ChatService.cs` |
-
----
-
-### Section B: Server Functionality (10 Marks)
-
-| # | Feature | Marks | Status | Summary | Locations |
-|---|:---|:---:|:---:|---|---|
-| **B.1** | **User management** | 2m | ✅ Complete | Authoritative unique session tracking; immediate ID release on disconnect. | `UserManager.cs` |
-| **B.2** | **Channel management** | 2m | ✅ Complete | Authoritative unique channel registry and single-channel-per-user enforcement. | `ChannelManager.cs` |
-| **B.3** | **Message distribution** | 2m | ✅ Complete | Dispatches public messages strictly to active channel members without replay. | `MessageRouter.cs` |
-| **B.4** | **Private messaging** | 2m | ✅ Complete | Delivers private messages strictly between co-channel members; rejects others. | `MessageRouter.cs` |
-| **B.5** | **File handling** | 2m | ✅ Complete | In-memory file storage enforcing allowed formats and 2 MB limit for channel members. | `FileHandler.cs` |
+| Feature | Polling | Duplex | Shared / Server |
+|---|:---:|:---:|:---:|
+| Sign in / sign out | ✓ | ✓ | ✓ |
+| Channels / membership | ✓ | ✓ | ✓ |
+| Public messaging | ✓ | ✓ | ✓ |
+| Private messaging | ✓ | ✓ | ✓ |
+| File sharing / retrieval | ✓ | ✓ | ✓ |
+| Membership updates | ✓ | ✓ | ✓ |
+| User joined / left system messages | ✓ | ✓ | ✓ |
+| Chat export | ✓ | ✓ | ✓ |
+| Concurrent server state | — | — | ✓ |
+| Duplex disconnect cleanup | — | ✓ | ✓ |
 
 ---
 
-### Section C: Duplex Client (8 Marks)
-
-| # | Feature | Marks | Status | Summary | Locations |
-|---|:---|:---:|:---:|---|---|
-| **C.1** | **Duplex contract & callbacks** | 2m | ✅ Complete | `IDuplexChatService` and `IChatCallback` over NetTcpBinding with session mapping. | `IDuplexChatService.cs`<br>`CallbackManager.cs` |
-| **C.2** | **Pure push updates** | 2m | ✅ Complete | All core updates pushed by server callbacks; no polling loops or refresh buttons. | `ChatCallbackHandler.cs`<br>`DuplexServiceClient.cs` |
-| **C.3** | **Thread safety & UI marshaling** | 2m | ✅ Complete | Thread-safe server state; client marshals callback events onto WPF UI thread. | `ChannelManager.cs`<br>`ChatCallbackHandler.cs` |
-| **C.4** | **Disconnection handling** | 2m | ✅ Complete | Detects client drops, frees user ID, removes from channel, and notifies peers. | `CallbackManager.cs`<br>`DuplexDisconnectCleanupIntegrationSuite.cs` |
-
----
-
-### Additional / Enhancement Features
-
-| Feature | Category | Status | Summary | Locations |
-|---|:---|:---:|---|---|
-| **Chat Export (.ZIP)** | Export / UX | ✅ Complete | Exports the channel transcript as `<channel name> channel chat.txt` and bundles available attached files into `<channel name> channel chat.zip`. | `ChatExportService.cs` |
-| **Dynamic Endpoint Settings** | Configuration | ✅ Complete | Runtime UI dialog to update server URLs without app restart. | `EndpointSettingsDialog.xaml`<br>`ConfigurationService.cs` |
-| **Theme Switching** | UI / Styling | ✅ Complete | Runtime toggle between Dark and Light mode themes. | `ThemeService.cs`<br>`Styles/` |
-| **Custom Window Chrome** | UI / Windows | ✅ Complete | Frameless window with custom title bar and 8-direction mouse resizing. | `CustomTitleBar.xaml`<br>`WindowResizer.cs` |
-| **Procedural Ribbon Avatars** | UI / Avatars | ✅ Complete | Deterministic SVG ribbon avatar generation from username hash. | `StringToRibbonPathConverter.cs` |
-| **Message Grouping** | UI / Chat | ✅ Complete | Groups consecutive messages from the same sender to reduce header clutter. | `MessageViewModel.cs` |
-| **Bounded Message Queue** | Server / Perf | ✅ Complete | Configurable message buffer (`--max-messages`) with eviction logging. | `ChannelManager.cs` |
-| **Color Console Logging** | Server / Logs | ✅ Complete | Tagged, timestamped, color-coded server activity and error logging. | `ServerLogger.cs` |
-| **MSTest Test Suite & CI** | Testing / QA | ✅ Complete | Server unit/integration coverage and client-side unit/smoke coverage using MSTest; GitHub Actions runs the solution build and test commands. | `tests/`<br>`.github/workflows/ci.yml` |
-| **UI Converters & Attached Props** | UI / Helpers | ✅ Complete | File size formatters, initials converters, and rounded corner attached properties. | `Converters/`<br>`ControlHelper.cs` |
-
----
-
-## 📂 Project Structure
+## Architecture
 
 ```text
-COMP3008/
-├── COMP3008.slnx                 # Solution file
-├── src/
-│   ├── Chat.Contracts/           # WCF service, callback, and data contracts
-│   ├── Chat.Server/              # Self-hosted WCF server & state management
-│   ├── Chat.Client.Shared/       # Shared UI components, themes, converters & export service
-│   ├── Chat.Client.Polling/      # WPF client using periodic HTTP polling
-│   └── Chat.Client.Duplex/       # WPF client using real-time NetTcp duplex callbacks
-├── tests/
-│   ├── Chat.Server.Tests/        # Server unit and WCF integration tests
-│   └── Chat.Client.Tests/        # Shared-client unit, export, view-model and smoke tests
-├── scripts/                      # Convenience launchers (.ps1 / .bat)
-└── docs/                         # Assignment specs, lab guides, and C4 architecture diagrams (.mmd)
-    └── architecture/
-        └── c4/                   # Raw .mmd C4 diagrams (Levels 1 to 4)
+COMP3008.slnx
+│
+├── src/Chat.Contracts
+│     WCF service contracts, callback contracts and data contracts
+│
+├── src/Chat.Server
+│     Self-hosted WCF service, authoritative state and file storage
+│
+├── src/Chat.Client.Shared
+│     Shared client models, UI helpers, themes and export functionality
+│
+├── src/Chat.Client.Polling
+│     WPF client using periodic request/response polling
+│
+└── src/Chat.Client.Duplex
+      WPF client using server-pushed duplex callbacks
 ```
 
-### Test organisation
+### Contracts and endpoints
 
-The test suite uses **MSTest**. Test projects are separated by application boundary rather than by test type:
+| Client | Contract | Binding | Endpoint | Update model |
+|---|---|---|---|---|
+| Polling | `IChatService` | `BasicHttpBinding` | `http://localhost:9000/ChatService/Polling` | Periodic pull |
+| Duplex | `IDuplexChatService` + `IChatCallback` | `NetTcpBinding` | `net.tcp://localhost:8081/ChatService/Duplex` | Server push |
 
-- `Chat.Server.Tests` contains server unit tests plus WCF/in-process integration coverage for polling and duplex behaviour.
-- `Chat.Client.Tests` contains client-side unit, export, view-model, converter, and smoke coverage.
-- Test categories and fixtures live within the relevant test project; additional folders should only be introduced when they contain a meaningful test grouping.
+The server is authoritative for users, channels, membership, messages, files and duplex callback registrations. The WCF service is configured for concurrent request handling; shared state is protected in the state-management layer and around membership transitions.
 
----
+### Server state and files
 
-## 🔒 Constraints & Rules
-
-- **State**: Authoritative in-memory server state (no database). Server restart resets all state.
-- **Message Isolation**: Messages are not back-filled to late joiners; only new messages are visible.
-- **Private Chat**: Restricted strictly to members currently within the same channel.
-- **File Restrictions**: Allowed formats: `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.txt` (Max size: **2 MB**).
+Authoritative session/channel/message state is in memory. File metadata is held by the server while file bytes use the server-side `ShardedFileContentStore` under `StoredFiles`. Clients never transfer files directly to one another.
 
 ---
 
-## 🚀 Build & Run
+## Polling vs Duplex
+
+| Concern | Polling client | Duplex client |
+|---|---|---|
+| Core transport | HTTP / `BasicHttpBinding` | TCP / `NetTcpBinding` |
+| Update direction | Client requests | Server pushes callbacks |
+| Background polling | Yes | No for core real-time updates |
+| Member updates | Polling response | Callback notification |
+| Public messages | Polling response | Callback |
+| Private messages | Polling response | Callback |
+| File notifications | Polling/state retrieval | Callback metadata + separate retrieval |
+| Callback registration | No | Yes |
+| Disconnect handling | Sign-out/session handling | Callback/channel lifecycle + server cleanup |
+
+The Duplex client must not simulate duplex behaviour with a polling timer or refresh button.
+
+---
+
+## Core features
+
+### Users and channels
+
+Users sign in with a unique ID. The server owns uniqueness and membership state, enforces the channel rules, and releases the user ID during sign-out/disconnect cleanup.
+
+### Public and private messaging
+
+Public messages are routed to current channel members. Private messages are server-routed to the permitted recipient. Private conversations use separate WPF views/windows and can coexist.
+
+### System messages
+
+Membership events are represented as typed conversation items rather than raw strings:
+
+```text
+ConversationItemViewModel
+├── MessageViewModel
+└── SystemMessageViewModel
+```
+
+`SystemMessageViewModel` represents events such as `<user> joined the channel.` and `<user> left the channel.`. The dedicated WPF template is centered, subtle and timestamped, with no sender/avatar/file controls. System events must never be interpreted as `MessageType.File` messages.
+
+### File sharing
+
+Permitted channel files are `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp` and `.txt`, up to 2 MB. `FileHandler` validates and stores content; authorised clients retrieve content using the file ID. A duplex file notification may carry metadata only; `FileData == null` in that notification is therefore intentional.
+
+### Chat export
+
+`ChatExportService` exports the conversation transcript and available attached files as a ZIP. Normal messages retain their sender. System messages use the same timestamp format but have no sender prefix, e.g.:
+
+```text
+[10:40 AM] Alice: Hello
+[10:41 AM] Bob joined the channel.
+[10:42 AM] Bob: Hi
+[10:43 AM] Alice left the channel.
+```
+
+---
+
+## Concurrency and WPF threading
+
+The WCF service uses concurrent request handling, so shared state cannot rely on sequential execution. Synchronization is applied around shared state and membership transitions, and callback failures are isolated so one dead client does not stop notifications to other clients.
+
+Duplex callbacks and background polling do not necessarily execute on the WPF UI thread:
+
+```mermaid
+flowchart LR
+    A[WCF callback / polling worker] --> B[Client coordinator]
+    B --> C[WPF Dispatcher]
+    C --> D[ObservableCollection / ViewModel]
+    D --> E[WPF UI]
+```
+
+Conversation items are maintained incrementally so new content does not require replacing the entire `ItemsSource`. Bottom-following is conditional: users reading older messages are not forcibly moved to the newest item.
+
+---
+
+## Assignment requirement mapping
+
+The detailed mapping is maintained in [`docs/assignment-mapping.md`](docs/assignment-mapping.md). It uses the retained Part A requirement extraction and the repository's lab/lecture guides, then ties each requirement to actual source locations.
+
+Key areas:
+
+- **Client functionality:** sign-in, channels, public/private chat, files, sign-out and required WPF views.
+- **Architecture:** self-hosted WCF server, shared contracts, two independent clients and shared server state.
+- **Polling:** background periodic request/response updates.
+- **Duplex:** `IChatCallback`, callback registration, server push and disconnect lifecycle.
+- **Chat/channels:** `UserManager`, `ChannelManager`, `MessageRouter` and `ChatService`.
+- **Concurrency:** concurrent WCF requests, synchronized state, callback isolation and WPF Dispatcher handoff.
+
+Where a feature is project-specific rather than a direct laboratory exercise, the mapping says so rather than inventing a Lab/Lecture reference.
+
+---
+
+## Documentation and walkthroughs
+
+| Document | Purpose |
+|---|---|
+| [`docs/README.md`](docs/README.md) | Documentation index |
+| [`docs/assignment-mapping.md`](docs/assignment-mapping.md) | Requirement-by-requirement implementation and Lab/Lecture mapping |
+| [`docs/walkthrough.md`](docs/walkthrough.md) | End-to-end behaviour, demonstration order and debugging guide |
+| [`docs/labs/README.md`](docs/labs/README.md) | Retained conceptual laboratory guide |
+| [`docs/lecs/README.md`](docs/lecs/README.md) | Retained conceptual lecture guide |
+| [`docs/architecture/c4/`](docs/architecture/c4/) | C4 architecture diagrams |
+| [`docs/ass/`](docs/ass/) | Assignment reference/extraction material retained in the repository |
+
+---
+
+## Build and run
 
 ### Prerequisites
-- Windows 10 / 11
-- .NET Framework 4.8 Developer Pack / targeting pack
-- Visual Studio with .NET desktop/WPF tooling, or a compatible MSBuild installation
-- .NET SDK 8, 9, or 10 for the current GitHub Actions build/test workflow
 
-### Building
+- Windows 10/11
+- .NET Framework 4.8 Developer/Targeting Pack
+- Visual Studio with WPF/.NET desktop tooling or compatible MSBuild tooling
+- .NET SDK 8, 9 or 10 for the current CI workflow
 
-The repository contains legacy .NET Framework 4.8/WPF projects. Visual Studio/MSBuild is the recommended local build path, particularly when building the WPF projects. GitHub Actions currently uses the `dotnet` CLI against the solution.
+### Build
 
 ```powershell
-# Build the solution with the configured CLI workflow
 dotnet build COMP3008.slnx --configuration Debug
-
-# Or build with MSBuild / Visual Studio tooling
-msbuild COMP3008.slnx /p:Configuration=Release
 ```
 
-### Running
+### Run
+
+Start the server first, then one or more clients:
 
 ```powershell
-# Start Server
 .\scripts\run_server_debug.ps1
-# (or with arguments: .\src\Chat.Server\bin\Debug\Chat.Server.exe --max-messages 100)
-
-# Start Polling Client
 .\scripts\run_client_polling_debug.ps1
-
-# Start Duplex Client
 .\scripts\run_client_duplex_debug.ps1
 ```
 
+Use multiple client instances to demonstrate shared state, polling, duplex callbacks and concurrent behaviour.
+
 ---
 
-## 🧪 Testing
+## Testing
 
-The repository uses **MSTest** and the current CI workflow builds and tests the solution directly with the .NET CLI.
+The repository uses MSTest. Run:
 
 ```powershell
-# Build the solution
 dotnet build COMP3008.slnx --configuration Debug
-
-# Run all tests
 dotnet test COMP3008.slnx --configuration Debug
-
-# Run a specific test project
-dotnet test tests\Chat.Server.Tests\Chat.Server.Tests.csproj --configuration Debug
-dotnet test tests\Chat.Client.Tests\Chat.Client.Tests.csproj --configuration Debug
 ```
 
-For test discovery/debugging, the generated test assembly can also be run directly with VSTest after the project has been built:
-
-```powershell
-vstest.console.exe tests\Chat.Server.Tests\bin\Debug\Chat.Server.Tests.dll
-```
-
-### CI
-
-GitHub Actions runs on `windows-latest` against .NET SDK **8.0**, **9.0**, and **10.0**. Each matrix job performs:
-
-1. `dotnet build COMP3008.slnx --configuration Debug`
-2. `dotnet test COMP3008.slnx --configuration Debug`
-
-The former custom `scripts/ci/run-integration-tests.ps1` server-launching test runner has been removed; integration coverage is now part of the MSTest projects themselves.
+Individual test projects can be run with `dotnet test` against the projects under `tests/`. The CI workflow should be treated as the authoritative test environment when local SDK/Framework differences occur.
 
 ---
 
-## 📄 License
+## Constraints
 
-Distributed under the [Personal Educational Project License](LICENSE).
+- Authoritative users/channels/message state is in memory and resets when the server restarts.
+- File bytes are stored server-side and retrieved through the server.
+- Late channel joiners do not receive earlier channel messages.
+- Private messaging requires the sender and recipient to share a channel.
+- Allowed files: `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.txt`; maximum 2 MB.
+- Polling and Duplex are separate WPF applications using the same server.
+
+---
+
+## Project structure
+
+```text
+COMP3008/
+├── COMP3008.slnx
+├── src/
+│   ├── Chat.Contracts/
+│   ├── Chat.Server/
+│   ├── Chat.Client.Shared/
+│   ├── Chat.Client.Polling/
+│   └── Chat.Client.Duplex/
+├── tests/
+├── scripts/
+├── docs/
+└── README.md
+```
+
+See [`docs/walkthrough.md`](docs/walkthrough.md) for the recommended marker demonstration and debugging entry points.

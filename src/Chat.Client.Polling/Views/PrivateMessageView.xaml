@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Chat.Client.Shared.Controls;assembly=Chat.Client.Shared"
     xmlns:helpers="clr-namespace:Chat.Client.Shared.Helpers;assembly=Chat.Client.Shared"
+    xmlns:selectors="clr-namespace:Chat.Client.Shared.Selectors;assembly=Chat.Client.Shared"
     x:Name="Root"
     Title="Private Message"
     Width="760"
@@ -96,8 +97,10 @@
                                 </Setter>
                             </Style>
                         </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
+                        <ListBox.ItemTemplateSelector>
+                            <selectors:ConversationItemTemplateSelector>
+                                <selectors:ConversationItemTemplateSelector.MessageTemplate>
+                                    <DataTemplate>
                                 <Grid MaxWidth="420" HorizontalAlignment="Left">
                                     <Grid.Style>
                                         <Style TargetType="Grid">
@@ -183,9 +186,16 @@
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
+                                        </Grid>
+                                    </DataTemplate>
+                                </selectors:ConversationItemTemplateSelector.MessageTemplate>
+                                <selectors:ConversationItemTemplateSelector.SystemMessageTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Text}" Foreground="{StaticResource MessageMetadataBrush}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,16"/>
+                                    </DataTemplate>
+                                </selectors:ConversationItemTemplateSelector.SystemMessageTemplate>
+                            </selectors:ConversationItemTemplateSelector>
+                        </ListBox.ItemTemplateSelector>
                     </ListBox>
                     <Border
                         Grid.Row="2"

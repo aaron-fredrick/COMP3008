@@ -208,6 +208,16 @@ namespace Chat.Server.Services
             return file;
         }
 
+        public System.IO.Stream DownloadFileStream(string userId, Guid fileId)
+        {
+            string clientType = DetectClientType();
+            var file = _fileHandler.GetFile(fileId);
+            if (file == null) { ServerLogger.Warning(clientType, "FILE STREAM", $"{userId} requested an unknown or unavailable file {fileId}"); return null; }
+            if (!IsUserInChannel(userId, file.ChannelName)) { ServerLogger.Warning(clientType, "FILE STREAM", $"{userId} attempted to download a file outside their current channel."); return null; }
+            ServerLogger.Request(clientType, "FILE STREAM", $"{userId} started streaming file {fileId}");
+            return _fileHandler.GetFileStream(fileId);
+        }
+
         public SharedFile SharePrivateFile(string senderId, string recipientId, string fileName, FileType fileType, byte[] fileData)
         {
             string clientType = DetectClientType();
@@ -244,6 +254,19 @@ namespace Chat.Server.Services
             var requester = _userManager.GetUserSession(userId);
             if (sender == null || recipient == null || requester == null || string.IsNullOrWhiteSpace(sender.CurrentChannel) || !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal) || !string.Equals(requester.CurrentChannel, sender.CurrentChannel, StringComparison.Ordinal)) return null;
             return file;
+        }
+
+        public System.IO.Stream DownloadPrivateFileStream(string userId, Guid fileId)
+        {
+            string clientType = DetectClientType();
+            var file = _fileHandler.GetFile(fileId);
+            if (file == null || string.IsNullOrWhiteSpace(file.RecipientId) || (!string.Equals(userId, file.UploaderId, StringComparison.Ordinal) && !string.Equals(userId, file.RecipientId, StringComparison.Ordinal))) return null;
+            var sender = _userManager.GetUserSession(file.UploaderId);
+            var recipient = _userManager.GetUserSession(file.RecipientId);
+            var requester = _userManager.GetUserSession(userId);
+            if (sender == null || recipient == null || requester == null || string.IsNullOrWhiteSpace(sender.CurrentChannel) || !string.Equals(sender.CurrentChannel, recipient.CurrentChannel, StringComparison.Ordinal) || !string.Equals(requester.CurrentChannel, sender.CurrentChannel, StringComparison.Ordinal)) return null;
+            ServerLogger.Request(clientType, "PRIVATE FILE STREAM", $"{userId} started streaming private file {fileId}");
+            return _fileHandler.GetFileStream(fileId);
         }
 
         public List<SharedFile> GetChannelFiles(string userId, string channelName)
