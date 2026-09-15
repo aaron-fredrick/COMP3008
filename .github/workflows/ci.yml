@@ -39,9 +39,20 @@ jobs:
         shell: powershell
         run: dotnet test COMP3008.slnx --configuration Debug --collect:"XPlat Code Coverage"
 
-      - name: Upload coverage to Codecov
+      - name: Upload server coverage to Codecov
         if: matrix.dotnet-version == '10.0.x'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: '**/TestResults/**/coverage.cobertura.xml'
+          files: tests/Chat.Server.Tests/TestResults/**/coverage.cobertura.xml
+          flags: server
+
+      - name: Upload client coverage to Codecov
+        if: matrix.dotnet-version == '10.0.x'
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: tests/Chat.Client.Tests/TestResults/**/coverage.cobertura.xml
+          flags: client
